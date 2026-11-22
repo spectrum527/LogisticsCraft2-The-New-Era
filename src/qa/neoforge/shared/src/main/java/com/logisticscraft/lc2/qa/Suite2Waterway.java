@@ -139,6 +139,13 @@ public final class Suite2Waterway {
                 portA.getWaterBerthPos() != null && portB.getWaterBerthPos() != null,
                 "A=" + portA.getWaterBerthPos() + ", B=" + portB.getWaterBerthPos());
 
+        // Strict 2-zone semantics: install pulling_upgrade on Port A and ejector_upgrade on Port B
+        // so 42 stacks (>27 internal slots) pull from adjacent containers and eject cleanly at Port B!
+        portA.setItem(SmartPortBlockEntity.UPGRADE_START,
+                new ItemStack(QaChecks.item(LogisticsConstants.UPGRADE_PULLING), 1));
+        portB.setItem(SmartPortBlockEntity.UPGRADE_START + 1,
+                new ItemStack(QaChecks.item(LogisticsConstants.UPGRADE_EJECTOR), 1));
+
         // Spawn and dock Electric Cargo Boat at Port A
         boolean docked = portA.spawnAndDockBoat(
                 level, player, new ItemStack(Lc2Registries.ELECTRIC_CARGO_BOAT_ITEM.get()));

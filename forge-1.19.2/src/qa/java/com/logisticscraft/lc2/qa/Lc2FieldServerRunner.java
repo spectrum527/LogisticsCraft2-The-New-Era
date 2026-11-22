@@ -294,6 +294,11 @@ final class Lc2FieldServerRunner {
                         if (portA.findDockedBoat(level) == null) {
                             Lc2QaHelpers.spawnDockedBoatAt(level, portA);
                         }
+                        // Populate distinct Outbound (0..2) & Storage (27..28) stacks for live 2-zone GUI + Swap test!
+                        portA.setItem(SmartPortBlockEntity.SLOT_OUTBOUND_START, new ItemStack(Items.RAW_COPPER, 24));
+                        portA.setItem(SmartPortBlockEntity.SLOT_OUTBOUND_START + 1, new ItemStack(Items.RAW_IRON, 16));
+                        portA.setItem(SmartPortBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.COPPER_INGOT, 18));
+                        portA.setItem(SmartPortBlockEntity.SLOT_STORAGE_START + 1, new ItemStack(Items.IRON_INGOT, 12));
                         portA.setStatusKey("status.lc2.ready");
                     }
                     Direction f = shoreA.waterDir();
@@ -304,6 +309,11 @@ final class Lc2FieldServerRunner {
                     SmartPortBlockEntity portA = (SmartPortBlockEntity) level.getBlockEntity(portAPos);
                     qa.check("p3.server_smart_port_restored", portA != null && "Outpost Harbor A".equals(portA.getStationName()),
                             "name=" + (portA == null ? "null" : portA.getStationName()));
+                    qa.check("p3.server_smart_port_zones_restored_after_double_swap",
+                            portA != null && portA.getItem(SmartPortBlockEntity.SLOT_OUTBOUND_START).is(Items.RAW_COPPER)
+                                    && portA.getItem(SmartPortBlockEntity.SLOT_STORAGE_START).is(Items.COPPER_INGOT),
+                            "slot0=" + (portA == null ? "null" : portA.getItem(0))
+                                    + ", slot27=" + (portA == null ? "null" : portA.getItem(27)));
                     advance(Stage.C4_GUI_CARGO_STATION);
                 }
             }
@@ -311,7 +321,20 @@ final class Lc2FieldServerRunner {
             case C4_GUI_CARGO_STATION -> {
                 ServerPlayer player = requirePlayer(server);
                 if (awaitingStepId < 0) {
+                    // Decouple stationA's comparator return repeater so drones stay parked during live GUI & Swap test!
                     Direction f = shoreA.waterDir();
+                    Direction r = f.getClockWise();
+                    level.setBlock(stationAPos.below().relative(r), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                    CargoStationBlockEntity stA = (CargoStationBlockEntity) level.getBlockEntity(stationAPos);
+                    if (stA != null) {
+                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 1, Lc2QaHelpers.itemStack("lc2:heavy_transport_drone", 1));
+                        stA.setItem(CargoStationBlockEntity.SLOT_OUTBOUND_START, new ItemStack(Items.RAW_IRON, 20));
+                        stA.setItem(CargoStationBlockEntity.SLOT_OUTBOUND_START + 1, new ItemStack(Items.RAW_GOLD, 12));
+                        stA.setItem(CargoStationBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.IRON_INGOT, 14));
+                        stA.setItem(CargoStationBlockEntity.SLOT_STORAGE_START + 1, new ItemStack(Items.GOLD_INGOT, 8));
+                        stA.setStatusKey("status.lc2.ready");
+                    }
                     Vec3 cam = Vec3.atCenterOf(stationAPos).add(f.getStepX() * 2.2, 0.6, f.getStepZ() * 2.2);
                     teleportLook(level, player, cam, Vec3.atCenterOf(stationAPos));
                     sendDirective(player, "OPEN_AND_TEST_CARGO_STATION", stationAPos, -1, "03_cargo_station_screen.png");
@@ -319,6 +342,11 @@ final class Lc2FieldServerRunner {
                     CargoStationBlockEntity stA = (CargoStationBlockEntity) level.getBlockEntity(stationAPos);
                     qa.check("p3.server_cargo_station_restored", stA != null && "Outpost Airfield A".equals(stA.getStationName()),
                             "name=" + (stA == null ? "null" : stA.getStationName()));
+                    qa.check("p3.server_cargo_station_zones_restored_after_double_swap",
+                            stA != null && stA.getItem(CargoStationBlockEntity.SLOT_OUTBOUND_START).is(Items.RAW_IRON)
+                                    && stA.getItem(CargoStationBlockEntity.SLOT_STORAGE_START).is(Items.IRON_INGOT),
+                            "slot0=" + (stA == null ? "null" : stA.getItem(0))
+                                    + ", slot27=" + (stA == null ? "null" : stA.getItem(27)));
                     advance(Stage.C5_BOAT_BLOCKED_DISPATCH);
                 }
             }

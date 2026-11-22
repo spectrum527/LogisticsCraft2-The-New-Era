@@ -67,17 +67,17 @@ public abstract class AbstractLogisticsStationMenu extends AbstractContainerMenu
         }
     }
 
-    /** Adds standard 27-slot player inventory + 9-slot hotbar at exact {@code docs/GUI_LAYOUT.md} coords. */
+    /** Adds standard 27-slot player inventory + 9-slot hotbar centered at exact {@code docs/GUI_LAYOUT.md} coords. */
     protected final void addPlayerInventorySlots(Inventory playerInventory) {
-        // Player inventory (3x9): x = 8 + col * 18, y = 142 + row * 18
+        // Player inventory (3x9): x = 99 + col * 18, y = 153 + row * 18
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 142 + row * 18));
+                addSlot(new Slot(playerInventory, col + row * 9 + 9, 99 + col * 18, 153 + row * 18));
             }
         }
-        // Player hotbar (1x9): x = 8 + col * 18, y = 199
+        // Player hotbar (1x9): x = 99 + col * 18, y = 211
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, 8 + col * 18, 199));
+            addSlot(new Slot(playerInventory, col, 99 + col * 18, 211));
         }
     }
 

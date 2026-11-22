@@ -303,6 +303,12 @@ public final class Suite3Airway {
         checks.check("s3.cargo.52_stacks_staged",
                 QaChecks.countStacksAcross(level, ORIGIN_CHEST_1, ORIGIN_CHEST_2) == 52);
 
+        // Strict 2-zone semantics: install pulling_upgrade on origin & ejector_upgrade on target for >27-slot 48-stack transfer
+        origin.setItem(CargoStationBlockEntity.UPGRADE_START,
+                new ItemStack(QaChecks.item(LogisticsConstants.UPGRADE_PULLING), 1));
+        near.setItem(CargoStationBlockEntity.UPGRADE_START,
+                new ItemStack(QaChecks.item(LogisticsConstants.UPGRADE_EJECTOR), 1));
+
         // Launch Standard Drone first (bay 0) -> MUST carry exactly 12 stacks!
         origin.setItem(CargoStationBlockEntity.DRONE_BAY_START, droneStack(false));
         var stdRes = origin.tryDispatch(level, true);
@@ -364,7 +370,9 @@ public final class Suite3Airway {
         // 7. Auto-Return Target-Side Payment (WAITING_RETURN_ENERGY -> supply target -> returns home!)
         CargoStationBlockEntity origin = (CargoStationBlockEntity) level.getBlockEntity(ST_ORIGIN);
         CargoStationBlockEntity near = (CargoStationBlockEntity) level.getBlockEntity(ST_NEAR);
-        // Clear target bays, chests, and ALL energy/batteries at target
+        // Clear target bays, upgrades, chests, and ALL energy/batteries at target so Stage 7 verifies direct Storage (27..53) unload
+        origin.setItem(CargoStationBlockEntity.UPGRADE_START, ItemStack.EMPTY);
+        near.setItem(CargoStationBlockEntity.UPGRADE_START, ItemStack.EMPTY);
         for (int b = 0; b < 6; b++) {
             near.setItem(CargoStationBlockEntity.DRONE_BAY_START + b, ItemStack.EMPTY);
             origin.setItem(CargoStationBlockEntity.DRONE_BAY_START + b, ItemStack.EMPTY);
@@ -412,12 +420,17 @@ public final class Suite3Airway {
         CargoStationBlockEntity near = (CargoStationBlockEntity) level.getBlockEntity(ST_NEAR);
         if (waitingObservedTick < 0) {
             waitingObservedTick = tick;
-            Map<String, Integer> unloaded = QaChecks.countItemsAcross(level, NEAR_CHEST_1, NEAR_CHEST_2);
-            checks.check("s3.autoreturn.unloaded_and_waiting_in_bay",
-                    unloaded.getOrDefault("minecraft:netherite_ingot", 0) == 3
-                            && unloaded.getOrDefault("minecraft:diamond_block", 0) == 5
+            Map<String, Integer> unloadedStorage = QaChecks.countStorageItems(near);
+            Map<String, Integer> nearOutbound = QaChecks.countOutboundItems(near);
+            Map<String, Integer> nearChests = QaChecks.countItemsAcross(level, NEAR_CHEST_1, NEAR_CHEST_2);
+            checks.check("s3.autoreturn.unloaded_to_storage_and_waiting_in_bay",
+                    unloadedStorage.getOrDefault("minecraft:netherite_ingot", 0) == 3
+                            && unloadedStorage.getOrDefault("minecraft:diamond_block", 0) == 5
+                            && nearOutbound.isEmpty()
+                            && nearChests.isEmpty()
                             && near.getClientBayKind(rec.targetBay()) == CargoStationBlockEntity.BAY_STANDARD,
-                    "unloaded=" + unloaded + ", bayKind=" + near.getClientBayKind(rec.targetBay()));
+                    "storage=" + unloadedStorage + ", outbound=" + nearOutbound
+                            + ", chests=" + nearChests + ", bayKind=" + near.getClientBayKind(rec.targetBay()));
             return;
         }
         // Hold for 10 ticks with 0 EU to prove it genuinely waits until Target has energy

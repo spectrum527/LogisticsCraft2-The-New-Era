@@ -15,8 +15,8 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * Shared container menu base for Smart Port and Cargo Station screens, handling periodic
- * server-to-client {@link S2CStationSyncPacket} updates and standard player inventory slots
- * positioned at {@code y = 142..199} per {@code docs/GUI_LAYOUT.md}.
+ * server-to-client {@link S2CStationSyncPacket} updates and centered player inventory slots
+ * positioned at {@code x = 99..243, y = 153..211} per {@code docs/GUI_LAYOUT.md}.
  */
 public abstract class AbstractStationMenu extends AbstractContainerMenu {
 
@@ -64,15 +64,15 @@ public abstract class AbstractStationMenu extends AbstractContainerMenu {
     }
 
     protected void addPlayerInventorySlots(Inventory playerInventory) {
-        // Player Inventory (3x9): x = 8 + col * 18, y = 142 + row * 18
+        // Player Inventory (3x9): x = 99 + col * 18, y = 153 + row * 18
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 142 + row * 18));
+                addSlot(new Slot(playerInventory, col + row * 9 + 9, 99 + col * 18, 153 + row * 18));
             }
         }
-        // Player Hotbar (1x9): x = 8 + col * 18, y = 199
+        // Player Hotbar (1x9): x = 99 + col * 18, y = 211
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, 8 + col * 18, 199));
+            addSlot(new Slot(playerInventory, col, 99 + col * 18, 211));
         }
     }
 
@@ -100,8 +100,7 @@ public abstract class AbstractStationMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Slot wrapper honoring container validation, optional max stack override, and clearing
-     * incoming-overflow flags when players manually modify cargo buffer slots.
+     * Slot wrapper honoring container validation and optional max stack override.
      */
     protected class StationSlot extends Slot {
         private final int maxStackOverride;
@@ -122,14 +121,6 @@ public abstract class AbstractStationMenu extends AbstractContainerMenu {
                 return Math.min(maxStackOverride, stack.getMaxStackSize());
             }
             return super.getMaxStackSize(stack);
-        }
-
-        @Override
-        public void setChanged() {
-            super.setChanged();
-            if (serverBlockEntity != null) {
-                serverBlockEntity.markSlotUserModified(getSlotIndex());
-            }
         }
     }
 }

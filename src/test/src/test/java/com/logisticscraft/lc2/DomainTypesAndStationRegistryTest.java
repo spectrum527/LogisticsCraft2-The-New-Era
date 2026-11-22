@@ -62,6 +62,22 @@ class DomainTypesAndStationRegistryTest {
     }
 
     @Test
+    void twoZoneStationInventoryConstantsMatchContract() {
+        assertEquals(0, LogisticsConstants.STATION_OUTBOUND_START);
+        assertEquals(27, LogisticsConstants.STATION_OUTBOUND_SLOTS);
+        assertEquals(27, LogisticsConstants.STATION_STORAGE_START);
+        assertEquals(27, LogisticsConstants.STATION_STORAGE_SLOTS);
+        assertEquals(54, LogisticsConstants.STATION_TOTAL_CARGO_SLOTS);
+        assertEquals(
+                LogisticsConstants.STATION_OUTBOUND_SLOTS + LogisticsConstants.STATION_STORAGE_SLOTS,
+                LogisticsConstants.STATION_TOTAL_CARGO_SLOTS);
+        assertEquals(27, LogisticsConstants.SMART_PORT_BUFFER_SLOTS);
+        assertEquals(27, LogisticsConstants.CARGO_STATION_BUFFER_SLOTS);
+        assertEquals(59, LogisticsConstants.SMART_PORT_MACHINE_SLOTS);
+        assertEquals(66, LogisticsConstants.CARGO_STATION_MACHINE_SLOTS);
+    }
+
+    @Test
     void vec3dHorizontalYawMatchesMinecraftConvention() {
         Vec3d o = Vec3d.ZERO;
         assertEquals(0.0f, Vec3d.horizontalYawDegrees(o, new Vec3d(0, 0, 10)), 1e-4f);     // South = 0

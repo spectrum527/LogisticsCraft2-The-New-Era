@@ -21,12 +21,18 @@ import net.minecraft.world.entity.player.Inventory;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * Base 212x222 IC2-styled station screen shared by {@link SmartPortScreen} and
- * {@link CargoStationScreen}, implementing every pixel coordinate in {@code docs/GUI_LAYOUT.md}.
+ * Base 392x234 IC2-styled dual-zone station screen (512x256 texture atlas) shared by
+ * {@link SmartPortScreen} and {@link CargoStationScreen}, implementing every pixel coordinate
+ * in {@code docs/GUI_LAYOUT.md}.
  */
 public abstract class AbstractStationScreen<T extends AbstractStationMenu> extends AbstractContainerScreen<T> {
 
+    protected static final int ATLAS_WIDTH = 512;
+    protected static final int ATLAS_HEIGHT = 256;
+
     private static final int TITLE_COLOR = 0x2C3440;
+    private static final int OUTBOUND_LABEL_COLOR = 0x7A4200;
+    private static final int STORAGE_LABEL_COLOR = 0x004D66;
     private static final int LCD_TEXT_CYAN = 0x55FFFF;
     private static final int LCD_TEXT_GREEN = 0x66FF88;
     private static final int LCD_TEXT_AMBER = 0xFFCC44;
@@ -54,24 +60,29 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
     ) {
         super(menu, playerInventory, title);
         this.texture = texture;
-        this.imageWidth = 212;
-        this.imageHeight = 222;
+        this.imageWidth = 392;
+        this.imageHeight = 234;
         this.titleLabelX = 8;
-        this.titleLabelY = 5;
-        this.inventoryLabelX = 8;
-        this.inventoryLabelY = 133;
+        this.titleLabelY = 4;
+        this.inventoryLabelX = 99;
+        this.inventoryLabelY = 144;
+    }
+
+    protected static void blitAtlas(PoseStack poseStack, int x, int y, int u, int v, int w, int h) {
+        blit(poseStack, x, y, (float) u, (float) v, w, h, ATLAS_WIDTH, ATLAS_HEIGHT);
     }
 
     @Override
     protected void init() {
         super.init();
 
-        // Station Name EditBox (8, 15, 112, 12) + Save Button (122, 15, 48, 12)
+        // Row 1 (y=13): Station Name EditBox (8,13,150,12), Save (162,13,44,12),
+        // Auto-Return (210,13,66,12), Energy Priority (279,13,68,12)
         this.nameBox = new EditBox(
                 this.font,
                 this.leftPos + 8,
-                this.topPos + 15,
-                112,
+                this.topPos + 13,
+                150,
                 12,
                 Component.translatable("gui.lc2.station_name")
         );
@@ -80,9 +91,9 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
         addRenderableWidget(this.nameBox);
 
         addRenderableWidget(new CompactButton(
-                this.leftPos + 122,
-                this.topPos + 15,
-                48,
+                this.leftPos + 162,
+                this.topPos + 13,
+                44,
                 12,
                 Component.translatable("gui.lc2.save"),
                 btn -> Lc2Network.sendToServer(C2SStationActionPacket.setName(
@@ -91,46 +102,10 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                 ))
         ));
 
-        // Prev Target '<' (8, 28, 14, 12) & Next Target '>' (156, 28, 14, 12)
-        addRenderableWidget(new CompactButton(
-                this.leftPos + 8,
-                this.topPos + 28,
-                14,
-                12,
-                Component.literal("<"),
-                btn -> Lc2Network.sendToServer(C2SStationActionPacket.cycleTarget(this.menu.getStationPos(), -1))
-        ));
-        addRenderableWidget(new CompactButton(
-                this.leftPos + 156,
-                this.topPos + 28,
-                14,
-                12,
-                Component.literal(">"),
-                btn -> Lc2Network.sendToServer(C2SStationActionPacket.cycleTarget(this.menu.getStationPos(), +1))
-        ));
-
-        // Manual X/Y/Z EditBoxes (8,41,38,12), (48,41,32,12), (82,41,38,12) + Set Button (122,41,48,12)
-        this.targetXBox = createCoordBox(this.leftPos + 8, this.topPos + 41, 38);
-        this.targetYBox = createCoordBox(this.leftPos + 48, this.topPos + 41, 32);
-        this.targetZBox = createCoordBox(this.leftPos + 82, this.topPos + 41, 38);
-        addRenderableWidget(this.targetXBox);
-        addRenderableWidget(this.targetYBox);
-        addRenderableWidget(this.targetZBox);
-
-        addRenderableWidget(new CompactButton(
-                this.leftPos + 122,
-                this.topPos + 41,
-                48,
-                12,
-                Component.translatable("gui.lc2.set_target"),
-                btn -> applyManualCoords()
-        ));
-
-        // Auto-Return Toggle (8, 54, 54, 12), Priority Toggle (64, 54, 56, 12), Dispatch (122, 54, 48, 12)
         this.autoReturnBtn = addRenderableWidget(new CompactButton(
-                this.leftPos + 8,
-                this.topPos + 54,
-                54,
+                this.leftPos + 210,
+                this.topPos + 13,
+                66,
                 12,
                 Component.translatable("gui.lc2.auto_return.off"),
                 btn -> Lc2Network.sendToServer(C2SStationActionPacket.simple(
@@ -138,10 +113,11 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                         C2SStationActionPacket.Action.TOGGLE_AUTO_RETURN
                 ))
         ));
+
         this.energyPriorityBtn = addRenderableWidget(new CompactButton(
-                this.leftPos + 64,
-                this.topPos + 54,
-                56,
+                this.leftPos + 279,
+                this.topPos + 13,
+                68,
                 12,
                 Component.translatable(EnergyPriority.EU_FIRST.translationKey()),
                 btn -> Lc2Network.sendToServer(C2SStationActionPacket.simple(
@@ -149,15 +125,65 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                         C2SStationActionPacket.Action.TOGGLE_ENERGY_PRIORITY
                 ))
         ));
+
+        // Row 2 (y=27): Prev '<' (8,27,14,12), Target LCD (23,27,256,12),
+        // Next '>' (280,27,14,12), Launch (297,27,50,12)
         addRenderableWidget(new CompactButton(
-                this.leftPos + 122,
-                this.topPos + 54,
-                48,
+                this.leftPos + 8,
+                this.topPos + 27,
+                14,
+                12,
+                Component.literal("<"),
+                btn -> Lc2Network.sendToServer(C2SStationActionPacket.cycleTarget(this.menu.getStationPos(), -1))
+        ));
+        addRenderableWidget(new CompactButton(
+                this.leftPos + 280,
+                this.topPos + 27,
+                14,
+                12,
+                Component.literal(">"),
+                btn -> Lc2Network.sendToServer(C2SStationActionPacket.cycleTarget(this.menu.getStationPos(), +1))
+        ));
+        addRenderableWidget(new CompactButton(
+                this.leftPos + 297,
+                this.topPos + 27,
+                50,
                 12,
                 Component.translatable("gui.lc2.dispatch"),
                 btn -> Lc2Network.sendToServer(C2SStationActionPacket.simple(
                         this.menu.getStationPos(),
                         C2SStationActionPacket.Action.DISPATCH
+                ))
+        ));
+
+        // Row 3 (y=41): Manual X (8,41,44,12), Y (54,41,36,12), Z (92,41,44,12),
+        // Set (138,41,36,12), Status LCD (176,41,171,12)
+        this.targetXBox = createCoordBox(this.leftPos + 8, this.topPos + 41, 44);
+        this.targetYBox = createCoordBox(this.leftPos + 54, this.topPos + 41, 36);
+        this.targetZBox = createCoordBox(this.leftPos + 92, this.topPos + 41, 44);
+        addRenderableWidget(this.targetXBox);
+        addRenderableWidget(this.targetYBox);
+        addRenderableWidget(this.targetZBox);
+
+        addRenderableWidget(new CompactButton(
+                this.leftPos + 138,
+                this.topPos + 41,
+                36,
+                12,
+                Component.translatable("gui.lc2.set_target"),
+                btn -> applyManualCoords()
+        ));
+
+        // Center 2-Zone Swap Button at (172, 104, 16, 20) rendering baked 12x10 sprite at UV (414, 64, 12, 10)
+        addRenderableWidget(new SwapZonesButton(
+                this.leftPos + 172,
+                this.topPos + 104,
+                16,
+                20,
+                this.texture,
+                btn -> Lc2Network.sendToServer(C2SStationActionPacket.simple(
+                        this.menu.getStationPos(),
+                        C2SStationActionPacket.Action.SWAP_CARGO_ZONES
                 ))
         ));
 
@@ -314,32 +340,32 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.setShaderTexture(0, this.texture);
 
-        // Main 212x222 panel
-        blit(poseStack, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight);
+        // Main 392x234 panel from 512x256 atlas
+        blitAtlas(poseStack, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight);
 
         double eu = this.sync != null ? this.sync.storedEu() : 0.0;
         double maxEu = this.sync != null ? this.sync.maxEu() : LogisticsConstants.BASE_ENERGY_CAPACITY_EU;
 
-        // EU Gauge Fill bottom-up: (186, 17, 16, 40) <- UV (216, 0, 16, 40)
+        // EU Gauge Fill bottom-up: (363, 14, 16, 40) <- UV (396, 0, 16, 40)
         if (maxEu > 0.0 && eu > 0.0) {
             int h = Math.min(40, Math.max(1, (int) Math.round(40.0 * eu / maxEu)));
-            blit(poseStack, this.leftPos + 186, this.topPos + 17 + 40 - h, 216, 40 - h, 16, h);
+            blitAtlas(poseStack, this.leftPos + 363, this.topPos + 14 + 40 - h, 396, 40 - h, 16, h);
         }
 
-        // EU Bolt Indicator: (189, 60, 10, 14) <- UV (234, 0, 10, 14)
+        // EU Bolt Indicator: (366, 57, 10, 14) <- UV (414, 0, 10, 14)
         if (eu > 0.0) {
-            blit(poseStack, this.leftPos + 189, this.topPos + 60, 234, 0, 10, 14);
+            blitAtlas(poseStack, this.leftPos + 366, this.topPos + 57, 414, 0, 10, 14);
         }
 
-        // Chunk-Loader Active Badge: (186, 180, 16, 16) <- UV (216, 64, 16, 16)
+        // Chunk-Loader Active Badge: (363, 180, 16, 16) <- UV (396, 64, 16, 16)
         if (this.sync != null && this.sync.chunkLoaderActive()) {
-            blit(poseStack, this.leftPos + 186, this.topPos + 180, 216, 64, 16, 16);
+            blitAtlas(poseStack, this.leftPos + 363, this.topPos + 180, 396, 64, 16, 16);
         }
 
-        // Vehicle / Port Status Badge: (186, 199, 16, 16) <- Active (216, 44) / Warn (234, 44)
+        // Vehicle / Port Status Badge: (363, 200, 16, 16) <- Active (396, 44) / Warn (414, 44)
         if (this.sync != null) {
             boolean ready = isStatusBadgeHealthy(this.sync);
-            blit(poseStack, this.leftPos + 186, this.topPos + 199, ready ? 216 : 234, 44, 16, 16);
+            blitAtlas(poseStack, this.leftPos + 363, this.topPos + 200, ready ? 396 : 414, 44, 16, 16);
         }
 
         renderExtraBg(poseStack, partialTick, mouseX, mouseY);
@@ -353,16 +379,20 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
         this.font.draw(poseStack, headerTitle, this.titleLabelX, this.titleLabelY, TITLE_COLOR);
         this.font.draw(poseStack, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, TITLE_COLOR);
 
-        // Target Readout LCD at (23, 28, 132, 12) -> text inside [25..153] (128px max)
+        // 2-Zone Cargo Headers: Outbound at (8, 77), Storage at (190, 77)
+        this.font.draw(poseStack, Component.translatable("gui.lc2.zone.outbound"), 8, 77, OUTBOUND_LABEL_COLOR);
+        this.font.draw(poseStack, Component.translatable("gui.lc2.zone.storage"), 190, 77, STORAGE_LABEL_COLOR);
+
+        // Target Readout LCD at (23, 27, 256, 12) -> text at (26, 29), maxWidth=250
         String targetLine = formatTargetReadout();
         int targetColor = targetReadoutColor();
-        drawFittedLcdText(poseStack, targetLine, 26, 30, 126, targetColor);
+        drawFittedLcdText(poseStack, targetLine, 26, 29, 250, targetColor);
 
-        // Status Readout LCD at (7, 67, 164, 10) -> text inside [9..169] (160px max)
+        // Status Readout LCD at (176, 41, 171, 12) -> text at (179, 43), maxWidth=165
         String statusKey = this.sync != null ? this.sync.statusKey() : "status.lc2.ready";
         String statusText = Component.translatable(statusKey).getString();
         int statusColor = statusKey.contains(".failure.") ? LCD_TEXT_RED : LCD_TEXT_GREEN;
-        drawFittedLcdText(poseStack, statusText, 10, 68, 158, statusColor);
+        drawFittedLcdText(poseStack, statusText, 179, 43, 165, statusColor);
 
         renderExtraLabels(poseStack, mouseX, mouseY);
     }
@@ -371,8 +401,14 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
         int relX = mouseX - this.leftPos;
         int relY = mouseY - this.topPos;
 
-        // EU Gauge tooltip (185, 16, 18, 42)
-        if (inRect(relX, relY, 185, 16, 18, 42) && this.sync != null) {
+        // Center Swap Button tooltip (172, 104, 16, 20)
+        if (inRect(relX, relY, 172, 104, 16, 20)) {
+            renderTooltip(poseStack, Component.translatable("tooltip.lc2.swap"), mouseX, mouseY);
+            return;
+        }
+
+        // EU Gauge tooltip (362, 13, 18, 42)
+        if (inRect(relX, relY, 362, 13, 18, 42) && this.sync != null) {
             renderTooltip(
                     poseStack,
                     Component.translatable(
@@ -388,8 +424,8 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
             return;
         }
 
-        // Chunk loader badge tooltip (186, 180, 16, 16)
-        if (inRect(relX, relY, 186, 180, 16, 16) && this.sync != null) {
+        // Chunk loader badge tooltip (363, 180, 16, 16)
+        if (inRect(relX, relY, 363, 180, 16, 16) && this.sync != null) {
             renderTooltip(
                     poseStack,
                     Component.translatable(
@@ -538,6 +574,49 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                 mc.font.drawShadow(poseStack, label, 0.0F, 0.0F, textColor);
                 poseStack.popPose();
             }
+        }
+    }
+
+    /**
+     * Center 16x20 IC2-beveled Swap button rendering the baked 12x10 dual-color swap arrows
+     * sprite from UV {@code (414, 64, 12, 10)} in the 512x256 station atlas.
+     */
+    protected static final class SwapZonesButton extends Button {
+
+        private final ResourceLocation atlasTexture;
+
+        public SwapZonesButton(
+                int x,
+                int y,
+                int width,
+                int height,
+                ResourceLocation atlasTexture,
+                OnPress onPress
+        ) {
+            super(x, y, width, height, Component.translatable("gui.lc2.swap.title"), onPress);
+            this.atlasTexture = atlasTexture;
+        }
+
+        @Override
+        public void renderButton(PoseStack poseStack, int mouseX, int mouseY, float partialTick) {
+            int bg = !this.active ? 0xFF707070 : (this.isHoveredOrFocused() ? 0xFF98A8BC : 0xFF8B8B8B);
+            int hi = this.isHoveredOrFocused() ? 0xFFE6F0FA : 0xFFD8D8D8;
+            int lo = 0xFF3E3E3E;
+            int border = 0xFF222222;
+
+            fill(poseStack, this.x, this.y, this.x + this.width, this.y + this.height, border);
+            fill(poseStack, this.x + 1, this.y + 1, this.x + this.width - 1, this.y + this.height - 1, bg);
+            fill(poseStack, this.x + 1, this.y + 1, this.x + this.width - 1, this.y + 2, hi);
+            fill(poseStack, this.x + 1, this.y + 1, this.x + 2, this.y + this.height - 1, hi);
+            fill(poseStack, this.x + 1, this.y + this.height - 2, this.x + this.width - 1, this.y + this.height - 1, lo);
+            fill(poseStack, this.x + this.width - 2, this.y + 1, this.x + this.width - 1, this.y + this.height - 1, lo);
+
+            RenderSystem.setShader(GameRenderer::getPositionTexShader);
+            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+            RenderSystem.setShaderTexture(0, this.atlasTexture);
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
+            blitAtlas(poseStack, this.x + (this.width - 12) / 2, this.y + (this.height - 10) / 2, 414, 64, 12, 10);
         }
     }
 }

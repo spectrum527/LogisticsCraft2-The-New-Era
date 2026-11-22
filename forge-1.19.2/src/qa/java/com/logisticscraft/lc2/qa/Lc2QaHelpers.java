@@ -1,6 +1,7 @@
 package com.logisticscraft.lc2.qa;
 
 import com.logisticscraft.lc2.forge.Lc2Registries;
+import com.logisticscraft.lc2.forge.block.AbstractLogisticsStationBlockEntity;
 import com.logisticscraft.lc2.forge.block.CargoStationBlockEntity;
 import com.logisticscraft.lc2.forge.block.SmartPortBlock;
 import com.logisticscraft.lc2.forge.block.SmartPortBlockEntity;
@@ -281,6 +282,37 @@ final class Lc2QaHelpers {
             }
         }
         return totals;
+    }
+
+    static Map<Item, Integer> countStationZone(
+            AbstractLogisticsStationBlockEntity station,
+            int startSlot,
+            int endExclusive
+    ) {
+        Map<Item, Integer> totals = new HashMap<>();
+        for (int i = startSlot; i < endExclusive; i++) {
+            ItemStack st = station.getItem(i);
+            if (!st.isEmpty()) {
+                totals.merge(st.getItem(), st.getCount(), Integer::sum);
+            }
+        }
+        return totals;
+    }
+
+    static Map<Item, Integer> countStationOutbound(AbstractLogisticsStationBlockEntity station) {
+        return countStationZone(
+                station,
+                AbstractLogisticsStationBlockEntity.OUTBOUND_START,
+                AbstractLogisticsStationBlockEntity.OUTBOUND_END
+        );
+    }
+
+    static Map<Item, Integer> countStationStorage(AbstractLogisticsStationBlockEntity station) {
+        return countStationZone(
+                station,
+                AbstractLogisticsStationBlockEntity.STORAGE_START,
+                AbstractLogisticsStationBlockEntity.STORAGE_END
+        );
     }
 
     static int totalItemCount(Map<Item, Integer> map) {

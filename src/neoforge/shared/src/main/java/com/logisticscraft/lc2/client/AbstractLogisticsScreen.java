@@ -13,19 +13,24 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * Shared interactive GUI logic for Smart Port and Cargo Station matching every pixel coordinate
- * in {@code docs/GUI_LAYOUT.md}.
+ * Shared interactive 2-zone GUI logic for Smart Port and Cargo Station matching every pixel
+ * coordinate in {@code docs/GUI_LAYOUT.md} ({@code 392x234} panel on {@code 512x256} atlas).
  */
 public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStationMenu>
         extends LogisticsScreenBase<M> {
 
-    protected static final int PANEL_WIDTH = 212;
-    protected static final int PANEL_HEIGHT = 222;
+    protected static final int PANEL_WIDTH = 392;
+    protected static final int PANEL_HEIGHT = 234;
+    protected static final int TARGET_LCD_TEXT_WIDTH = 250;
+    protected static final int STATUS_LCD_TEXT_WIDTH = 165;
     protected static final int COLOR_LABEL = 0xFF2C3440;
+    protected static final int COLOR_ZONE_OUTBOUND = 0xFF7A4200;
+    protected static final int COLOR_ZONE_STORAGE = 0xFF004D66;
     protected static final int COLOR_LCD_CYAN = 0xFF4CE8FF;
     protected static final int COLOR_LCD_GREEN = 0xFF66FF99;
     protected static final int COLOR_LCD_AMBER = 0xFFFFC845;
     protected static final int COLOR_LCD_RED = 0xFFFF6E6E;
+    protected static final int COLOR_LCD_MUTED = 0xFF7B90A0;
 
     protected EditBox nameBox;
     protected EditBox xBox;
@@ -38,6 +43,7 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
     protected Button autoReturnBtn;
     protected Button priorityBtn;
     protected Button dispatchBtn;
+    protected Button swapBtn;
 
     private boolean fieldsInitializedFromSync = false;
     private BlockPos lastSyncedTarget = null;
@@ -45,9 +51,9 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
     protected AbstractLogisticsScreen(M menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title, PANEL_WIDTH, PANEL_HEIGHT);
         this.titleLabelX = 8;
-        this.titleLabelY = 5;
-        this.inventoryLabelX = 8;
-        this.inventoryLabelY = 133;
+        this.titleLabelY = 4;
+        this.inventoryLabelX = 99;
+        this.inventoryLabelY = 144;
     }
 
     /** Returns the PNG filename (without extension) inside {@code assets/lc2/textures/gui/}. */
@@ -88,72 +94,90 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
         super.init();
         clearEditBoxes();
 
-        // Station Name EditBox: (8, 15, 112, 12)
+        // Row 1: Station Name EditBox (8, 13, 150, 12)
         nameBox = addTrackedEditBox(new EditBox(
-                font, leftPos + 8, topPos + 15, 112, 12,
+                font, leftPos + 8, topPos + 13, 150, 12,
                 Component.translatable("gui.lc2.station_name")
         ));
         nameBox.setMaxLength(32);
         nameBox.setHint(Component.translatable("gui.lc2.name_placeholder"));
         addRenderableWidget(nameBox);
 
-        // Save Name Button: (122, 15, 48, 12)
+        // Button 0: Save Name (162, 13, 44, 12)
         saveNameBtn = addRenderableWidget(Button.builder(
                 Component.translatable("gui.lc2.save"),
                 b -> Lc2Native.sendToServer(StationActionPayload.rename(menu.stationPos(), nameBox.getValue()))
-        ).bounds(leftPos + 122, topPos + 15, 48, 12).build());
+        ).bounds(leftPos + 162, topPos + 13, 44, 12).build());
 
-        // Prev Target Button (<): (8, 28, 14, 12)
+        // Button 1: Prev Target (<) (8, 27, 14, 12)
         prevTargetBtn = addRenderableWidget(Button.builder(
                 Component.literal("<"),
                 b -> Lc2Native.sendToServer(StationActionPayload.simple(menu.stationPos(), StationActionPayload.Action.PREV_TARGET))
-        ).bounds(leftPos + 8, topPos + 28, 14, 12).build());
+        ).bounds(leftPos + 8, topPos + 27, 14, 12).build());
 
-        // Next Target Button (>): (156, 28, 14, 12)
+        // Button 2: Next Target (>) (280, 27, 14, 12)
         nextTargetBtn = addRenderableWidget(Button.builder(
                 Component.literal(">"),
                 b -> Lc2Native.sendToServer(StationActionPayload.simple(menu.stationPos(), StationActionPayload.Action.NEXT_TARGET))
-        ).bounds(leftPos + 156, topPos + 28, 14, 12).build());
+        ).bounds(leftPos + 280, topPos + 27, 14, 12).build());
 
-        // Manual X/Y/Z EditBoxes: (8,41,38,12), (48,41,32,12), (82,41,38,12)
-        xBox = addTrackedEditBox(new EditBox(font, leftPos + 8, topPos + 41, 38, 12, Component.literal("X")));
+        // Row 3: Manual X/Y/Z EditBoxes: (8,41,44,12), (54,41,36,12), (92,41,44,12)
+        xBox = addTrackedEditBox(new EditBox(font, leftPos + 8, topPos + 41, 44, 12, Component.literal("X")));
         xBox.setMaxLength(8);
         xBox.setHint(Component.literal("X"));
         addRenderableWidget(xBox);
 
-        yBox = addTrackedEditBox(new EditBox(font, leftPos + 48, topPos + 41, 32, 12, Component.literal("Y")));
+        yBox = addTrackedEditBox(new EditBox(font, leftPos + 54, topPos + 41, 36, 12, Component.literal("Y")));
         yBox.setMaxLength(6);
         yBox.setHint(Component.literal("Y"));
         addRenderableWidget(yBox);
 
-        zBox = addTrackedEditBox(new EditBox(font, leftPos + 82, topPos + 41, 38, 12, Component.literal("Z")));
+        zBox = addTrackedEditBox(new EditBox(font, leftPos + 92, topPos + 41, 44, 12, Component.literal("Z")));
         zBox.setMaxLength(8);
         zBox.setHint(Component.literal("Z"));
         addRenderableWidget(zBox);
 
-        // Apply Coords Button: (122, 41, 48, 12)
+        // Button 3: Set Coords (138, 41, 36, 12)
         applyCoordsBtn = addRenderableWidget(Button.builder(
                 Component.translatable("gui.lc2.set_target"),
                 b -> applyManualCoords()
-        ).bounds(leftPos + 122, topPos + 41, 48, 12).build());
+        ).bounds(leftPos + 138, topPos + 41, 36, 12).build());
 
-        // Auto-Return Toggle Button: (8, 54, 62, 12) — fits "Return: OFF" cleanly with padding
+        // Button 4: Auto-Return Toggle (210, 13, 66, 12)
         autoReturnBtn = addRenderableWidget(Button.builder(
                 Component.translatable("gui.lc2.auto_return.off"),
                 b -> Lc2Native.sendToServer(StationActionPayload.simple(menu.stationPos(), StationActionPayload.Action.TOGGLE_AUTO_RETURN))
-        ).bounds(leftPos + 8, topPos + 54, 62, 12).build());
+        ).bounds(leftPos + 210, topPos + 13, 66, 12).build());
 
-        // Energy Priority Toggle Button: (72, 54, 52, 12) — fits "Bat First" / "EU First" cleanly
+        // Button 5: Energy Priority Toggle (279, 13, 68, 12)
         priorityBtn = addRenderableWidget(Button.builder(
                 Component.translatable("gui.lc2.priority.eu_first"),
                 b -> Lc2Native.sendToServer(StationActionPayload.simple(menu.stationPos(), StationActionPayload.Action.TOGGLE_ENERGY_PRIORITY))
-        ).bounds(leftPos + 72, topPos + 54, 52, 12).build());
+        ).bounds(leftPos + 279, topPos + 13, 68, 12).build());
 
-        // Manual Dispatch Button: (126, 54, 44, 12) — fits "Launch" cleanly
+        // Button 6: Launch / Manual Dispatch (297, 27, 50, 12)
         dispatchBtn = addRenderableWidget(Button.builder(
                 Component.translatable("gui.lc2.dispatch"),
                 b -> Lc2Native.sendToServer(StationActionPayload.simple(menu.stationPos(), StationActionPayload.Action.MANUAL_DISPATCH))
-        ).bounds(leftPos + 126, topPos + 54, 44, 12).build());
+        ).bounds(leftPos + 297, topPos + 27, 50, 12).build());
+
+        // Button 7: Center Swap Button (172, 104, 16, 20) with baked 12x10 swap arrows at UV (414, 64, 12, 10)
+        swapBtn = addRenderableWidget(createIconButton(
+                172,
+                104,
+                16,
+                20,
+                Component.translatable("gui.lc2.swap.title"),
+                guiTextureName(),
+                2,
+                5,
+                414,
+                64,
+                12,
+                10,
+                b -> Lc2Native.sendToServer(StationActionPayload.simple(
+                        menu.stationPos(), StationActionPayload.Action.SWAP_CARGO_ZONES))
+        ));
 
         menu.setSyncListener(this::onSyncUpdated);
         onSyncUpdated();
@@ -228,59 +252,76 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
 
     @Override
     protected final void paintPanel(ScreenCanvas canvas, int mouseX, int mouseY) {
-        // 1. Main 212x222 background panel
+        // 1. Main 392x234 background panel from 512x256 atlas
         canvas.blit(guiTextureName(), 0, 0, 0, 0, PANEL_WIDTH, PANEL_HEIGHT);
+
+        // 2. 2-Zone cargo headers: Outbound at (8, 77) and Storage at (190, 77)
+        canvas.drawString(Component.translatable("gui.lc2.zone.outbound"), 8, 77, COLOR_ZONE_OUTBOUND);
+        canvas.drawString(Component.translatable("gui.lc2.zone.storage"), 190, 77, COLOR_ZONE_STORAGE);
 
         StationSyncPayload state = menu.syncedState();
         if (state == null) {
             return;
         }
 
-        // 2. EU Gauge Fill (bottom-up): screen (186, 17, 16, 40), UV (216, 0, 16, 40)
+        // 3. EU Gauge Fill (bottom-up): screen (363, 14, 16, 40), UV (396, 0, 16, 40)
         double maxEu = Math.max(1.0, state.maxEu());
         int fillHeight = (int) Math.round(40.0 * Math.clamp(state.storedEu() / maxEu, 0.0, 1.0));
         if (fillHeight > 0) {
-            canvas.blit(guiTextureName(), 186, 17 + 40 - fillHeight, 216, 40 - fillHeight, 16, fillHeight);
+            canvas.blit(guiTextureName(), 363, 14 + 40 - fillHeight, 396, 40 - fillHeight, 16, fillHeight);
         }
 
-        // 3. EU Bolt Indicator: screen (189, 60, 10, 14), UV (234, 0, 10, 14)
+        // 4. EU Bolt Indicator: screen (366, 57, 10, 14), UV (414, 0, 10, 14)
         if (state.storedEu() > 0.0) {
-            canvas.blit(guiTextureName(), 189, 60, 234, 0, 10, 14);
+            canvas.blit(guiTextureName(), 366, 57, 414, 0, 10, 14);
         }
 
-        // 4. Chunk-Loader Active Badge: screen (186, 180, 16, 16), UV (216, 64, 16, 16)
+        // 5. Chunk-Loader Active Badge: screen (363, 180, 16, 16), UV (396, 64, 16, 16)
         if (state.chunkLoaderActive()) {
-            canvas.blit(guiTextureName(), 186, 180, 216, 64, 16, 16);
+            canvas.blit(guiTextureName(), 363, 180, 396, 64, 16, 16);
         }
 
-        // 5. Vehicle / Port Status Badge: screen (186, 199, 16, 16), Active (216, 44) / Warn (234, 44)
-        int badgeU = state.vehicleReady() ? 216 : 234;
-        canvas.blit(guiTextureName(), 186, 199, badgeU, 44, 16, 16);
+        // 6. Vehicle / Port Ready Badge: screen (363, 200, 16, 16), Active (396, 44) / Warn (414, 44)
+        int badgeU = state.vehicleReady() ? 396 : 414;
+        canvas.blit(guiTextureName(), 363, 200, badgeU, 44, 16, 16);
 
-        // 6. Target Readout LCD at (23, 28, 132, 12) -> render text at (26, 30)
+        // 7. Target Readout LCD at (23, 27, 256, 12) -> render text at (26, 29), maxWidth = 250
         String targetText = formatTargetReadout(state);
-        canvas.drawClippedString(targetText, 26, 30, 126, state.hasTarget() ? COLOR_LCD_CYAN : COLOR_LCD_AMBER);
+        canvas.drawClippedString(
+                targetText,
+                26,
+                29,
+                TARGET_LCD_TEXT_WIDTH,
+                state.hasTarget() ? COLOR_LCD_CYAN : COLOR_LCD_AMBER
+        );
 
-        // 7. Status Readout LCD at (7, 67, 164, 10) -> render text at (10, 68)
+        // 8. Status Readout LCD at (176, 41, 171, 12) -> render text at (179, 43), maxWidth = 165
         String statusText = Component.translatable(state.statusKey()).getString();
         int statusColor = state.statusKey().contains(".failure.") ? COLOR_LCD_RED : COLOR_LCD_GREEN;
-        canvas.drawClippedString(statusText, 10, 68, 158, statusColor);
+        canvas.drawClippedString(statusText, 179, 43, STATUS_LCD_TEXT_WIDTH, statusColor);
 
-        // 8. Subclass-specific extras (e.g. Cargo Station RF Range Mini-LCD)
+        // 9. Subclass-specific middle deck strip (Harbor Telemetry / RF Mini-LCD + Flight Deck Status)
         paintExtraPanel(canvas, state);
     }
 
     @Override
     protected final void paintOverlayTooltips(ScreenCanvas canvas, int mouseX, int mouseY) {
+        int relX = mouseX - leftPos;
+        int relY = mouseY - topPos;
+
+        // Swap button hover tooltip: (172, 104, 16, 20)
+        if (relX >= 172 && relX < 188 && relY >= 104 && relY < 124) {
+            canvas.drawTooltip(List.of(Component.translatable("tooltip.lc2.swap")), mouseX, mouseY);
+            return;
+        }
+
         StationSyncPayload state = menu.syncedState();
         if (state == null) {
             return;
         }
-        int relX = mouseX - leftPos;
-        int relY = mouseY - topPos;
 
-        // EU Gauge Frame tooltip: (185, 16, 18, 42)
-        if (relX >= 185 && relX < 203 && relY >= 16 && relY < 58) {
+        // EU Gauge Frame tooltip: (362, 13, 18, 42)
+        if (relX >= 362 && relX < 380 && relY >= 13 && relY < 55) {
             canvas.drawTooltip(
                     List.of(Component.translatable(
                             "gui.lc2.eu_stored",
@@ -295,8 +336,8 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
             return;
         }
 
-        // Chunk-Loader Badge tooltip: (186, 180, 16, 16)
-        if (relX >= 186 && relX < 202 && relY >= 180 && relY < 196) {
+        // Chunk-Loader Badge tooltip: (362, 179, 18, 18)
+        if (relX >= 362 && relX < 380 && relY >= 179 && relY < 197) {
             canvas.drawTooltip(
                     List.of(Component.translatable(
                             state.chunkLoaderActive()
@@ -309,8 +350,17 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
             return;
         }
 
-        // Target LCD tooltip: (23, 28, 132, 12)
-        if (relX >= 23 && relX < 155 && relY >= 28 && relY < 40 && state.hasTarget()) {
+        // Vehicle / Port Ready Badge tooltip: (362, 199, 18, 18)
+        if (relX >= 362 && relX < 380 && relY >= 199 && relY < 217) {
+            List<Component> lines = buildVehicleBadgeTooltip(state);
+            if (!lines.isEmpty()) {
+                canvas.drawTooltip(lines, mouseX, mouseY);
+            }
+            return;
+        }
+
+        // Target LCD tooltip: (23, 27, 256, 12)
+        if (relX >= 23 && relX < 279 && relY >= 27 && relY < 39 && state.hasTarget()) {
             StationSyncPayload.TargetInfo info = state.selectedTargetInfo();
             if (info != null) {
                 canvas.drawTooltip(buildTargetTooltip(info), mouseX, mouseY);
@@ -320,4 +370,9 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
 
     /** Builds detailed tooltip lines when hovering over the Target Readout LCD. */
     protected abstract List<Component> buildTargetTooltip(StationSyncPayload.TargetInfo info);
+
+    /** Builds tooltip lines when hovering over the right-column Vehicle / Port Ready badge. */
+    protected List<Component> buildVehicleBadgeTooltip(StationSyncPayload state) {
+        return List.of();
+    }
 }

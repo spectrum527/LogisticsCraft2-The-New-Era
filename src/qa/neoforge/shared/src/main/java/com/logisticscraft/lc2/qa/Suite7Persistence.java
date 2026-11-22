@@ -118,8 +118,10 @@ public final class Suite7Persistence {
             portA.setEnergyPriority(EnergyPriority.EU_FIRST);
             portA.addEnergy(5000.0);
             for (int i = 0; i < 4; i++) {
-                portA.setItem(i, new ItemStack(Items.DIAMOND_BLOCK, 5)); // 20 total
+                portA.setItem(i, new ItemStack(Items.DIAMOND_BLOCK, 5)); // 20 total in Outbound
             }
+            // Place sentinel stack in Port A Storage (27) to prove boat NEVER ships Storage AND Storage persists across cold restart
+            portA.setItem(SmartPortBlockEntity.STORAGE_START, new ItemStack(Items.NETHERITE_BLOCK, 3));
 
             CargoStationBlockEntity airA = (CargoStationBlockEntity) level.getBlockEntity(PERSIST_AIR_A);
             CargoStationBlockEntity airB = (CargoStationBlockEntity) level.getBlockEntity(PERSIST_AIR_B);
@@ -250,19 +252,24 @@ public final class Suite7Persistence {
             return false;
         }
 
-        var boatDelivered = QaChecks.countItemsAcross(level, PERSIST_PORT_B_CHEST);
-        var droneDelivered = QaChecks.countItemsAcross(level, PERSIST_AIR_B_CHEST);
+        SmartPortBlockEntity portA = (SmartPortBlockEntity) level.getBlockEntity(PERSIST_PORT_A);
         SmartPortBlockEntity portB = (SmartPortBlockEntity) level.getBlockEntity(PERSIST_PORT_B);
         CargoStationBlockEntity airB = (CargoStationBlockEntity) level.getBlockEntity(PERSIST_AIR_B);
+        var boatDelivered = QaChecks.countStorageItems(portB);
+        var droneDelivered = QaChecks.countStorageItems(airB);
+        var portAStorage = QaChecks.countStorageItems(portA);
 
-        checks.check("s7.cold.restarted_boat_delivered_all_20_diamonds",
+        checks.check("s7.cold.restarted_boat_delivered_all_20_diamonds_to_storage",
                 boatDelivered.getOrDefault("minecraft:diamond_block", 0) == 20
+                        && QaChecks.countOutboundItems(portB).isEmpty()
+                        && portAStorage.getOrDefault("minecraft:netherite_block", 0) == 3
                         && portB != null && portB.findDockedBoat(level).isPresent(),
-                "delivered=" + boatDelivered);
-        checks.check("s7.cold.restarted_drone_delivered_all_28_emeralds",
+                "deliveredStorage=" + boatDelivered + ", originStoragePreserved=" + portAStorage);
+        checks.check("s7.cold.restarted_drone_delivered_all_28_emeralds_to_storage",
                 droneDelivered.getOrDefault("minecraft:emerald_block", 0) == 28
+                        && QaChecks.countOutboundItems(airB).isEmpty()
                         && airB != null && airB.countReadyDrones() == 1,
-                "delivered=" + droneDelivered);
+                "deliveredStorage=" + droneDelivered);
 
         readDone = true;
         return true;

@@ -225,22 +225,27 @@ public final class Suite6CollisionAvoidance {
                 dronesPassedEachOther && minOpposingDroneCruiseDist >= 2.0,
                 "minDroneDist=" + String.format("%.2f", minOpposingDroneCruiseDist));
 
-        // Verify all opposing cargos arrived at opposite chests cleanly
-        var portEastCargo = QaChecks.countItemsAcross(level, PORT_EAST_CHEST);
-        var portWestCargo = QaChecks.countItemsAcross(level, PORT_WEST_CHEST);
-        var airEastCargo = QaChecks.countItemsAcross(level, AIR_EAST_CHEST);
-        var airWestCargo = QaChecks.countItemsAcross(level, AIR_WEST_CHEST);
-        checks.check("s6.delivery.opposing_boats_cargo_intact",
-                portEastCargo.getOrDefault("minecraft:iron_block", 0) == 10
-                        && portWestCargo.getOrDefault("minecraft:gold_block", 0) == 10,
-                "east=" + portEastCargo + ", west=" + portWestCargo);
-        checks.check("s6.delivery.opposing_drones_cargo_intact",
-                airEastCargo.getOrDefault("minecraft:redstone_block", 0) == 16
-                        && airWestCargo.getOrDefault("minecraft:lapis_block", 0) == 16,
-                "east=" + airEastCargo + ", west=" + airWestCargo);
-
+        // Verify all opposing cargos arrived strictly in opposite stations' Storage (27..53), leaving Outbound (0..26) clean!
+        SmartPortBlockEntity portW = (SmartPortBlockEntity) level.getBlockEntity(PORT_WEST);
+        SmartPortBlockEntity portE = (SmartPortBlockEntity) level.getBlockEntity(PORT_EAST);
         CargoStationBlockEntity airW = (CargoStationBlockEntity) level.getBlockEntity(AIR_WEST);
         CargoStationBlockEntity airE = (CargoStationBlockEntity) level.getBlockEntity(AIR_EAST);
+        var portEastCargo = QaChecks.countStorageItems(portE);
+        var portWestCargo = QaChecks.countStorageItems(portW);
+        var airEastCargo = QaChecks.countStorageItems(airE);
+        var airWestCargo = QaChecks.countStorageItems(airW);
+        checks.check("s6.delivery.opposing_boats_cargo_intact_in_storage",
+                portEastCargo.getOrDefault("minecraft:iron_block", 0) == 10
+                        && portWestCargo.getOrDefault("minecraft:gold_block", 0) == 10
+                        && QaChecks.countOutboundItems(portE).isEmpty()
+                        && QaChecks.countOutboundItems(portW).isEmpty(),
+                "east=" + portEastCargo + ", west=" + portWestCargo);
+        checks.check("s6.delivery.opposing_drones_cargo_intact_in_storage",
+                airEastCargo.getOrDefault("minecraft:redstone_block", 0) == 16
+                        && airWestCargo.getOrDefault("minecraft:lapis_block", 0) == 16
+                        && QaChecks.countOutboundItems(airE).isEmpty()
+                        && QaChecks.countOutboundItems(airW).isEmpty(),
+                "east=" + airEastCargo + ", west=" + airWestCargo);
         checks.check("s6.drones.all_4_parked_at_opposite_stations",
                 airW.countReadyDrones() == 2 && airE.countReadyDrones() == 2);
 

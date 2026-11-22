@@ -302,11 +302,18 @@ public final class FieldTestRunner {
                 !fenceNav && !slabNav,
                 "fenceNav=" + fenceNav + ", slabNav=" + slabNav);
 
-        // 2. SmartPortBlock & CargoStationBlock comparator analog signal (0 empty, >=1 non-empty)
+        // 2. SmartPortBlock & CargoStationBlock comparator analog signal (0 empty & 0 for Storage-only, >=1 for Outbound)
         SmartPortBlockEntity portA = (SmartPortBlockEntity) level.getBlockEntity(built.portA());
         CargoStationBlockEntity hill = (CargoStationBlockEntity) level.getBlockEntity(built.hillCargoPos());
         int portEmptySig = QaPlatform.analogOutputSignal(level, built.portA(), built.site().waterDirA().getClockWise());
         int cargoEmptySig = QaPlatform.analogOutputSignal(level, built.hillCargoPos(), Direction.EAST);
+
+        portA.setItem(SmartPortBlockEntity.STORAGE_START, new ItemStack(Items.COBBLESTONE, 1));
+        hill.setItem(CargoStationBlockEntity.STORAGE_START, new ItemStack(Items.COBBLESTONE, 1));
+        int portStorageOnlySig = QaPlatform.analogOutputSignal(level, built.portA(), built.site().waterDirA().getClockWise());
+        int cargoStorageOnlySig = QaPlatform.analogOutputSignal(level, built.hillCargoPos(), Direction.EAST);
+        portA.setItem(SmartPortBlockEntity.STORAGE_START, ItemStack.EMPTY);
+        hill.setItem(CargoStationBlockEntity.STORAGE_START, ItemStack.EMPTY);
 
         portA.setItem(0, new ItemStack(Items.COBBLESTONE, 1));
         hill.setItem(0, new ItemStack(Items.COBBLESTONE, 1));
@@ -319,10 +326,11 @@ public final class FieldTestRunner {
                 level.getBlockState(built.portA()).hasAnalogOutputSignal()
                         && level.getBlockState(built.hillCargoPos()).hasAnalogOutputSignal()
                         && portEmptySig == 0 && cargoEmptySig == 0
+                        && portStorageOnlySig == 0 && cargoStorageOnlySig == 0
                         && portFilledSig >= 1 && cargoFilledSig >= 1,
-                "port(0->" + portFilledSig + "), cargo(0->" + cargoFilledSig + ")");
+                "port(0/storage=0->" + portFilledSig + "), cargo(0/storage=0->" + cargoFilledSig + ")");
 
-        // 3. Oversized/multi-slot stack safety in loadOutgoingCargo: 2x12 snowballs (maxStack=16) pulled into maxStacks=1
+        // 3. Oversized/multi-slot stack safety in loadOutgoingCargo: 2x12 snowballs (maxStack=16) pulled via pulling_upgrade into maxStacks=1
         // On 1.21.1 pulls 12 and leaves 12; on 26.x Transfer API extracts 24 at once, loads 16, and Phase 1 fix returns 8!
         BlockPos tmpPort = built.portA().above(24);
         BlockPos tmpChest = tmpPort.east();
@@ -331,6 +339,8 @@ public final class FieldTestRunner {
         level.setBlockAndUpdate(tmpChest, Blocks.CHEST.defaultBlockState());
         SmartPortBlockEntity tmpPortBe = (SmartPortBlockEntity) level.getBlockEntity(tmpPort);
         ChestBlockEntity tmpChestBe = (ChestBlockEntity) level.getBlockEntity(tmpChest);
+        tmpPortBe.setItem(SmartPortBlockEntity.UPGRADE_START,
+                new ItemStack(QaChecks.item(com.logisticscraft.lc2.core.LogisticsConstants.UPGRADE_PULLING), 1));
         tmpChestBe.setItem(0, new ItemStack(Items.SNOWBALL, 12));
         tmpChestBe.setItem(1, new ItemStack(Items.SNOWBALL, 12));
         List<ItemStack> loaded = tmpPortBe.loadOutgoingCargo(level, 1);

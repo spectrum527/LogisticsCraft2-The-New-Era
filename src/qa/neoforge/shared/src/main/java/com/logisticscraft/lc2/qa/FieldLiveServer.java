@@ -12,6 +12,7 @@ import com.logisticscraft.lc2.core.LogisticsConstants;
 import com.logisticscraft.lc2.core.TransitRecord;
 import com.logisticscraft.lc2.core.Vec3d;
 import com.logisticscraft.lc2.entity.ElectricCargoBoatEntity;
+import com.logisticscraft.lc2.platform.Lc2Native;
 import com.logisticscraft.lc2.world.LogisticsLevelManager;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import java.io.IOException;
@@ -195,10 +196,17 @@ public final class FieldLiveServer {
             portA.setAutoReturn(true);
             portA.setEnergyPriority(EnergyPriority.EU_FIRST);
             portA.addEnergy(12_000.0);
-            if (portA.getItem(0).isEmpty()) {
-                portA.setItem(0, new ItemStack(Items.RAW_COPPER, 16));
-                portA.setItem(1, new ItemStack(Items.RAW_IRON, 12));
+            for (int i = 0; i < SmartPortBlockEntity.TOTAL_CARGO_SLOTS; i++) {
+                portA.setItem(i, ItemStack.EMPTY);
             }
+            // Seed distinct items in BOTH Outbound (0..2) and Storage (27..29) for 2-zone GUI + live Swap TCP check!
+            // Slot 0 uses crafted ingots/blocks so live miners never merge raw ores into slot 0 during GUI check.
+            portA.setItem(0, new ItemStack(Items.GOLD_BLOCK, 8));
+            portA.setItem(1, new ItemStack(Items.RAW_COPPER, 16));
+            portA.setItem(2, new ItemStack(Items.RAW_IRON, 12));
+            portA.setItem(SmartPortBlockEntity.STORAGE_START, new ItemStack(Items.COPPER_INGOT, 24));
+            portA.setItem(SmartPortBlockEntity.STORAGE_START + 1, new ItemStack(Items.IRON_INGOT, 18));
+            portA.setItem(SmartPortBlockEntity.STORAGE_START + 2, new ItemStack(Items.GOLD_INGOT, 6));
             portA.setItem(SmartPortBlockEntity.BATTERY_SLOT,
                     new ItemStack(QaChecks.item(LogisticsConstants.SINGLE_USE_BATTERY_ID), 4));
         }
@@ -233,10 +241,17 @@ public final class FieldLiveServer {
                     new ItemStack(QaChecks.item(LogisticsConstants.HEAVY_TRANSPORT_DRONE_ID), 1));
             hill.setItem(CargoStationBlockEntity.BATTERY_SLOT,
                     new ItemStack(QaChecks.item(LogisticsConstants.SINGLE_USE_BATTERY_ID), 6));
-            if (hill.getItem(0).isEmpty()) {
-                hill.setItem(0, new ItemStack(Items.RAW_COPPER, 24));
-                hill.setItem(1, new ItemStack(Items.RAW_IRON, 16));
+            for (int i = 0; i < CargoStationBlockEntity.TOTAL_CARGO_SLOTS; i++) {
+                hill.setItem(i, ItemStack.EMPTY);
             }
+            // Seed distinct items in BOTH Outbound (0..2) and Storage (27..29) for 2-zone GUI + live Swap TCP check!
+            // Slot 0 uses crafted ingots/blocks so live miners never merge raw ores into slot 0 during GUI check.
+            hill.setItem(0, new ItemStack(Items.IRON_BLOCK, 12));
+            hill.setItem(1, new ItemStack(Items.RAW_COPPER, 24));
+            hill.setItem(2, new ItemStack(Items.RAW_IRON, 16));
+            hill.setItem(CargoStationBlockEntity.STORAGE_START, new ItemStack(Items.DIAMOND_BLOCK, 10));
+            hill.setItem(CargoStationBlockEntity.STORAGE_START + 1, new ItemStack(Items.EMERALD_BLOCK, 14));
+            hill.setItem(CargoStationBlockEntity.STORAGE_START + 2, new ItemStack(Items.REDSTONE_BLOCK, 20));
         }
         if (player != null) {
             player.getInventory().clearContent();
@@ -539,6 +554,9 @@ public final class FieldLiveServer {
             pa.addProperty("storedEu", portA.getStoredEu());
             pa.addProperty("targetPos", portA.getTargetPos() == null ? "" : posString(portA.getTargetPos()));
             pa.addProperty("boatDocked", portA.findDockedBoat(level).isPresent());
+            pa.addProperty("outboundSlot0", slotDesc(portA.getItem(SmartPortBlockEntity.OUTBOUND_START)));
+            pa.addProperty("storageSlot0", slotDesc(portA.getItem(SmartPortBlockEntity.STORAGE_START)));
+            pa.addProperty("statusKey", portA.getStatusKey());
             root.add("portA", pa);
         }
         if (level.getBlockEntity(factory.hillCargoPos()) instanceof CargoStationBlockEntity hill) {
@@ -550,6 +568,9 @@ public final class FieldLiveServer {
             hc.addProperty("rfRange", hill.installedRfChip().maxRange());
             hc.addProperty("readyDrones", hill.countReadyDrones());
             hc.addProperty("targetPos", hill.getTargetPos() == null ? "" : posString(hill.getTargetPos()));
+            hc.addProperty("outboundSlot0", slotDesc(hill.getItem(CargoStationBlockEntity.OUTBOUND_START)));
+            hc.addProperty("storageSlot0", slotDesc(hill.getItem(CargoStationBlockEntity.STORAGE_START)));
+            hc.addProperty("statusKey", hill.getStatusKey());
             root.add("hillCargo", hc);
         }
         JsonArray transits = new JsonArray();
@@ -591,6 +612,13 @@ public final class FieldLiveServer {
 
     private static String posString(BlockPos pos) {
         return pos.getX() + "," + pos.getY() + "," + pos.getZ();
+    }
+
+    private static String slotDesc(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return "";
+        }
+        return Lc2Native.itemId(stack) + "x" + stack.getCount();
     }
 
     private static void writeAtomic(Path path, JsonObject obj) throws IOException {

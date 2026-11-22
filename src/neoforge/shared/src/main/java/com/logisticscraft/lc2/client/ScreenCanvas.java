@@ -9,7 +9,7 @@ import net.minecraft.network.chat.Component;
  */
 public interface ScreenCanvas {
 
-    /** Draws a textured rectangle from {@code assets/lc2/textures/gui/<guiName>.png} (256x256). */
+    /** Draws a textured rectangle from {@code assets/lc2/textures/gui/<guiName>.png} (512x256). */
     void blit(String guiName, int x, int y, int u, int v, int width, int height);
 
     /** Draws a string at panel-local {@code (x, y)} with no drop shadow. */

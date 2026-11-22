@@ -364,7 +364,11 @@ def run_live_suite(mc_version: str, screenshot_out: Path) -> None:
         assert sp_open["syncPriority"] == "EU_FIRST", f"Expected initial EU_FIRST: {sp_open}"
         assert sp_open["syncStoredEu"] > 5000, f"Expected synced EU > 5000: {sp_open}"
 
-        # Rename, cycle target, toggle Auto-Return, toggle Energy Priority -> verify S2C sync + server persistence!
+        # Rename, cycle target, toggle Auto-Return, toggle Energy Priority, and click live Swap button over TCP!
+        srv_sp_before_swap = session.server_state()["portA"]
+        assert srv_sp_before_swap["outboundSlot0"] == "minecraft:gold_blockx8", f"Unexpected initial port outbound0: {srv_sp_before_swap}"
+        assert srv_sp_before_swap["storageSlot0"] == "minecraft:copper_ingotx24", f"Unexpected initial port storage0: {srv_sp_before_swap}"
+
         session.act("gui_rename", name="Harbor Alpha")
         session.wait_until("smart_port_renamed", lambda s: s.get("syncStationName") == "Harbor Alpha", timeout=15)
         session.act("gui_click", button="toggle_autoreturn")
@@ -372,12 +376,20 @@ def run_live_suite(mc_version: str, screenshot_out: Path) -> None:
         session.act("gui_click", button="toggle_priority")
         session.wait_until("smart_port_priority_toggled", lambda s: s.get("syncPriority") == "BATTERY_FIRST", timeout=15)
         session.act("gui_click", button="next_target")
-        sp_after = session.wait_until("smart_port_target_synced", lambda s: s.get("syncHasTarget") is True, timeout=15)
+        session.wait_until("smart_port_target_synced", lambda s: s.get("syncHasTarget") is True, timeout=15)
+        session.act("gui_click", button="swap")
+        sp_after = session.wait_until(
+            "smart_port_swapped",
+            lambda s: s.get("syncStatusKey") == "status.lc2.swapped",
+            timeout=15,
+        )
 
         srv_sp = session.server_state()["portA"]
         assert srv_sp["name"] == "Harbor Alpha", f"Server did not persist rename: {srv_sp}"
         assert srv_sp["autoReturn"] is False, f"Server did not persist autoReturn: {srv_sp}"
         assert srv_sp["priority"] == "BATTERY_FIRST", f"Server did not persist priority: {srv_sp}"
+        assert srv_sp["outboundSlot0"] == "minecraft:copper_ingotx24", f"Server did not swap port outbound0: {srv_sp}"
+        assert srv_sp["storageSlot0"] == "minecraft:gold_blockx8", f"Server did not swap port storage0: {srv_sp}"
         report["checks"]["smart_port_gui_roundtrip"] = {
             "clientSync": {
                 "name": sp_after["syncStationName"],
@@ -385,6 +397,8 @@ def run_live_suite(mc_version: str, screenshot_out: Path) -> None:
                 "priority": sp_after["syncPriority"],
                 "storedEu": sp_after["syncStoredEu"],
                 "targetPos": sp_after["syncTargetPos"],
+                "statusKey": sp_after["syncStatusKey"],
+                "swapBtnPresent": sp_after.get("swapBtnPresent"),
             },
             "serverPersisted": srv_sp,
         }
@@ -392,7 +406,7 @@ def run_live_suite(mc_version: str, screenshot_out: Path) -> None:
         shot2 = session.wait_screenshot(f"lc2_{mc_version}_02_smart_port_gui.png")
         shutil.copy2(shot2, screenshot_out / shot2.name)
         report["screenshots"].append(str(screenshot_out / shot2.name))
-        print(f"[{mc_version}] SmartPortScreen verified & captured {shot2.name}", flush=True)
+        print(f"[{mc_version}] SmartPortScreen verified (incl. live TCP Swap!) & captured {shot2.name}", flush=True)
 
         # Toggle back & close SmartPortScreen
         session.act("gui_click", button="toggle_autoreturn")
@@ -413,25 +427,45 @@ def run_live_suite(mc_version: str, screenshot_out: Path) -> None:
         assert cs_open["syncRfRange"] >= 256, f"Expected RF range >= 256: {cs_open}"
         assert cs_open["syncStoredEu"] > 5000, f"Expected synced EU > 5000: {cs_open}"
         assert cs_open["syncVehicleReady"] is True, f"Expected vehicleReady=true: {cs_open}"
+        assert cs_open["syncReadyVehicleCount"] >= 4, f"Expected >= 4 ready drones: {cs_open}"
         assert cs_open["syncTargetCount"] >= 1, f"Expected >= 1 compatible cargo station target: {cs_open}"
 
+        srv_cs_before_swap = session.server_state()["hillCargo"]
+        assert srv_cs_before_swap["outboundSlot0"] == "minecraft:iron_blockx12", f"Unexpected initial cargo outbound0: {srv_cs_before_swap}"
+        assert srv_cs_before_swap["storageSlot0"] == "minecraft:diamond_blockx10", f"Unexpected initial cargo storage0: {srv_cs_before_swap}"
+
         session.act("gui_click", button="toggle_priority")
-        cs_prio = session.wait_until("cargo_priority_toggled", lambda s: s.get("syncPriority") == "BATTERY_FIRST", timeout=15)
+        session.wait_until("cargo_priority_toggled", lambda s: s.get("syncPriority") == "BATTERY_FIRST", timeout=15)
         srv_cs = session.server_state()["hillCargo"]
         assert srv_cs["priority"] == "BATTERY_FIRST", f"Server did not persist cargo priority: {srv_cs}"
         session.act("gui_click", button="toggle_priority")
-        cs_restored = session.wait_until("cargo_priority_restored", lambda s: s.get("syncPriority") == "EU_FIRST", timeout=15)
+        session.wait_until("cargo_priority_restored", lambda s: s.get("syncPriority") == "EU_FIRST", timeout=15)
+
+        # Click live Swap button over TCP on CargoStationScreen and verify server atomically swapped zones!
+        session.act("gui_click", button="swap")
+        cs_swapped = session.wait_until(
+            "cargo_station_swapped",
+            lambda s: s.get("syncStatusKey") == "status.lc2.swapped",
+            timeout=15,
+        )
+        srv_cs_swapped = session.server_state()["hillCargo"]
+        assert srv_cs_swapped["outboundSlot0"] == "minecraft:diamond_blockx10", f"Server did not swap cargo outbound0: {srv_cs_swapped}"
+        assert srv_cs_swapped["storageSlot0"] == "minecraft:iron_blockx12", f"Server did not swap cargo storage0: {srv_cs_swapped}"
         report["checks"]["cargo_station_gui_roundtrip"] = {
-            "rfRange": cs_restored["syncRfRange"],
-            "storedEu": cs_restored["syncStoredEu"],
-            "targetCount": cs_restored["syncTargetCount"],
-            "serverReadyDrones": srv_cs["readyDrones"],
+            "rfRange": cs_swapped["syncRfRange"],
+            "storedEu": cs_swapped["syncStoredEu"],
+            "readyVehicleCount": cs_swapped["syncReadyVehicleCount"],
+            "targetCount": cs_swapped["syncTargetCount"],
+            "statusKey": cs_swapped["syncStatusKey"],
+            "serverReadyDrones": srv_cs_swapped["readyDrones"],
+            "serverSwappedOutbound0": srv_cs_swapped["outboundSlot0"],
+            "serverSwappedStorage0": srv_cs_swapped["storageSlot0"],
         }
         time.sleep(0.4)
         shot3 = session.wait_screenshot(f"lc2_{mc_version}_03_cargo_station_gui.png")
         shutil.copy2(shot3, screenshot_out / shot3.name)
         report["screenshots"].append(str(screenshot_out / shot3.name))
-        print(f"[{mc_version}] CargoStationScreen verified & captured {shot3.name}", flush=True)
+        print(f"[{mc_version}] CargoStationScreen verified (incl. live TCP Swap!) & captured {shot3.name}", flush=True)
 
         session.act("close_screen")
         session.wait_until("cargo_station_closed", lambda s: s.get("screen") == "", timeout=15)

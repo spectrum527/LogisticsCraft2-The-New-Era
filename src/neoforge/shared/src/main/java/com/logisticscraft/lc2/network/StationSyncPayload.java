@@ -28,6 +28,7 @@ public record StationSyncPayload(
         String statusKey,
         boolean chunkLoaderActive,
         boolean vehicleReady,
+        int readyVehicleCount,
         int rfRange,
         List<TargetInfo> targets
 ) implements CustomPacketPayload {
@@ -60,6 +61,7 @@ public record StationSyncPayload(
                         buf.writeUtf(p.statusKey == null ? "status.lc2.ready" : p.statusKey, 128);
                         buf.writeBoolean(p.chunkLoaderActive);
                         buf.writeBoolean(p.vehicleReady);
+                        buf.writeVarInt(p.readyVehicleCount);
                         buf.writeVarInt(p.rfRange);
                         int count = Math.min(p.targets.size(), 128);
                         buf.writeVarInt(count);
@@ -86,6 +88,7 @@ public record StationSyncPayload(
                         String statusKey = buf.readUtf(128);
                         boolean chunkLoaderActive = buf.readBoolean();
                         boolean vehicleReady = buf.readBoolean();
+                        int readyVehicleCount = buf.readVarInt();
                         int rfRange = buf.readVarInt();
                         int count = Math.min(Math.max(0, buf.readVarInt()), 128);
                         List<TargetInfo> targets = new ArrayList<>(count);
@@ -101,7 +104,7 @@ public record StationSyncPayload(
                         return new StationSyncPayload(
                                 stationPos, name, storedEu, maxEu, tier, packetLimit,
                                 autoReturn, priorityOrd, hasTarget, targetPos, statusKey,
-                                chunkLoaderActive, vehicleReady, rfRange, List.copyOf(targets)
+                                chunkLoaderActive, vehicleReady, readyVehicleCount, rfRange, List.copyOf(targets)
                         );
                     }
             );

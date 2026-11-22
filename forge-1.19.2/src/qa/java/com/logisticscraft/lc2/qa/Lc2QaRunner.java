@@ -12,10 +12,13 @@ import com.logisticscraft.lc2.core.Vec3d;
 import com.logisticscraft.lc2.core.VehicleKind;
 import com.logisticscraft.lc2.core.VirtualTransitEngine;
 import com.logisticscraft.lc2.forge.Lc2Registries;
+import com.logisticscraft.lc2.forge.block.AbstractLogisticsStationBlockEntity;
 import com.logisticscraft.lc2.forge.block.CargoStationBlockEntity;
 import com.logisticscraft.lc2.forge.block.SmartPortBlockEntity;
 import com.logisticscraft.lc2.forge.entity.CargoDroneEntity;
 import com.logisticscraft.lc2.forge.entity.ElectricCargoBoatEntity;
+import com.logisticscraft.lc2.forge.gui.CargoStationMenu;
+import com.logisticscraft.lc2.forge.gui.SmartPortMenu;
 import com.logisticscraft.lc2.forge.util.Lc2Coords;
 import com.logisticscraft.lc2.forge.util.LogisticsChunkTickets;
 import com.logisticscraft.lc2.forge.world.LogisticsLevelManager;
@@ -35,9 +38,12 @@ import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.npc.Villager;
@@ -49,14 +55,17 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.HopperBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
+import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.registries.ForgeRegistries;
 
 /**
@@ -104,6 +113,13 @@ final class Lc2QaRunner {
         // Scenario 6: Multi-Vehicle Collision Avoidance
         S6_SETUP_AND_DISPATCH,
         S6_WAIT_COLLISION_COMPLETION,
+        // Scenario 8: 2-Zone Isolation, Swap, NBT Migration, Quick-Move & Items-Before-Vehicle Regression
+        S8_ZONE_ISOLATION_SETUP,
+        S8_ZONE_ISOLATION_VERIFY,
+        S8_ITEMS_BEFORE_VEHICLE_SETUP,
+        S8_ITEMS_BEFORE_VEHICLE_PLACE,
+        S8_ITEMS_BEFORE_VEHICLE_LAUNCH_CHECK,
+        S8_ITEMS_BEFORE_VEHICLE_ARRIVAL,
         // Scenario 7: Cold-Restart Persistence (write phase)
         S7_WRITE_DISPATCH,
         S7_WRITE_MIDFLIGHT_SAVE_AND_HALT,
@@ -215,6 +231,29 @@ final class Lc2QaRunner {
     private UUID s7DroneTransitId;
     private int s7ExpectedBoatItems = 320;
     private int s7ExpectedDroneItems = 256;
+
+    // Scenario 8 refs: 2-Zone Isolation, Swap, Legacy Migration & Items-Before-Vehicle Regression
+    private final BlockPos s8HopperPortPos = new BlockPos(-20, SURFACE_Y + 1, 0);
+    private final BlockPos s8HopperTopPos = new BlockPos(-20, SURFACE_Y + 2, 0);
+    private final BlockPos s8HopperBottomPos = new BlockPos(-20, SURFACE_Y, 0);
+    private final BlockPos s8UpgStationPos = new BlockPos(-28, SURFACE_Y, 0);
+    private final BlockPos s8UpgWestChestPos = new BlockPos(-29, SURFACE_Y, 0);
+    private final BlockPos s8UpgEastChestPos = new BlockPos(-27, SURFACE_Y, 0);
+    private final BlockPos s8UpgNorthChestPos = new BlockPos(-28, SURFACE_Y, -1);
+    private final BlockPos s8UpgDummyTargetPos = new BlockPos(-28, SURFACE_Y, 12);
+
+    private final BlockPos s8DroneOrigPos = new BlockPos(-20, SURFACE_Y, -16);
+    private final BlockPos s8DroneTargetPos = new BlockPos(4, SURFACE_Y, -16);
+    private final BlockPos s8DroneRedstonePos = new BlockPos(-21, SURFACE_Y, -16);
+    private final BlockPos s8BoatWaterOrigPos = new BlockPos(-20, WATER_Y, -26);
+    private final BlockPos s8BoatWaterTargetPos = new BlockPos(0, WATER_Y, -26);
+    private final BlockPos s8BoatWaterRedstonePos = new BlockPos(-21, WATER_Y, -26);
+    private final BlockPos s8BoatDockOrigPos = new BlockPos(-20, WATER_Y, 14);
+    private final BlockPos s8BoatDockTargetPos = new BlockPos(0, WATER_Y, 14);
+    private final BlockPos s8BoatDockRedstonePos = new BlockPos(-21, WATER_Y, 14);
+    private UUID s8ItemsFirstDroneId;
+    private UUID s8ItemsFirstBoatWaterId;
+    private UUID s8ItemsFirstBoatDockId;
 
     Lc2QaRunner(String phase) {
         this.phase = phase;
@@ -426,6 +465,42 @@ final class Lc2QaRunner {
             }
 
             // =========================================================================
+            // SCENARIO 8: 2-Zone Isolation, Swap, NBT Migration & Items-Before-Vehicle
+            // =========================================================================
+            case S8_ZONE_ISOLATION_SETUP -> {
+                runScenario8ZoneIsolationSetup(level);
+                advance(Stage.S8_ZONE_ISOLATION_VERIFY);
+            }
+            case S8_ZONE_ISOLATION_VERIFY -> {
+                if (stageTicks < 35) {
+                    return;
+                }
+                runScenario8ZoneIsolationVerify(level);
+                advance(Stage.S8_ITEMS_BEFORE_VEHICLE_SETUP);
+            }
+            case S8_ITEMS_BEFORE_VEHICLE_SETUP -> {
+                runScenario8ItemsBeforeVehicleSetup(level);
+                advance(Stage.S8_ITEMS_BEFORE_VEHICLE_PLACE);
+            }
+            case S8_ITEMS_BEFORE_VEHICLE_PLACE -> {
+                if (stageTicks < 5) {
+                    return;
+                }
+                runScenario8ItemsBeforeVehiclePlace(level);
+                advance(Stage.S8_ITEMS_BEFORE_VEHICLE_LAUNCH_CHECK);
+            }
+            case S8_ITEMS_BEFORE_VEHICLE_LAUNCH_CHECK -> {
+                if (stageTicks < 2) {
+                    return;
+                }
+                runScenario8ItemsBeforeVehicleLaunchCheck(level);
+                advance(Stage.S8_ITEMS_BEFORE_VEHICLE_ARRIVAL);
+            }
+            case S8_ITEMS_BEFORE_VEHICLE_ARRIVAL -> {
+                tickScenario8ItemsBeforeVehicleArrival(level);
+            }
+
+            // =========================================================================
             // SCENARIO 7: Cold-Restart / NBT Persistence (Write Phase)
             // =========================================================================
             case S7_WRITE_DISPATCH -> {
@@ -622,12 +697,15 @@ final class Lc2QaRunner {
         ElectricCargoBoatEntity boat = Lc2QaHelpers.spawnDockedBoatAt(level, portA);
         qa.check("s2.boat_docked_at_portA", portA.findDockedBoat(level) == boat, "docked boat found");
 
-        // Configure Port A -> Port B
+        // Configure Port A -> Port B (install pulling_upgrade on Port A & ejector_upgrade on Port B
+        // to exercise 42-stack multi-container adjacent I/O under strict 2-zone rules)
         portA.setTargetPos(s2PortBPos);
         portA.setAutoReturn(false);
         portA.setStoredEu(10000.0);
         portA.setEnergyPriority(EnergyPriority.BATTERY_FIRST);
         portA.setItem(SmartPortBlockEntity.SLOT_BATTERY, Lc2QaHelpers.itemStack("ic2:single_use_battery", 4));
+        portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:pulling_upgrade", 1));
+        portB.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("ic2:ejector_upgrade", 1));
 
         // 1) Build stone dam -> MUST fail with WATER_DISCONNECTED
         Lc2QaHelpers.setEastWestDam(level, 19, WATER_Y, 30, true);
@@ -846,7 +924,7 @@ final class Lc2QaRunner {
 
         // 6) Standard Drone (12 stacks, faster 0.80) vs Heavy Drone (36 stacks, slower 0.50)
         CargoStationBlockEntity cargoA = Lc2QaHelpers.placeCargoStation(level, s3CargoAPos, "S3-CargoA");
-        Lc2QaHelpers.placeCargoStation(level, s3CargoBPos, "S3-CargoB");
+        CargoStationBlockEntity cargoB = Lc2QaHelpers.placeCargoStation(level, s3CargoBPos, "S3-CargoB");
         level.setBlock(s3CargoAContainers.get(0), Blocks.CHEST.defaultBlockState(), Block.UPDATE_ALL);
         level.setBlock(s3CargoAContainers.get(1), Blocks.SHULKER_BOX.defaultBlockState(), Block.UPDATE_ALL);
         level.setBlock(s3CargoBContainers.get(0), Blocks.CHEST.defaultBlockState(), Block.UPDATE_ALL);
@@ -863,7 +941,9 @@ final class Lc2QaRunner {
         cargoA.setAutoReturn(false);
         cargoA.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
         cargoA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+        cargoA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:pulling_upgrade", 1));
         cargoA.setStoredEu(5000.0);
+        cargoB.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:ejector_upgrade", 1));
 
         qa.check("s3.std_drone_dispatch_ok", cargoA.tryDispatch(level, true), "status=" + cargoA.getStatusKey());
         TransitRecord stdRec = findLatestTransitFrom(level, s3CargoAPos, VehicleKind.STANDARD_DRONE);
@@ -932,7 +1012,11 @@ final class Lc2QaRunner {
         qa.checkEquals("s3.std_drone_delivered_12_stacks", 12, deliveredStd.size());
         qa.checkEquals("s3.std_drone_delivered_96_items", 12 * 8, Lc2QaHelpers.totalItemCount(deliveredStd));
 
-        // Reset containers & launch Heavy Drone with 40 distinct stacks available -> MUST carry 36 stacks!
+        // Reset containers & CargoA Outbound (pulling_upgrade pulled leftover stacks into Outbound while Std Drone flew)
+        CargoStationBlockEntity cargoA = (CargoStationBlockEntity) level.getBlockEntity(s3CargoAPos);
+        for (int s = CargoStationBlockEntity.SLOT_OUTBOUND_START; s < CargoStationBlockEntity.SLOT_OUTBOUND_COUNT; s++) {
+            cargoA.setItem(s, ItemStack.EMPTY);
+        }
         for (BlockPos p : s3CargoAContainers) {
             Lc2QaHelpers.clearContainerBlock(level, p);
         }
@@ -944,7 +1028,6 @@ final class Lc2QaRunner {
             BlockPos dest = i < 20 ? s3CargoAContainers.get(0) : s3CargoAContainers.get(1);
             Lc2QaHelpers.insertItemIntoBlock(level, dest, stacks40.get(i));
         }
-        CargoStationBlockEntity cargoA = (CargoStationBlockEntity) level.getBlockEntity(s3CargoAPos);
         cargoA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:heavy_transport_drone", 1));
         cargoA.setStoredEu(5000.0);
         qa.check("s3.heavy_drone_dispatch_ok", cargoA.tryDispatch(level, true), "status=" + cargoA.getStatusKey());
@@ -1045,8 +1128,14 @@ final class Lc2QaRunner {
         CargoStationBlockEntity bayTarget = (CargoStationBlockEntity) level.getBlockEntity(s3BayTargetPos);
         qa.checkEquals("s3.bay_target_now_6_full", 0b111111, bayTarget.getDockedBayMask());
 
-        Map<Item, Integer> unloadedAtRetB = Lc2QaHelpers.countItemsInBlocks(level, List.of(s3RetBChestPos));
-        qa.checkEquals("s3.auto_return_cargo_unloaded_at_target", 30, Lc2QaHelpers.totalItemCount(unloadedAtRetB));
+        // retB has NO ejector_upgrade -> cargo MUST unload strictly into retB's Storage (27..53) and NOT touch adjacent chest!
+        CargoStationBlockEntity retB = (CargoStationBlockEntity) level.getBlockEntity(s3RetBPos);
+        Map<Item, Integer> unloadedStorageAtRetB = Lc2QaHelpers.countStationStorage(retB);
+        Map<Item, Integer> unloadedOutboundAtRetB = Lc2QaHelpers.countStationOutbound(retB);
+        Map<Item, Integer> adjacentChestAtRetB = Lc2QaHelpers.countItemsInBlocks(level, List.of(s3RetBChestPos));
+        qa.checkEquals("s3.auto_return_cargo_unloaded_to_storage", 30, Lc2QaHelpers.totalItemCount(unloadedStorageAtRetB));
+        qa.checkEquals("s3.auto_return_outbound_remained_empty", 0, Lc2QaHelpers.totalItemCount(unloadedOutboundAtRetB));
+        qa.checkEquals("s3.auto_return_no_ejector_chest_untouched", 0, Lc2QaHelpers.totalItemCount(adjacentChestAtRetB));
         qa.checkEquals("s3.auto_return_waiting_count", 1, LogisticsLevelManager.countWaitingReturnAt(level, s3RetBPos));
         advance(Stage.S3_WAIT_UNPOWERED_HOLD);
     }
@@ -1095,6 +1184,8 @@ final class Lc2QaRunner {
         portA.setAutoReturn(false);
         portA.setStoredEu(10000.0);
         portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:overclocker_upgrade", 4));
+        portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("ic2:pulling_upgrade", 1));
+        portB.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:ejector_upgrade", 1));
 
         // Setup Cargo Stations at X=0 -> X=352 (dist = 352 <= 512 -> rf_chip_2)
         CargoStationBlockEntity stA = Lc2QaHelpers.placeCargoStation(level, s4StationAPos, "S4-UnloadedStA");
@@ -1112,6 +1203,7 @@ final class Lc2QaRunner {
         stA.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_2", 1));
         stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
         stA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:overclocker_upgrade", 4));
+        stA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("ic2:pulling_upgrade", 1));
     }
 
     private void tickScenario4WaitChunksUnload(ServerLevel level) {
@@ -1222,12 +1314,14 @@ final class Lc2QaRunner {
                 || LogisticsLevelManager.isTransitActive(level, s4DroneTransitId)) {
             return;
         }
+        // portB has ejector_upgrade -> delivered into adjacent containers; stB has NO ejector -> delivered to Storage (27..53)!
         Map<Item, Integer> boatDelivered = Lc2QaHelpers.countItemsInBlocks(level, s4PortBContainers);
-        Map<Item, Integer> droneDelivered = Lc2QaHelpers.countItemsInBlocks(level, List.of(s4StationBChestPos));
+        CargoStationBlockEntity stB = (CargoStationBlockEntity) level.getBlockEntity(s4StationBPos);
+        Map<Item, Integer> droneDeliveredStorage = Lc2QaHelpers.countStationStorage(stB);
         qa.checkEquals("s4.unloaded_boat_delivered_all_320_items", 20 * 16, Lc2QaHelpers.totalItemCount(boatDelivered));
         qa.checkEquals("s4.unloaded_boat_delivered_20_stacks", 20, boatDelivered.size());
-        qa.checkEquals("s4.unloaded_drone_delivered_all_160_items", 10 * 16, Lc2QaHelpers.totalItemCount(droneDelivered));
-        qa.checkEquals("s4.unloaded_drone_delivered_10_stacks", 10, droneDelivered.size());
+        qa.checkEquals("s4.unloaded_drone_delivered_all_160_items_storage", 10 * 16, Lc2QaHelpers.totalItemCount(droneDeliveredStorage));
+        qa.checkEquals("s4.unloaded_drone_delivered_10_stacks_storage", 10, droneDeliveredStorage.size());
 
         // Release temporary QA chunk tickets
         for (ChunkPos cp : s4HeldTempChunks) {
@@ -1407,17 +1501,428 @@ final class Lc2QaRunner {
         qa.check("s6.opposing_drones_no_overlap", s6MinDroneCruiseDist >= 1.50,
                 "minDroneCruiseDist=" + String.format("%.3f", s6MinDroneCruiseDist));
 
-        // Verify cargo arrived cleanly at opposite ports
-        Map<Item, Integer> atPortB = Lc2QaHelpers.countItemsInBlocks(level, List.of(s6PortBChestPos));
-        Map<Item, Integer> atPortA = Lc2QaHelpers.countItemsInBlocks(level, List.of(s6PortAChestPos));
-        qa.checkEquals("s6.boat_AB_delivered_iron", 80, atPortB.getOrDefault(Items.IRON_INGOT, 0));
-        qa.checkEquals("s6.boat_BA_delivered_gold", 80, atPortA.getOrDefault(Items.GOLD_INGOT, 0));
+        // Verify cargo arrived cleanly into opposite ports' Storage zones (27..53), leaving Outbound empty!
+        SmartPortBlockEntity portA = (SmartPortBlockEntity) level.getBlockEntity(s6PortAPos);
+        SmartPortBlockEntity portB = (SmartPortBlockEntity) level.getBlockEntity(s6PortBPos);
+        Map<Item, Integer> atPortBStorage = Lc2QaHelpers.countStationStorage(portB);
+        Map<Item, Integer> atPortAStorage = Lc2QaHelpers.countStationStorage(portA);
+        qa.checkEquals("s6.boat_AB_delivered_iron_storage", 80, atPortBStorage.getOrDefault(Items.IRON_INGOT, 0));
+        qa.checkEquals("s6.boat_BA_delivered_gold_storage", 80, atPortAStorage.getOrDefault(Items.GOLD_INGOT, 0));
+        qa.checkEquals("s6.portA_outbound_empty", 0, Lc2QaHelpers.totalItemCount(Lc2QaHelpers.countStationOutbound(portA)));
+        qa.checkEquals("s6.portB_outbound_empty", 0, Lc2QaHelpers.totalItemCount(Lc2QaHelpers.countStationOutbound(portB)));
 
         // Verify all 4 opposing drones docked cleanly (2 at A, 2 at B)
         CargoStationBlockEntity dA = (CargoStationBlockEntity) level.getBlockEntity(s6DroneAPos);
         CargoStationBlockEntity dB = (CargoStationBlockEntity) level.getBlockEntity(s6DroneBPos);
         qa.checkEquals("s6.drones_docked_at_A", 2, Integer.bitCount(dA.getDockedBayMask()));
         qa.checkEquals("s6.drones_docked_at_B", 2, Integer.bitCount(dB.getDockedBayMask()));
+        advance(Stage.S8_ZONE_ISOLATION_SETUP);
+    }
+
+    // -------------------------------------------------------------------------
+    // SCENARIO 8 IMPLEMENTATION: 2-ZONE ISOLATION, SWAP, MIGRATION & ITEMS-FIRST
+    // -------------------------------------------------------------------------
+
+    private void runScenario8ZoneIsolationSetup(ServerLevel level) {
+        Lc2QaMod.LOGGER.info("[LC2-QA] === Scenario 8: 2-Zone Isolation, Swap, NBT Migration & Items-First ===");
+        FakePlayer fakePlayer = FakePlayerFactory.getMinecraft(level);
+
+        // --- 8A: External Hopper & ForgeCapabilities.ITEM_HANDLER Zone Isolation ---
+        SmartPortBlockEntity hPort = Lc2QaHelpers.placeSmartPort(level, s8HopperPortPos, Direction.SOUTH, "S8-HopperPort");
+        // Seed Battery slot (54) and 1 Outbound stack (slot 0) + 1 Storage stack (slot 27)
+        hPort.setItem(SmartPortBlockEntity.SLOT_BATTERY, Lc2QaHelpers.itemStack("ic2:single_use_battery", 8));
+        hPort.setItem(SmartPortBlockEntity.SLOT_OUTBOUND_START, new ItemStack(Items.COBBLESTONE, 16));
+        hPort.setItem(SmartPortBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.GOLD_NUGGET, 4));
+
+        // Verify ForgeCapabilities.ITEM_HANDLER across all 6 faces + null strictly enforces 2-zone rules!
+        for (Direction side : new Direction[]{null, Direction.UP, Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+            IItemHandler handler = hPort.getCapability(ForgeCapabilities.ITEM_HANDLER, side).orElse(null);
+            qa.check("s8.cap_present_" + side, handler != null, "side=" + side);
+            // Slot 0 (Outbound): NEVER extractable externally!
+            ItemStack stealOutbound = handler.extractItem(SmartPortBlockEntity.SLOT_OUTBOUND_START, 1, true);
+            qa.check("s8.cap_cannot_extract_outbound_" + side, stealOutbound.isEmpty(), "extracted=" + stealOutbound);
+            // Slot 27 (Storage): NEVER insertable externally!
+            ItemStack pushStorage = handler.insertItem(SmartPortBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.STONE, 1), true);
+            qa.checkEquals("s8.cap_cannot_insert_storage_" + side, 1, pushStorage.getCount());
+            // Battery slot (index 54 in automatedSlots): NEVER extractable externally!
+            ItemStack stealBat = handler.extractItem(SmartPortBlockEntity.SLOT_BATTERY, 1, true);
+            qa.check("s8.cap_cannot_extract_battery_" + side, stealBat.isEmpty(), "extracted=" + stealBat);
+            // Slot 27 (Storage): extractable externally!
+            ItemStack pullStorage = handler.extractItem(SmartPortBlockEntity.SLOT_STORAGE_START, 1, true);
+            qa.check("s8.cap_can_extract_storage_" + side, !pullStorage.isEmpty() && pullStorage.is(Items.GOLD_NUGGET),
+                    "extracted=" + pullStorage);
+        }
+
+        // Fill ALL remaining Outbound slots (1..26) with 1 full stack each so Outbound is completely full (27/27)
+        // except slot 0 has 16 cobblestone; then place Hoppers above (pushing 32 cobblestone + 8 dirt) and below!
+        for (int i = 1; i < SmartPortBlockEntity.SLOT_OUTBOUND_COUNT; i++) {
+            hPort.setItem(i, new ItemStack(Items.STONE, 64));
+        }
+        level.setBlock(s8HopperTopPos, Blocks.HOPPER.defaultBlockState().setValue(HopperBlock.FACING, Direction.DOWN), Block.UPDATE_ALL);
+        level.setBlock(s8HopperBottomPos, Blocks.HOPPER.defaultBlockState().setValue(HopperBlock.FACING, Direction.DOWN), Block.UPDATE_ALL);
+        // Push 4 cobblestone (merges into Outbound slot 0) + 4 dirt (cannot fit in full Outbound -> MUST NOT spill into Storage!)
+        Lc2QaHelpers.insertItemIntoBlock(level, s8HopperTopPos, new ItemStack(Items.COBBLESTONE, 4));
+        Lc2QaHelpers.insertItemIntoBlock(level, s8HopperTopPos, new ItemStack(Items.DIRT, 4));
+
+        // --- 8B: Ejector / Pulling Upgrade Zone Isolation ---
+        CargoStationBlockEntity upgSt = Lc2QaHelpers.placeCargoStation(level, s8UpgStationPos, "S8-UpgradeStation");
+        Lc2QaHelpers.placeCargoStation(level, s8UpgDummyTargetPos, "S8-UpgradeTarget");
+        level.setBlock(s8UpgWestChestPos, Blocks.CHEST.defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(s8UpgEastChestPos, Blocks.CHEST.defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(s8UpgNorthChestPos, Blocks.CHEST.defaultBlockState(), Block.UPDATE_ALL);
+
+        Lc2QaHelpers.insertItemIntoBlock(level, s8UpgWestChestPos, new ItemStack(Items.IRON_INGOT, 12));
+        Lc2QaHelpers.insertItemIntoBlock(level, s8UpgNorthChestPos, new ItemStack(Items.GOLD_INGOT, 12));
+        upgSt.setItem(CargoStationBlockEntity.SLOT_OUTBOUND_START, new ItemStack(Items.EMERALD, 6));
+        upgSt.setItem(CargoStationBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.DIAMOND, 10));
+
+        ItemStack pullWest = Lc2FieldHelpers.configureUpgradeFace(level, fakePlayer, s8UpgStationPos, "ic2:pulling_upgrade", Direction.WEST);
+        ItemStack ejectEast = Lc2FieldHelpers.configureUpgradeFace(level, fakePlayer, s8UpgStationPos, "ic2:ejector_upgrade", Direction.EAST);
+        upgSt.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, pullWest);
+        upgSt.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START + 1, ejectEast);
+
+        // --- 8C: Atomic Swap Button (swapCargoZones), Comparator, Menu Quick-Move & Legacy v1 NBT Migration ---
+        BlockPos swapPos = new BlockPos(-34, SURFACE_Y, 0);
+        SmartPortBlockEntity swapPort = Lc2QaHelpers.placeSmartPort(level, swapPos, Direction.SOUTH, "S8-SwapPort");
+        // Storage-only -> Comparator MUST be 0!
+        swapPort.setItem(SmartPortBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.DIAMOND, 16));
+        swapPort.setItem(SmartPortBlockEntity.SLOT_STORAGE_START + 13, new ItemStack(Items.EMERALD, 8));
+        swapPort.setItem(SmartPortBlockEntity.SLOT_STORAGE_START + 26, new ItemStack(Items.NETHERITE_INGOT, 4));
+        qa.checkEquals("s8.comparator_zero_when_only_storage_filled", 0, swapPort.getCargoComparatorSignal());
+
+        // Add distinct Outbound items -> Comparator > 0!
+        swapPort.setItem(SmartPortBlockEntity.SLOT_OUTBOUND_START, new ItemStack(Items.RAW_IRON, 20));
+        swapPort.setItem(SmartPortBlockEntity.SLOT_OUTBOUND_START + 13, new ItemStack(Items.RAW_COPPER, 12));
+        qa.check("s8.comparator_nonzero_when_outbound_filled", swapPort.getCargoComparatorSignal() > 0,
+                "signal=" + swapPort.getCargoComparatorSignal());
+
+        // Atomic Swap!
+        swapPort.swapCargoZones();
+        qa.checkEquals("s8.swap_status_key", "status.lc2.swapped", swapPort.getStatusKey());
+        qa.check("s8.swap_slot_0_to_27",
+                swapPort.getItem(0).is(Items.DIAMOND) && swapPort.getItem(0).getCount() == 16
+                        && swapPort.getItem(27).is(Items.RAW_IRON) && swapPort.getItem(27).getCount() == 20,
+                "slot0=" + swapPort.getItem(0) + ", slot27=" + swapPort.getItem(27));
+        qa.check("s8.swap_slot_13_to_40",
+                swapPort.getItem(13).is(Items.EMERALD) && swapPort.getItem(13).getCount() == 8
+                        && swapPort.getItem(40).is(Items.RAW_COPPER) && swapPort.getItem(40).getCount() == 12,
+                "slot13=" + swapPort.getItem(13) + ", slot40=" + swapPort.getItem(40));
+        qa.check("s8.swap_slot_26_to_53",
+                swapPort.getItem(26).is(Items.NETHERITE_INGOT) && swapPort.getItem(26).getCount() == 4
+                        && swapPort.getItem(53).isEmpty(),
+                "slot26=" + swapPort.getItem(26) + ", slot53=" + swapPort.getItem(53));
+
+        // Verify Menu Quick-Move on SmartPortMenu & CargoStationMenu moves normal items ONLY to Outbound (0..26)!
+        swapPort.clearContent();
+        fakePlayer.getInventory().clearContent();
+        fakePlayer.getInventory().setItem(0, new ItemStack(Items.COPPER_INGOT, 10));
+        SmartPortMenu spMenu = new SmartPortMenu(1, fakePlayer.getInventory(), swapPort);
+        qa.checkEquals("s8.smart_port_menu_total_slots", 95, spMenu.slots.size());
+        // Player hotbar slot 0 is at menu index 59 + 27 = 86
+        spMenu.quickMoveStack(fakePlayer, 86);
+        qa.checkEquals("s8.smart_port_quick_move_to_outbound", 10,
+                Lc2QaHelpers.countStationOutbound(swapPort).getOrDefault(Items.COPPER_INGOT, 0));
+        qa.checkEquals("s8.smart_port_quick_move_never_storage", 0,
+                Lc2QaHelpers.totalItemCount(Lc2QaHelpers.countStationStorage(swapPort)));
+        // Fill all 27 Outbound slots -> quick-move of another item MUST NOT spill into Storage!
+        for (int i = 0; i < 27; i++) {
+            swapPort.setItem(i, new ItemStack(Items.STONE, 64));
+        }
+        fakePlayer.getInventory().setItem(0, new ItemStack(Items.DIRT, 5));
+        spMenu.quickMoveStack(fakePlayer, 86);
+        qa.checkEquals("s8.smart_port_quick_move_refuses_storage_when_outbound_full", 0,
+                Lc2QaHelpers.totalItemCount(Lc2QaHelpers.countStationStorage(swapPort)));
+        qa.checkEquals("s8.smart_port_quick_move_left_in_player_inv", 5,
+                fakePlayer.getInventory().getItem(0).getCount());
+
+        // Same Menu Quick-Move check for CargoStationMenu (102 total slots, hotbar slot 0 at index 66 + 27 = 93)
+        BlockPos qmStationPos = new BlockPos(-36, SURFACE_Y, 0);
+        CargoStationBlockEntity qmStation = Lc2QaHelpers.placeCargoStation(level, qmStationPos, "S8-QmStation");
+        fakePlayer.getInventory().clearContent();
+        fakePlayer.getInventory().setItem(0, new ItemStack(Items.IRON_INGOT, 14));
+        CargoStationMenu csMenu = new CargoStationMenu(2, fakePlayer.getInventory(), qmStation);
+        qa.checkEquals("s8.cargo_station_menu_total_slots", 102, csMenu.slots.size());
+        csMenu.quickMoveStack(fakePlayer, 93);
+        qa.checkEquals("s8.cargo_station_quick_move_to_outbound", 14,
+                Lc2QaHelpers.countStationOutbound(qmStation).getOrDefault(Items.IRON_INGOT, 0));
+        qa.checkEquals("s8.cargo_station_quick_move_never_storage", 0,
+                Lc2QaHelpers.totalItemCount(Lc2QaHelpers.countStationStorage(qmStation)));
+        fakePlayer.getInventory().clearContent();
+
+        // Verify Legacy v1 NBT Migration (LayoutVersion absent -> clean remap with 0 lost items)!
+        verifyLegacyNbtMigration(level);
+    }
+
+    private void verifyLegacyNbtMigration(ServerLevel level) {
+        // 1) Legacy SmartPort (v1: 32 slots -> 0..26 cargo, 27 battery, 28..31 upgrades)
+        NonNullList<ItemStack> legacyPortItems = NonNullList.withSize(32, ItemStack.EMPTY);
+        legacyPortItems.set(0, new ItemStack(Items.IRON_INGOT, 11));
+        legacyPortItems.set(26, new ItemStack(Items.GOLD_INGOT, 7));
+        legacyPortItems.set(27, Lc2QaHelpers.itemStack("ic2:single_use_battery", 12));
+        legacyPortItems.set(28, Lc2QaHelpers.itemStack("ic2:overclocker_upgrade", 2));
+        legacyPortItems.set(31, Lc2QaHelpers.itemStack("lc2:chunk_loading_upgrade", 1));
+        CompoundTag legacyPortTag = new CompoundTag();
+        ContainerHelper.saveAllItems(legacyPortTag, legacyPortItems);
+        legacyPortTag.putDouble("StoredEu", 4200.0);
+        legacyPortTag.putString("StationName", "Legacy Port");
+
+        SmartPortBlockEntity migratedPort = new SmartPortBlockEntity(
+                new BlockPos(-38, SURFACE_Y, 0),
+                Lc2Registries.SMART_PORT_BLOCK.get().defaultBlockState()
+        );
+        migratedPort.load(legacyPortTag);
+        qa.check("s8.migrate_port_outbound_0",
+                migratedPort.getItem(0).is(Items.IRON_INGOT) && migratedPort.getItem(0).getCount() == 11,
+                "slot0=" + migratedPort.getItem(0));
+        qa.check("s8.migrate_port_outbound_26",
+                migratedPort.getItem(26).is(Items.GOLD_INGOT) && migratedPort.getItem(26).getCount() == 7,
+                "slot26=" + migratedPort.getItem(26));
+        qa.checkEquals("s8.migrate_port_battery_54", 12, migratedPort.getBatteryCount());
+        qa.check("s8.migrate_port_upgrade_55",
+                "ic2:overclocker_upgrade".equals(Lc2Coords.itemId(migratedPort.getItem(55)))
+                        && migratedPort.getItem(55).getCount() == 2,
+                "slot55=" + migratedPort.getItem(55));
+        qa.check("s8.migrate_port_upgrade_58",
+                "lc2:chunk_loading_upgrade".equals(Lc2Coords.itemId(migratedPort.getItem(58))),
+                "slot58=" + migratedPort.getItem(58));
+        qa.checkEquals("s8.migrate_port_storage_empty", 0,
+                Lc2QaHelpers.totalItemCount(Lc2QaHelpers.countStationStorage(migratedPort)));
+        CompoundTag savedPortV2 = migratedPort.saveWithoutMetadata();
+        qa.checkEquals("s8.migrate_port_saves_layout_v2", 2, savedPortV2.getInt("LayoutVersion"));
+
+        // 2) Legacy CargoStation (v1: 30 slots -> 0..17 cargo, 18 RF chip, 19..24 drones, 25 battery, 26..29 upgrades)
+        NonNullList<ItemStack> legacyStationItems = NonNullList.withSize(30, ItemStack.EMPTY);
+        legacyStationItems.set(0, new ItemStack(Items.COPPER_INGOT, 9));
+        legacyStationItems.set(17, new ItemStack(Items.DIAMOND, 5));
+        legacyStationItems.set(18, Lc2QaHelpers.itemStack("lc2:rf_chip_2", 1));
+        legacyStationItems.set(19, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+        legacyStationItems.set(24, Lc2QaHelpers.itemStack("lc2:heavy_transport_drone", 1));
+        legacyStationItems.set(25, Lc2QaHelpers.itemStack("ic2:single_use_battery", 6));
+        legacyStationItems.set(26, Lc2QaHelpers.itemStack("ic2:transformer_upgrade", 1));
+        legacyStationItems.set(29, Lc2QaHelpers.itemStack("ic2:energy_storage_upgrade", 1));
+        CompoundTag legacyStationTag = new CompoundTag();
+        ContainerHelper.saveAllItems(legacyStationTag, legacyStationItems);
+        legacyStationTag.putDouble("StoredEu", 5500.0);
+        legacyStationTag.putString("StationName", "Legacy Station");
+
+        CargoStationBlockEntity migratedStation = new CargoStationBlockEntity(
+                new BlockPos(-40, SURFACE_Y, 0),
+                Lc2Registries.CARGO_STATION_BLOCK.get().defaultBlockState()
+        );
+        migratedStation.load(legacyStationTag);
+        qa.check("s8.migrate_station_outbound_0",
+                migratedStation.getItem(0).is(Items.COPPER_INGOT) && migratedStation.getItem(0).getCount() == 9,
+                "slot0=" + migratedStation.getItem(0));
+        qa.check("s8.migrate_station_outbound_17",
+                migratedStation.getItem(17).is(Items.DIAMOND) && migratedStation.getItem(17).getCount() == 5,
+                "slot17=" + migratedStation.getItem(17));
+        qa.checkEquals("s8.migrate_station_rf_54", RfChipTier.TIER_2, migratedStation.getRfChipTier());
+        qa.checkEquals("s8.migrate_station_bay0_55", VehicleKind.STANDARD_DRONE, migratedStation.getBayDroneKind(0));
+        qa.checkEquals("s8.migrate_station_bay5_60", VehicleKind.HEAVY_DRONE, migratedStation.getBayDroneKind(5));
+        qa.checkEquals("s8.migrate_station_battery_61", 6, migratedStation.getBatteryCount());
+        qa.check("s8.migrate_station_upgrade_62",
+                "ic2:transformer_upgrade".equals(Lc2Coords.itemId(migratedStation.getItem(62))),
+                "slot62=" + migratedStation.getItem(62));
+        qa.check("s8.migrate_station_upgrade_65",
+                "ic2:energy_storage_upgrade".equals(Lc2Coords.itemId(migratedStation.getItem(65))),
+                "slot65=" + migratedStation.getItem(65));
+        CompoundTag savedStationV2 = migratedStation.saveWithoutMetadata();
+        qa.checkEquals("s8.migrate_station_saves_layout_v2", 2, savedStationV2.getInt("LayoutVersion"));
+    }
+
+    private void runScenario8ZoneIsolationVerify(ServerLevel level) {
+        // --- Verify 8A: Hopper push -> Outbound ONLY; Hopper pull -> Storage ONLY ---
+        SmartPortBlockEntity hPort = (SmartPortBlockEntity) level.getBlockEntity(s8HopperPortPos);
+        Map<Item, Integer> topHopper = Lc2QaHelpers.countItemsInBlocks(level, List.of(s8HopperTopPos));
+        Map<Item, Integer> bottomHopper = Lc2QaHelpers.countItemsInBlocks(level, List.of(s8HopperBottomPos));
+        Map<Item, Integer> portOutbound = Lc2QaHelpers.countStationOutbound(hPort);
+        Map<Item, Integer> portStorage = Lc2QaHelpers.countStationStorage(hPort);
+
+        // Top hopper pushed 4 cobblestone into Outbound slot 0 (16 -> 20), and 4 dirt stayed blocked in top hopper!
+        qa.checkEquals("s8.hopper_pushed_cobble_to_outbound", 20, portOutbound.getOrDefault(Items.COBBLESTONE, 0));
+        qa.checkEquals("s8.hopper_dirt_blocked_from_storage", 4, topHopper.getOrDefault(Items.DIRT, 0));
+        qa.checkEquals("s8.hopper_never_spilled_dirt_into_storage", 0, portStorage.getOrDefault(Items.DIRT, 0));
+        // Bottom hopper extracted ONLY the 4 gold nuggets from Storage, NEVER stealing cobblestone/stone from Outbound or batteries!
+        qa.checkEquals("s8.hopper_extracted_storage_gold_nuggets", 4, bottomHopper.getOrDefault(Items.GOLD_NUGGET, 0));
+        qa.checkEquals("s8.hopper_never_stole_outbound_cobble", 0, bottomHopper.getOrDefault(Items.COBBLESTONE, 0));
+        qa.checkEquals("s8.hopper_never_stole_outbound_stone", 0, bottomHopper.getOrDefault(Items.STONE, 0));
+        qa.checkEquals("s8.hopper_never_stole_battery", 8, hPort.getBatteryCount());
+        qa.checkEquals("s8.storage_drained_cleanly", 0, Lc2QaHelpers.totalItemCount(portStorage));
+
+        // --- Verify 8B: Pulling upgrade -> Outbound ONLY; Ejector upgrade -> Storage ONLY ---
+        CargoStationBlockEntity upgSt = (CargoStationBlockEntity) level.getBlockEntity(s8UpgStationPos);
+        Map<Item, Integer> westChest = Lc2QaHelpers.countItemsInBlocks(level, List.of(s8UpgWestChestPos));
+        Map<Item, Integer> eastChest = Lc2QaHelpers.countItemsInBlocks(level, List.of(s8UpgEastChestPos));
+        Map<Item, Integer> northChest = Lc2QaHelpers.countItemsInBlocks(level, List.of(s8UpgNorthChestPos));
+        Map<Item, Integer> upgOutbound = Lc2QaHelpers.countStationOutbound(upgSt);
+        Map<Item, Integer> upgStorage = Lc2QaHelpers.countStationStorage(upgSt);
+
+        // pulling_upgrade(WEST) pulled all 12 iron_ingot strictly into Outbound (NOT Storage!) and ignored NORTH chest!
+        qa.checkEquals("s8.pulling_pulled_iron_to_outbound", 12, upgOutbound.getOrDefault(Items.IRON_INGOT, 0));
+        qa.checkEquals("s8.pulling_west_chest_emptied", 0, Lc2QaHelpers.totalItemCount(westChest));
+        qa.checkEquals("s8.pulling_ignored_unconfigured_north", 12, northChest.getOrDefault(Items.GOLD_INGOT, 0));
+        qa.checkEquals("s8.pulling_never_touched_storage", 0, upgStorage.getOrDefault(Items.IRON_INGOT, 0));
+        // ejector_upgrade(EAST) pushed all 10 diamond strictly from Storage into EAST chest and NEVER touched Outbound!
+        qa.checkEquals("s8.ejector_pushed_storage_diamonds_to_east", 10, eastChest.getOrDefault(Items.DIAMOND, 0));
+        qa.checkEquals("s8.ejector_storage_emptied", 0, Lc2QaHelpers.totalItemCount(upgStorage));
+        qa.checkEquals("s8.ejector_never_touched_outbound_emerald", 6, upgOutbound.getOrDefault(Items.EMERALD, 0));
+        qa.checkEquals("s8.ejector_never_ejected_outbound_to_east", 0, eastChest.getOrDefault(Items.EMERALD, 0));
+
+        // --- Verify 8B-2: Vehicle Launch NEVER ships items from Storage (27..53) & NEVER pulls chest without pulling_upgrade! ---
+        upgSt.clearContent();
+        Lc2QaHelpers.clearContainerBlock(level, s8UpgWestChestPos);
+        Lc2QaHelpers.clearContainerBlock(level, s8UpgEastChestPos);
+        Lc2QaHelpers.insertItemIntoBlock(level, s8UpgWestChestPos, new ItemStack(Items.REDSTONE, 16));
+        upgSt.setItem(CargoStationBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.COPPER_INGOT, 24));
+        upgSt.setTargetPos(s8UpgDummyTargetPos);
+        upgSt.setAutoReturn(false);
+        upgSt.setStoredEu(5000.0);
+        upgSt.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
+        upgSt.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+        qa.check("s8.vehicle_storage_isolation_dispatched", upgSt.tryDispatch(level, true), "status=" + upgSt.getStatusKey());
+        TransitRecord isoRec = findLatestTransitFrom(level, s8UpgStationPos, VehicleKind.STANDARD_DRONE);
+        qa.check("s8.vehicle_storage_isolation_record", isoRec != null, "isoRec=" + isoRec);
+        List<ItemStack> isoCargo = LogisticsLevelManager.data(level).getTransitCargo(isoRec.id());
+        qa.checkEquals("s8.vehicle_loaded_zero_from_storage_or_chest", 0, isoCargo.size());
+        qa.checkEquals("s8.storage_copper_still_untouched", 24,
+                Lc2QaHelpers.countStationStorage(upgSt).getOrDefault(Items.COPPER_INGOT, 0));
+        qa.checkEquals("s8.adjacent_chest_redstone_untouched_without_pulling", 16,
+                Lc2QaHelpers.countItemsInBlocks(level, List.of(s8UpgWestChestPos)).getOrDefault(Items.REDSTONE, 0));
+        // Clean up probe drone flight
+        LogisticsLevelManager.cancelTransitAndDrop(level, isoRec.id(), Vec3.ZERO, false);
+        for (CargoDroneEntity drone : level.getEntitiesOfClass(
+                CargoDroneEntity.class, AABB.ofSize(Vec3.atCenterOf(s8UpgStationPos), 12.0, 24.0, 12.0))) {
+            if (isoRec.id().equals(drone.getTransitId())) {
+                drone.discard();
+            }
+        }
+    }
+
+    private void runScenario8ItemsBeforeVehicleSetup(ServerLevel level) {
+        Lc2QaMod.LOGGER.info("[LC2-QA] === Scenario 8B: Items-Before-Drone & Items-Before-Boat Regression ===");
+
+        // 1) Items FIRST -> Drone SECOND: put items in Outbound + redstone ON while 0 drones parked!
+        CargoStationBlockEntity dOrig = Lc2QaHelpers.placeCargoStation(level, s8DroneOrigPos, "S8-ItemsFirstDroneA");
+        Lc2QaHelpers.placeCargoStation(level, s8DroneTargetPos, "S8-ItemsFirstDroneB");
+        dOrig.setTargetPos(s8DroneTargetPos);
+        dOrig.setAutoReturn(false);
+        dOrig.setStoredEu(5000.0);
+        dOrig.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
+        dOrig.setItem(CargoStationBlockEntity.SLOT_OUTBOUND_START, new ItemStack(Items.IRON_INGOT, 32));
+        dOrig.setItem(CargoStationBlockEntity.SLOT_OUTBOUND_START + 1, new ItemStack(Items.GOLD_INGOT, 16));
+        level.setBlock(s8DroneRedstonePos, Blocks.REDSTONE_BLOCK.defaultBlockState(), Block.UPDATE_ALL);
+
+        // 2) Items FIRST -> Boat SECOND (placed in water ~3.0m from berth, testing BOAT_DOCK_RADIUS = 3.5!)
+        Lc2QaHelpers.buildCanalEastWest(level, -19, -1, WATER_Y, -26);
+        SmartPortBlockEntity bOrig = Lc2QaHelpers.placeSmartPort(level, s8BoatWaterOrigPos, Direction.EAST, "S8-ItemsFirstBoatWaterA");
+        Lc2QaHelpers.placeSmartPort(level, s8BoatWaterTargetPos, Direction.WEST, "S8-ItemsFirstBoatWaterB");
+        bOrig.setTargetPos(s8BoatWaterTargetPos);
+        bOrig.setAutoReturn(false);
+        bOrig.setStoredEu(10000.0);
+        bOrig.setItem(SmartPortBlockEntity.SLOT_OUTBOUND_START, new ItemStack(Items.COPPER_INGOT, 40));
+        bOrig.setItem(SmartPortBlockEntity.SLOT_OUTBOUND_START + 1, new ItemStack(Items.COAL, 24));
+        level.setBlock(s8BoatWaterRedstonePos, Blocks.REDSTONE_BLOCK.defaultBlockState(), Block.UPDATE_ALL);
+
+        // 3) Items FIRST -> Boat SECOND via right-clicking port (spawnAndDockBoat -> dispatchCooldown = 0!)
+        Lc2QaHelpers.buildCanalEastWest(level, -19, -1, WATER_Y, 14);
+        SmartPortBlockEntity bDockOrig = Lc2QaHelpers.placeSmartPort(level, s8BoatDockOrigPos, Direction.EAST, "S8-ItemsFirstBoatDockA");
+        Lc2QaHelpers.placeSmartPort(level, s8BoatDockTargetPos, Direction.WEST, "S8-ItemsFirstBoatDockB");
+        bDockOrig.setTargetPos(s8BoatDockTargetPos);
+        bDockOrig.setAutoReturn(false);
+        bDockOrig.setStoredEu(10000.0);
+        bDockOrig.setItem(SmartPortBlockEntity.SLOT_OUTBOUND_START, new ItemStack(Items.DIAMOND, 18));
+        level.setBlock(s8BoatDockRedstonePos, Blocks.REDSTONE_BLOCK.defaultBlockState(), Block.UPDATE_ALL);
+    }
+
+    private void runScenario8ItemsBeforeVehiclePlace(ServerLevel level) {
+        CargoStationBlockEntity dOrig = (CargoStationBlockEntity) level.getBlockEntity(s8DroneOrigPos);
+        SmartPortBlockEntity bOrig = (SmartPortBlockEntity) level.getBlockEntity(s8BoatWaterOrigPos);
+        SmartPortBlockEntity bDockOrig = (SmartPortBlockEntity) level.getBlockEntity(s8BoatDockOrigPos);
+
+        // Verify ALL THREE stations tried dispatching while redstone ON + items present and recorded NO_VEHICLE!
+        qa.checkEquals("s8.items_first_drone_status_no_vehicle",
+                DispatchFailure.NO_VEHICLE.translationKey(), dOrig.getStatusKey());
+        qa.checkEquals("s8.items_first_boat_water_status_no_vehicle",
+                DispatchFailure.NO_VEHICLE.translationKey(), bOrig.getStatusKey());
+        qa.checkEquals("s8.items_first_boat_dock_status_no_vehicle",
+                DispatchFailure.NO_VEHICLE.translationKey(), bDockOrig.getStatusKey());
+        qa.check("s8.items_first_no_premature_transits",
+                findLatestTransitFrom(level, s8DroneOrigPos, VehicleKind.STANDARD_DRONE) == null
+                        && findLatestTransitFrom(level, s8BoatWaterOrigPos, VehicleKind.ELECTRIC_CARGO_BOAT) == null
+                        && findLatestTransitFrom(level, s8BoatDockOrigPos, VehicleKind.ELECTRIC_CARGO_BOAT) == null,
+                "0 active transits before placing vehicles");
+
+        // Now place the Drone into bay 55 (SLOT_DRONE_BAY_START) -> MUST reset dispatchCooldown=0 & launch immediately!
+        dOrig.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+
+        // Now place the Boat in water ~3.0 blocks away from berth center (x = berthX + 3.0) -> tests BOAT_DOCK_RADIUS=3.5 & immediate reset!
+        var berth = bOrig.refreshWaterBerth(level);
+        var surf = berth.waterSurfaceCenter();
+        ElectricCargoBoatEntity waterBoat = new ElectricCargoBoatEntity(Lc2Registries.ELECTRIC_CARGO_BOAT_ENTITY.get(), level);
+        waterBoat.setPos(surf.x() + 3.0, surf.y(), surf.z());
+        qa.check("s8.items_first_boat_spawned_at_3m", level.addFreshEntity(waterBoat),
+                "spawned at offset +3.0m from berth " + berth);
+
+        // Now place the second Boat via SmartPortBlockEntity.spawnAndDockBoat -> MUST reset dispatchCooldown=0 & launch immediately!
+        FakePlayer fakePlayer = FakePlayerFactory.getMinecraft(level);
+        ItemStack boatItem = Lc2QaHelpers.itemStack("lc2:electric_cargo_boat", 1);
+        qa.check("s8.items_first_boat_spawn_and_dock_ok", bDockOrig.spawnAndDockBoat(level, fakePlayer, boatItem),
+                "spawnAndDockBoat succeeded");
+    }
+
+    private void runScenario8ItemsBeforeVehicleLaunchCheck(ServerLevel level) {
+        // Within 2 ticks (proving cooldown was immediately reset to 0 instead of waiting 20 ticks!), ALL 3 MUST have launched!
+        TransitRecord dRec = findLatestTransitFrom(level, s8DroneOrigPos, VehicleKind.STANDARD_DRONE);
+        TransitRecord bWaterRec = findLatestTransitFrom(level, s8BoatWaterOrigPos, VehicleKind.ELECTRIC_CARGO_BOAT);
+        TransitRecord bDockRec = findLatestTransitFrom(level, s8BoatDockOrigPos, VehicleKind.ELECTRIC_CARGO_BOAT);
+
+        qa.check("s8.items_first_drone_launched_immediately", dRec != null, "dRec=" + dRec);
+        qa.check("s8.items_first_boat_water_3m_launched_immediately", bWaterRec != null, "bWaterRec=" + bWaterRec);
+        qa.check("s8.items_first_boat_dock_launched_immediately", bDockRec != null, "bDockRec=" + bDockRec);
+
+        s8ItemsFirstDroneId = dRec.id();
+        s8ItemsFirstBoatWaterId = bWaterRec.id();
+        s8ItemsFirstBoatDockId = bDockRec.id();
+
+        // Remove redstone blocks cleanly so stations don't re-trigger after test
+        level.setBlock(s8DroneRedstonePos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(s8BoatWaterRedstonePos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(s8BoatDockRedstonePos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+    }
+
+    private void tickScenario8ItemsBeforeVehicleArrival(ServerLevel level) {
+        if (stageTicks > 250) {
+            throw new AssertionError("Scenario 8 items-before-vehicle deliveries timed out after 250 ticks");
+        }
+        if (LogisticsLevelManager.isTransitActive(level, s8ItemsFirstDroneId)
+                || LogisticsLevelManager.isTransitActive(level, s8ItemsFirstBoatWaterId)
+                || LogisticsLevelManager.isTransitActive(level, s8ItemsFirstBoatDockId)) {
+            return;
+        }
+
+        // Verify ALL THREE delivered cleanly into target Storage (27..53) while target Outbound (0..26) stays EMPTY!
+        CargoStationBlockEntity dTarget = (CargoStationBlockEntity) level.getBlockEntity(s8DroneTargetPos);
+        Map<Item, Integer> dStorage = Lc2QaHelpers.countStationStorage(dTarget);
+        qa.checkEquals("s8.items_first_drone_delivered_iron_storage", 32, dStorage.getOrDefault(Items.IRON_INGOT, 0));
+        qa.checkEquals("s8.items_first_drone_delivered_gold_storage", 16, dStorage.getOrDefault(Items.GOLD_INGOT, 0));
+        qa.checkEquals("s8.items_first_drone_target_outbound_empty", 0,
+                Lc2QaHelpers.totalItemCount(Lc2QaHelpers.countStationOutbound(dTarget)));
+        qa.checkEquals("s8.items_first_drone_target_comparator_zero", 0, dTarget.getCargoComparatorSignal());
+
+        SmartPortBlockEntity bWaterTarget = (SmartPortBlockEntity) level.getBlockEntity(s8BoatWaterTargetPos);
+        Map<Item, Integer> bwStorage = Lc2QaHelpers.countStationStorage(bWaterTarget);
+        qa.checkEquals("s8.items_first_boat_water_delivered_copper_storage", 40, bwStorage.getOrDefault(Items.COPPER_INGOT, 0));
+        qa.checkEquals("s8.items_first_boat_water_delivered_coal_storage", 24, bwStorage.getOrDefault(Items.COAL, 0));
+        qa.checkEquals("s8.items_first_boat_water_target_outbound_empty", 0,
+                Lc2QaHelpers.totalItemCount(Lc2QaHelpers.countStationOutbound(bWaterTarget)));
+        qa.checkEquals("s8.items_first_boat_water_target_comparator_zero", 0, bWaterTarget.getCargoComparatorSignal());
+
+        SmartPortBlockEntity bDockTarget = (SmartPortBlockEntity) level.getBlockEntity(s8BoatDockTargetPos);
+        Map<Item, Integer> bdStorage = Lc2QaHelpers.countStationStorage(bDockTarget);
+        qa.checkEquals("s8.items_first_boat_dock_delivered_diamond_storage", 18, bdStorage.getOrDefault(Items.DIAMOND, 0));
+        qa.checkEquals("s8.items_first_boat_dock_target_outbound_empty", 0,
+                Lc2QaHelpers.totalItemCount(Lc2QaHelpers.countStationOutbound(bDockTarget)));
+
         advance(Stage.S7_WRITE_DISPATCH);
     }
 
@@ -1540,20 +2045,20 @@ final class Lc2QaRunner {
                 || LogisticsLevelManager.isTransitActive(level, s7DroneTransitId)) {
             return;
         }
-        // Verify 100% cargo delivered & zero duplicates!
-        Map<Item, Integer> boatDelivered = Lc2QaHelpers.countItemsInBlocks(level, List.of(s7PortBChestPos));
-        Map<Item, Integer> droneDelivered = Lc2QaHelpers.countItemsInBlocks(level, List.of(s7StationBChestPos));
+        // Verify 100% cargo delivered cleanly into target Storage (27..53) & zero duplicates!
+        SmartPortBlockEntity portB = (SmartPortBlockEntity) level.getBlockEntity(s7PortBPos);
+        CargoStationBlockEntity stA = (CargoStationBlockEntity) level.getBlockEntity(s7StationAPos);
+        CargoStationBlockEntity stB = (CargoStationBlockEntity) level.getBlockEntity(s7StationBPos);
+        Map<Item, Integer> boatDelivered = Lc2QaHelpers.countStationStorage(portB);
+        Map<Item, Integer> droneDelivered = Lc2QaHelpers.countStationStorage(stB);
         qa.checkEquals("s7.read_boat_delivered_all_items", s7ExpectedBoatItems, Lc2QaHelpers.totalItemCount(boatDelivered));
         qa.checkEquals("s7.read_drone_delivered_all_items", s7ExpectedDroneItems, Lc2QaHelpers.totalItemCount(droneDelivered));
 
-        SmartPortBlockEntity portB = (SmartPortBlockEntity) level.getBlockEntity(s7PortBPos);
         qa.check("s7.read_boat_docked_at_target", portB.findDockedBoat(level) != null, "boat docked cleanly");
         AABB canalBox = new AABB(-45, WATER_Y - 2, -95, 45, WATER_Y + 4, -85);
         int boatCount = level.getEntitiesOfClass(ElectricCargoBoatEntity.class, canalBox).size();
         qa.checkEquals("s7.read_no_duplicate_boats_after_restart", 1, boatCount);
 
-        CargoStationBlockEntity stA = (CargoStationBlockEntity) level.getBlockEntity(s7StationAPos);
-        CargoStationBlockEntity stB = (CargoStationBlockEntity) level.getBlockEntity(s7StationBPos);
         qa.check("s7.read_heavy_drone_auto_returned_to_origin",
                 stA.findReadyDroneBay() >= 0 && stA.getBayDroneKind(stA.findReadyDroneBay()) == VehicleKind.HEAVY_DRONE,
                 "stA dockedMask=" + Integer.toBinaryString(stA.getDockedBayMask()));

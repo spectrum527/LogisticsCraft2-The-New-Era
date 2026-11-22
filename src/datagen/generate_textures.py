@@ -5,9 +5,9 @@ Generates all original CC BY-SA 4.0 textures under assets/lc2/textures/:
   - 10 block textures (16x16)
   - 7 item textures (16x16)
   - 3 entity textures (128x128 ChestBoat UV + two 64x64 CargoDrone UVs)
-  - 2 GUI textures (256x256, 212x222 panel + dynamic sprite atlas)
+  - 2 GUI textures (512x256 atlas, 392x234 2-zone panel + right-margin dynamic sprites)
 
-Optionally writes a 4x nearest-neighbor visual contact sheet via --preview <path>.
+Optionally writes a visual contact sheet via --preview <path> or a 2x GUI-only preview via --gui-preview <path>.
 """
 
 import argparse
@@ -1075,16 +1075,16 @@ def make_entity_drone(heavy: bool) -> Image.Image:
 
 
 # =============================================================================
-# 4. GUI TEXTURES (256x256, 212x222 panel matching docs/GUI_LAYOUT.md)
+# 4. GUI TEXTURES (512x256 atlas, 392x234 2-zone panel matching docs/GUI_LAYOUT.md)
 # =============================================================================
 
-def _draw_slot(px, item_x: int, item_y: int, accent=None):
+def _draw_slot(px, item_x: int, item_y: int, accent=None, bg=None, dk=None, lt=None, mid=None):
     """Draw an authentic IC2 18x18 recessed inventory slot around (item_x, item_y)."""
     x0, y0, x1, y1 = item_x - 1, item_y - 1, item_x + 16, item_y + 16
-    c_bg = rgba("#8B9098")
-    c_dk = rgba("#373B42")
-    c_lt = rgba("#EEF1F5")
-    c_mid = rgba("#B8BDC6")
+    c_bg = bg if bg is not None else rgba("#8B9098")
+    c_dk = dk if dk is not None else rgba("#373B42")
+    c_lt = lt if lt is not None else rgba("#EEF1F5")
+    c_mid = mid if mid is not None else rgba("#B8BDC6")
     fill_rect(px, x0, y0, x1, y1, c_bg)
     hline(px, x0, x1 - 1, y0, c_dk)
     vline(px, x0, y0, y1 - 1, c_dk)
@@ -1146,153 +1146,207 @@ def _draw_eu_bolt(px, x0: int, y0: int, lit: bool):
                 px[x0 + dx, y0 + dy] = pal[ch]
 
 
+def _draw_swap_arrows_sprite(px, u0: int, v0: int):
+    """Draw a crisp 12x10 transparent-BG swap-arrows sprite (amber -> top, cyan <- bottom)."""
+    grid = [
+        ".......oo...",
+        ".ooooooAAo..",
+        "oAAAAAAHHHo.",
+        ".ooooooAAo..",
+        ".......oo...",
+        "...oo.......",
+        "..oCCoooooo.",
+        ".oKKKCCCCCCo",
+        "..oCCoooooo.",
+        "...oo.......",
+    ]
+    pal = {
+        "o": rgba("#181E27"),
+        "A": rgba("#F29B2E"),  # warm amber outbound arrow
+        "H": rgba("#FFE47A"),  # amber tip highlight
+        "C": rgba("#27C3E6"),  # cool cyan storage arrow
+        "K": rgba("#A3F8FF"),  # cyan tip highlight
+    }
+    assert len(grid) == 10 and all(len(r) == 12 for r in grid)
+    for dy, row in enumerate(grid):
+        for dx, ch in enumerate(row):
+            if ch != ".":
+                px[u0 + dx, v0 + dy] = pal[ch]
+
+
+def _verify_gui_layout_non_overlapping(is_cargo_station: bool):
+    """Verify mathematically that every widget, LCD, slot, badge, and atlas sprite has ZERO overlaps."""
+    panel_rects = [
+        ("title_label", 8, 4, 150, 8),
+        # Top Control Bar Row 1
+        ("name_edit", 8, 13, 150, 12),
+        ("save_btn", 162, 13, 44, 12),
+        ("auto_return_btn", 210, 13, 66, 12),
+        ("priority_btn", 279, 13, 68, 12),
+        # Top Control Bar Row 2
+        ("prev_btn", 8, 27, 14, 12),
+        ("target_lcd", 23, 27, 256, 12),
+        ("next_btn", 280, 27, 14, 12),
+        ("launch_btn", 297, 27, 50, 12),
+        # Top Control Bar Row 3
+        ("x_edit", 8, 41, 44, 12),
+        ("y_edit", 54, 41, 36, 12),
+        ("z_edit", 92, 41, 44, 12),
+        ("set_btn", 138, 41, 36, 12),
+        ("status_lcd", 176, 41, 171, 12),
+        # 2-Zone Cargo Section
+        ("outbound_label", 8, 77, 160, 8),
+        ("outbound_bar", 7, 85, 162, 1),
+        ("outbound_grid", 7, 86, 162, 54),
+        ("swap_btn", 172, 104, 16, 20),
+        ("storage_label", 190, 77, 160, 8),
+        ("storage_bar", 189, 85, 162, 1),
+        ("storage_grid", 189, 86, 162, 54),
+        # Player Inventory
+        ("inv_label", 99, 144, 160, 8),
+        ("player_inv", 98, 152, 162, 54),
+        ("player_hotbar", 98, 210, 162, 18),
+        # Right Column
+        ("divider", 355, 13, 2, 215),
+        ("eu_gauge", 362, 13, 18, 42),
+        ("eu_bolt", 366, 57, 10, 14),
+        ("battery_slot", 362, 75, 18, 18),
+        ("upgrade_slots", 362, 101, 18, 72),
+        ("chunk_badge", 362, 179, 18, 18),
+        ("ready_badge", 362, 199, 18, 18),
+    ]
+    if not is_cargo_station:
+        panel_rects.append(("harbor_lcd", 7, 56, 340, 18))
+    else:
+        panel_rects.extend([
+            ("rf_chip_slot", 7, 56, 18, 18),
+            ("rf_range_lcd", 26, 56, 42, 18),
+            ("drone_bays", 73, 56, 108, 18),
+            ("flight_deck_lcd", 186, 56, 161, 18),
+        ])
+
+    for name, x, y, w, h in panel_rects:
+        assert x >= 3 and y >= 3 and x + w <= 389 and y + h <= 231, (
+            f"Panel element {name} ({x},{y},{w},{h}) exceeds safe panel interior (3..388, 3..230)"
+        )
+    for i, (n1, x1, y1, w1, h1) in enumerate(panel_rects):
+        for n2, x2, y2, w2, h2 in panel_rects[i + 1:]:
+            overlap_x = x1 < x2 + w2 and x2 < x1 + w1
+            overlap_y = y1 < y2 + h2 and y2 < y1 + h1
+            assert not (overlap_x and overlap_y), (
+                f"GUI layout overlap between {n1} ({x1},{y1},{w1},{h1}) and {n2} ({x2},{y2},{w2},{h2})"
+            )
+
+    atlas_rects = [
+        ("main_panel", 0, 0, 392, 234),
+        ("eu_fill", 396, 0, 16, 40),
+        ("eu_bolt_lit", 414, 0, 10, 14),
+        ("badge_active", 396, 44, 16, 16),
+        ("badge_warn", 414, 44, 16, 16),
+        ("badge_chunk", 396, 64, 16, 16),
+        ("swap_arrows", 414, 64, 12, 10),
+    ]
+    for name, x, y, w, h in atlas_rects:
+        assert x >= 0 and y >= 0 and x + w <= 512 and y + h <= 256, (
+            f"Atlas sprite {name} ({x},{y},{w},{h}) exceeds 512x256"
+        )
+    for i, (n1, x1, y1, w1, h1) in enumerate(atlas_rects):
+        for n2, x2, y2, w2, h2 in atlas_rects[i + 1:]:
+            overlap_x = x1 < x2 + w2 and x2 < x1 + w1
+            overlap_y = y1 < y2 + h2 and y2 < y1 + h1
+            assert not (overlap_x and overlap_y), (
+                f"Atlas sprite overlap between {n1} and {n2}"
+            )
+
+
 def _draw_base_gui(is_cargo_station: bool) -> Image.Image:
-    im = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+    _verify_gui_layout_non_overlapping(is_cargo_station)
+
+    im = Image.new("RGBA", (512, 256), (0, 0, 0, 0))
     px = im.load()
 
-    # Authentic IC2 beveled grey panel (212x222 in top-left of 256x256)
+    # Authentic IC2 beveled grey panel (392x234 in top-left of 512x256 atlas)
+    PW, PH = 392, 234
     c_out = rgba("#1E232B")
     c_hi = rgba("#F2F4F7")
     c_bg = rgba("#C6C6C6")
     c_bg2 = rgba("#C0C2C6")  # ultra-subtle horizontal brush
     c_sh = rgba("#555B66")
     c_seam = rgba("#9BA0A8")
+    c_seam_hi = rgba("#E4E7EC")
 
     # Outer frame
-    fill_rect(px, 0, 0, 211, 221, c_out)
+    fill_rect(px, 0, 0, PW - 1, PH - 1, c_out)
     # Rounded pixel corners (cut 1px transparent outside border)
-    for cx, cy in ((0, 0), (211, 0), (0, 221), (211, 221)):
+    for cx, cy in ((0, 0), (PW - 1, 0), (0, PH - 1), (PW - 1, PH - 1)):
         px[cx, cy] = (0, 0, 0, 0)
     # Bevel border (2px highlight top/left, 2px shadow bottom/right)
-    fill_rect(px, 1, 1, 210, 220, c_bg)
-    hline(px, 1, 209, 1, c_hi)
-    hline(px, 1, 208, 2, c_hi)
-    vline(px, 1, 1, 219, c_hi)
-    vline(px, 2, 1, 218, c_hi)
-    hline(px, 2, 210, 220, c_sh)
-    hline(px, 3, 210, 219, c_sh)
-    vline(px, 210, 2, 220, c_sh)
-    vline(px, 209, 3, 220, c_sh)
+    fill_rect(px, 1, 1, PW - 2, PH - 2, c_bg)
+    hline(px, 1, PW - 3, 1, c_hi)
+    hline(px, 1, PW - 4, 2, c_hi)
+    vline(px, 1, 1, PH - 3, c_hi)
+    vline(px, 2, 1, PH - 4, c_hi)
+    hline(px, 2, PW - 2, PH - 2, c_sh)
+    hline(px, 3, PW - 2, PH - 3, c_sh)
+    vline(px, PW - 2, 2, PH - 2, c_sh)
+    vline(px, PW - 3, 3, PH - 2, c_sh)
     # Inner subtle industrial horizontal grain
-    for y in range(4, 218, 2):
-        hline(px, 3, 208, y, c_bg2)
+    for y in range(4, PH - 3, 2):
+        hline(px, 3, PW - 4, y, c_bg2)
     # IC2 corner rivets
-    for rx, ry in ((4, 4), (206, 4), (4, 216), (206, 216)):
+    for rx, ry in ((4, 4), (PW - 6, 4), (4, PH - 6), (PW - 6, PH - 6)):
         px[rx, ry] = rgba("#707680")
         px[rx + 1, ry + 1] = c_hi
 
-    # Vertical divider seam separating main area (x=7..170) from right power/upgrade column (x=176..206)
-    vline(px, 175, 14, 215, c_seam)
-    vline(px, 176, 14, 215, rgba("#E4E7EC"))
+    # Vertical bevel divider separating main area (x=7..350) from right power/upgrade column (x=356..388)
+    vline(px, 355, 13, 227, c_seam)
+    vline(px, 356, 13, 227, c_seam_hi)
 
-    # Top recessed LCD displays (exact coords from docs/GUI_LAYOUT.md)
-    # Target readout LCD: (23, 28, 132, 12)
-    _draw_lcd(px, 23, 28, 132, 12)
-    # Status readout LCD: (7, 67, 164, 10)
-    _draw_lcd(px, 7, 67, 164, 10)
+    # Subtle horizontal section seams separating Top Control Bar / Middle Deck / 2-Zone Cargo
+    hline(px, 7, 350, 54, c_seam)
+    hline(px, 7, 350, 75, c_seam)
 
-    # Subtle inset framing behind control rows (y=14..66)
-    hline(px, 7, 170, 13, c_seam)
+    # -------------------------------------------------------------------------
+    # Top Control Bar LCDs (exact coordinates from docs/GUI_LAYOUT.md)
+    # -------------------------------------------------------------------------
+    # Row 2: Target Readout LCD (23, 27, 256, 12)
+    _draw_lcd(px, 23, 27, 256, 12)
+    # Row 3: Status Readout LCD (176, 41, 171, 12)
+    _draw_lcd(px, 176, 41, 171, 12)
 
-    # Player Inventory (3x9: x=8+col*18, y=142+row*18) + Hotbar (1x9: y=199)
-    for row in range(3):
-        for col in range(9):
-            _draw_slot(px, 8 + col * 18, 142 + row * 18)
-    for col in range(9):
-        _draw_slot(px, 8 + col * 18, 199)
-
-    # Right column: EU Gauge Frame (185, 16, 18, 42) -> inner (186, 17, 16, 40)
-    _draw_lcd(px, 185, 16, 18, 42)
-    # Subtle EU scale tick marks inside dark gauge
-    for ty in range(21, 56, 4):
-        hline(px, 187, 190, ty, rgba("#2C3B4D"))
-        hline(px, 197, 200, ty, rgba("#2C3B4D"))
-    # Unlit EU bolt at (189, 60, 10, 14)
-    _draw_eu_bolt(px, 189, 60, lit=False)
-
-    # Single-use battery slot at (186, 79) with subtle battery watermark
-    _draw_slot(px, 186, 79)
-    bat_wm = [
+    # -------------------------------------------------------------------------
+    # Middle Deck Strip (y = 56..73)
+    # -------------------------------------------------------------------------
+    drone_wm = [
         "................",
-        "......####......",
+        "..###......###..",
+        "..#+#......#+#..",
+        "..###..##..###..",
+        "....#.####.#....",
         ".....######.....",
-        "....########....",
-        "....#++++++#....",
-        "....#+####+#....",
-        "....#++##++#....",
-        "....#++++++#....",
-        "....#+####+#....",
-        "....#++++++#....",
-        "....#+####+#....",
-        "....#++++++#....",
-        "....########....",
+        ".....##++##.....",
+        ".....######.....",
+        "....#.####.#....",
+        "..###..##..###..",
+        "..#+#......#+#..",
+        "..###......###..",
+        "................",
         "................",
         "................",
         "................",
     ]
-    _draw_watermark(px, 186, 79, bat_wm, rgba("#7B8088"), rgba("#636870"))
-
-    # 4 Machine Upgrade slots at (186, 106/124/142/160) with IC2 upgrade card watermark
-    upg_wm = [
-        "................",
-        "...##########...",
-        "..##++++++++##..",
-        "..#+########+#..",
-        "..#+#......#+#..",
-        "..#+#..++..#+#..",
-        "..#+#.++++.#+#..",
-        "..#+#..++..#+#..",
-        "..#+#......#+#..",
-        "..#+########+#..",
-        "..############..",
-        "...##..##..##...",
-        "...##..##..##...",
-        "................",
-        "................",
-        "................",
-    ]
-    for uy in (106, 124, 142, 160):
-        _draw_slot(px, 186, uy)
-        _draw_watermark(px, 186, uy, upg_wm, rgba("#7D828A"), rgba("#676C74"))
-
-    # Bottom-right recessed status badge wells at (185, 179, 18, 18) & (185, 198, 18, 18)
-    _draw_lcd(px, 185, 179, 18, 18)
-    _draw_lcd(px, 185, 198, 18, 18)
-    # Subtle dim chunk-grid watermark in (186, 180)
-    for gx in (189, 193, 197):
-        for gy in (183, 187, 191):
-            fill_rect(px, gx, gy, gx + 1, gy + 1, rgba("#24333C"))
-
-    # Machine-specific slots
     if not is_cargo_station:
-        # Smart Port: 27 Cargo Buffer slots (3x9 @ x=8+col*18, y=79+row*18)
-        for row in range(3):
-            for col in range(9):
-                _draw_slot(px, 8 + col * 18, 79 + row * 18)
-        # Subtle dim anchor watermark in bottom-right badge (186, 199)
-        anchor_wm = [
-            "................",
-            ".......##.......",
-            "......#..#......",
-            ".......##.......",
-            "....########....",
-            ".......##.......",
-            ".......##.......",
-            ".......##.......",
-            "...#...##...#...",
-            "...##..##..##...",
-            "....###++###....",
-            "......####......",
-            "................",
-            "................",
-            "................",
-            "................",
-        ]
-        _draw_watermark(px, 186, 199, anchor_wm, rgba("#2E485C"), rgba("#213240"))
+        # Smart Port: Clean dark harbor telemetry LCD strip (7, 56, 340, 18)
+        _draw_lcd(px, 7, 56, 340, 18)
+        # Subtle 2px maritime cobalt/cyan status accent strip inside left edge (x=8..9; text starts x=12)
+        vline(px, 8, 57, 72, rgba("#1E4F82"))
+        vline(px, 9, 57, 72, rgba("#2E78BF"))
+        for ay in (61, 62, 67, 68):
+            px[9, ay] = rgba("#4CD8F5")
     else:
         # Cargo Station:
-        # RF Chip slot at (8, 79) with antenna watermark + subtle cyan rim
-        _draw_slot(px, 8, 79, accent=rgba("#4A7E94"))
+        # RF Chip Slot (8, 57) -> frame 7..24, 56..73
+        _draw_slot(px, 8, 57, accent=rgba("#4A7E94"))
         rf_wm = [
             "................",
             "....#......#....",
@@ -1311,51 +1365,197 @@ def _draw_base_gui(is_cargo_station: bool) -> Image.Image:
             "................",
             "................",
         ]
-        _draw_watermark(px, 8, 79, rf_wm, rgba("#7B8894"), rgba("#5F6973"))
+        _draw_watermark(px, 8, 57, rf_wm, rgba("#7B8894"), rgba("#5F6973"))
 
-        # RF Range Mini-LCD at (26, 78, 34, 18) — flush with RF & Drone Bay slot frames
-        _draw_lcd(px, 26, 78, 34, 18)
+        # RF Range Mini-LCD (26, 56, 42, 18)
+        _draw_lcd(px, 26, 56, 42, 18)
 
-        # 6 Drone Bay slots at (62 + bay*18, 79) with subtle drone-pad watermark
-        drone_wm = [
+        # 6 Drone Bay Slots (74 + bay * 18, 57) -> frames 73..180, 56..73
+        for bay in range(6):
+            bx = 74 + bay * 18
+            _draw_slot(px, bx, 57)
+            _draw_watermark(px, bx, 57, drone_wm, rgba("#7C838C"), rgba("#636A73"))
+
+        # Flight Deck Status LCD (186, 56, 161, 18)
+        _draw_lcd(px, 186, 56, 161, 18)
+
+    # -------------------------------------------------------------------------
+    # 2-Zone Cargo Section (y = 77..141, IDENTICAL on Smart Port & Cargo Station)
+    # -------------------------------------------------------------------------
+    # Left Zone: Outbound (0..26, 3x9 @ x = 8 + col*18, y = 87 + row*18)
+    # Baked warm amber indicator bar at (7, 85, 162, 1)
+    hline(px, 7, 168, 85, rgba("#D9821E"))
+    hline(px, 8, 167, 85, rgba("#E69228"))
+    px[7, 85] = rgba("#A85B10")
+    px[168, 85] = rgba("#A85B10")
+    for row in range(3):
+        for col in range(9):
+            _draw_slot(
+                px,
+                8 + col * 18,
+                87 + row * 18,
+                bg=rgba("#8E8D89"),
+                dk=rgba("#443D35"),
+                lt=rgba("#F0EBE4"),
+                mid=rgba("#BCB7B0"),
+            )
+    # Subtle warm amber-tinted inner recess border around Outbound 3x9 perimeter (7..168, 86..139)
+    hline(px, 7, 167, 86, rgba("#66441E"))
+    vline(px, 7, 86, 138, rgba("#66441E"))
+    hline(px, 8, 168, 139, rgba("#F3E1CA"))
+    vline(px, 168, 87, 139, rgba("#F3E1CA"))
+    # Subtle bottom amber accent hairline at (7, 140, 162, 1)
+    hline(px, 7, 168, 140, rgba("#BD8C54"))
+
+    # Center Channel (x = 169..188): Swap Button sits at (172, 104, 16, 20)
+    # Subtle engraved industrial directional guide chevrons above (y=93..97) & below (y=129..133)
+    # Centered on x=176..183 (midpoint 179.5 matching swap button center 179.5)
+    c_arr_amb = rgba("#B86E1D")
+    c_arr_amb_hi = rgba("#DFC8A8")
+    for ax in range(176, 182):
+        px[ax, 95] = c_arr_amb
+        px[ax, 96] = c_arr_amb_hi
+    for ax, ay in ((180, 93), (181, 94), (182, 95), (181, 96), (180, 97)):
+        px[ax, ay] = c_arr_amb
+
+    c_arr_cyn = rgba("#1E7F96")
+    c_arr_cyn_hi = rgba("#B7DCE6")
+    for ax in range(178, 184):
+        px[ax, 131] = c_arr_cyn
+        px[ax, 132] = c_arr_cyn_hi
+    for ax, ay in ((179, 129), (178, 130), (177, 131), (178, 132), (179, 133)):
+        px[ax, ay] = c_arr_cyn
+
+    # Right Zone: Storage (27..53, 3x9 @ x = 190 + col*18, y = 87 + row*18)
+    # Baked cool cyan indicator bar at (189, 85, 162, 1)
+    hline(px, 189, 350, 85, rgba("#1A92AD"))
+    hline(px, 190, 349, 85, rgba("#25ACC9"))
+    px[189, 85] = rgba("#116478")
+    px[350, 85] = rgba("#116478")
+    for row in range(3):
+        for col in range(9):
+            _draw_slot(
+                px,
+                190 + col * 18,
+                87 + row * 18,
+                bg=rgba("#889198"),
+                dk=rgba("#33414A"),
+                lt=rgba("#E7F1F5"),
+                mid=rgba("#B2BFC6"),
+            )
+    # Subtle cool cyan-tinted inner recess border around Storage 3x9 perimeter (189..350, 86..139)
+    hline(px, 189, 349, 86, rgba("#1D4756"))
+    vline(px, 189, 86, 138, rgba("#1D4756"))
+    hline(px, 190, 350, 139, rgba("#CEEAF2"))
+    vline(px, 350, 87, 139, rgba("#CEEAF2"))
+    # Subtle bottom cyan accent hairline at (189, 140, 162, 1)
+    hline(px, 189, 350, 140, rgba("#5B94A4"))
+
+    # -------------------------------------------------------------------------
+    # Player Inventory (centered beneath both zones: x = 99 + col*18)
+    # -------------------------------------------------------------------------
+    for row in range(3):
+        for col in range(9):
+            _draw_slot(px, 99 + col * 18, 153 + row * 18)
+    for col in range(9):
+        _draw_slot(px, 99 + col * 18, 211)
+
+    # -------------------------------------------------------------------------
+    # Right Power & Upgrade Column (x = 356..388, IDENTICAL on both machines)
+    # -------------------------------------------------------------------------
+    # EU Gauge Frame (362, 13, 18, 42) -> fill (363, 14, 16, 40)
+    _draw_lcd(px, 362, 13, 18, 42)
+    # Subtle EU scale tick marks inside dark gauge (every 4px = 10%)
+    for ty in range(18, 53, 4):
+        hline(px, 364, 367, ty, rgba("#2C3B4D"))
+        hline(px, 374, 377, ty, rgba("#2C3B4D"))
+    # Unlit EU bolt at (366, 57, 10, 14)
+    _draw_eu_bolt(px, 366, 57, lit=False)
+
+    # Single-Use Battery Slot (363, 76) -> frame 362..379, 75..92
+    _draw_slot(px, 363, 76)
+    bat_wm = [
+        "................",
+        "......####......",
+        ".....######.....",
+        "....########....",
+        "....#++++++#....",
+        "....#+####+#....",
+        "....#++##++#....",
+        "....#++++++#....",
+        "....#+####+#....",
+        "....#++++++#....",
+        "....#+####+#....",
+        "....#++++++#....",
+        "....########....",
+        "................",
+        "................",
+        "................",
+    ]
+    _draw_watermark(px, 363, 76, bat_wm, rgba("#7B8088"), rgba("#636870"))
+
+    # 4 Machine Upgrade Slots (363, 102/120/138/156)
+    upg_wm = [
+        "................",
+        "...##########...",
+        "..##++++++++##..",
+        "..#+########+#..",
+        "..#+#......#+#..",
+        "..#+#..++..#+#..",
+        "..#+#.++++.#+#..",
+        "..#+#..++..#+#..",
+        "..#+#......#+#..",
+        "..#+########+#..",
+        "..############..",
+        "...##..##..##...",
+        "...##..##..##...",
+        "................",
+        "................",
+        "................",
+    ]
+    for uy in (102, 120, 138, 156):
+        _draw_slot(px, 363, uy)
+        _draw_watermark(px, 363, uy, upg_wm, rgba("#7D828A"), rgba("#676C74"))
+
+    # Bottom-right recessed status badge wells:
+    # Chunk-Loader Badge well (362, 179, 18, 18) -> active badge (363, 180, 16, 16)
+    # Vehicle/Port Ready Badge well (362, 199, 18, 18) -> active/warn badge (363, 200, 16, 16)
+    _draw_lcd(px, 362, 179, 18, 18)
+    _draw_lcd(px, 362, 199, 18, 18)
+    # Subtle dim chunk-grid watermark in (363, 180)
+    for gx in (366, 370, 374):
+        for gy in (183, 187, 191):
+            fill_rect(px, gx, gy, gx + 1, gy + 1, rgba("#24333C"))
+
+    if not is_cargo_station:
+        anchor_wm = [
             "................",
-            "..###......###..",
-            "..#+#......#+#..",
-            "..###..##..###..",
-            "....#.####.#....",
-            ".....######.....",
-            ".....##++##.....",
-            ".....######.....",
-            "....#.####.#....",
-            "..###..##..###..",
-            "..#+#......#+#..",
-            "..###......###..",
+            ".......##.......",
+            "......#..#......",
+            ".......##.......",
+            "....########....",
+            ".......##.......",
+            ".......##.......",
+            ".......##.......",
+            "...#...##...#...",
+            "...##..##..##...",
+            "....###++###....",
+            "......####......",
             "................",
             "................",
             "................",
             "................",
         ]
-        for bay in range(6):
-            bx = 62 + bay * 18
-            _draw_slot(px, bx, 79)
-            _draw_watermark(px, bx, 79, drone_wm, rgba("#7C838C"), rgba("#636A73"))
-
-        # 18 Cargo Buffer slots (2x9 @ x=8+col*18, y=97+row*18)
-        for row in range(2):
-            for col in range(9):
-                _draw_slot(px, 8 + col * 18, 97 + row * 18)
-
-        # Subtle dim drone watermark in bottom-right badge (186, 199)
-        _draw_watermark(px, 186, 199, drone_wm, rgba("#2E485C"), rgba("#213240"))
+        _draw_watermark(px, 363, 200, anchor_wm, rgba("#2E485C"), rgba("#213240"))
+    else:
+        _draw_watermark(px, 363, 200, drone_wm, rgba("#2E485C"), rgba("#213240"))
 
     # =========================================================================
-    # DYNAMIC OVERLAY SPRITES in unused right margin (u = 216..255)
+    # DYNAMIC OVERLAY SPRITES in unused right margin (u = 396..444)
     # =========================================================================
 
-    # 1) Lit EU Energy Column Fill: (u=216, v=0, w=16, h=40)
-    # Vibrant IC2 segmented red->orange->gold energy column
+    # 1) Lit EU Energy Column Fill: UV (396, 0, 16, 40)
     for dy in range(40):
-        # dy=0 is top (fullest/gold-yellow), dy=39 is bottom (red-orange)
         frac = 1.0 - (dy / 39.0)
         if frac > 0.72:
             c_l, c_m, c_r = rgba("#FFF066"), rgba("#FFCC29"), rgba("#D98C14")
@@ -1364,23 +1564,21 @@ def _draw_base_gui(is_cargo_station: bool) -> Image.Image:
         else:
             c_l, c_m, c_r = rgba("#FF7838"), rgba("#E83B17"), rgba("#9E1E0B")
         if dy % 4 == 3:
-            # Crisp dark segment groove
-            hline(px, 216, 231, dy, rgba("#5E1C0A"))
+            hline(px, 396, 411, dy, rgba("#5E1C0A"))
         else:
-            hline(px, 216, 231, dy, c_m)
-            vline(px, 216, dy, dy, c_r)
-            vline(px, 217, dy, dy, c_l)
-            vline(px, 218, dy, dy, c_l)
-            vline(px, 231, dy, dy, c_r)
+            hline(px, 396, 411, dy, c_m)
+            px[396, dy] = c_r
+            px[397, dy] = c_l
+            px[398, dy] = c_l
+            px[411, dy] = c_r
 
-    # 2) Lit EU Lightning Bolt: (u=234, v=0, w=10, h=14)
-    _draw_eu_bolt(px, 234, 0, lit=True)
+    # 2) Lit EU Lightning Bolt: UV (414, 0, 10, 14)
+    _draw_eu_bolt(px, 414, 0, lit=True)
 
-    # 3) Active Vehicle Badge: (u=216, v=44, w=16, h=16)
-    fill_rect(px, 216, 44, 231, 59, rgba("#132633"))
+    # 3) Active Vehicle / Port Ready Badge: UV (396, 44, 16, 16)
+    fill_rect(px, 396, 44, 411, 59, rgba("#132633"))
     if not is_cargo_station:
-        # Lit cyan anchor icon
-        _draw_watermark(px, 216, 44, [
+        _draw_watermark(px, 396, 44, [
             "................",
             ".......++.......",
             "......+..+......",
@@ -1399,29 +1597,11 @@ def _draw_base_gui(is_cargo_station: bool) -> Image.Image:
             "................",
         ], rgba("#3CEEFF"), rgba("#BDFBFF"))
     else:
-        # Lit cyan drone icon
-        _draw_watermark(px, 216, 44, [
-            "................",
-            "..###......###..",
-            "..#+#......#+#..",
-            "..###..##..###..",
-            "....#.####.#....",
-            ".....######.....",
-            ".....##++##.....",
-            ".....######.....",
-            "....#.####.#....",
-            "..###..##..###..",
-            "..#+#......#+#..",
-            "..###......###..",
-            "................",
-            "................",
-            "................",
-            "................",
-        ], rgba("#C2FDFF"), rgba("#30E4FF"))
+        _draw_watermark(px, 396, 44, drone_wm, rgba("#C2FDFF"), rgba("#30E4FF"))
 
-    # 4) Warning / Idle Badge: (u=234, v=44, w=16, h=16)
-    fill_rect(px, 234, 44, 249, 59, rgba("#2B1F10"))
-    _draw_watermark(px, 234, 44, [
+    # 4) Warning / Idle Badge: UV (414, 44, 16, 16)
+    fill_rect(px, 414, 44, 429, 59, rgba("#2B1F10"))
+    _draw_watermark(px, 414, 44, [
         "................",
         ".......##.......",
         "......####......",
@@ -1440,12 +1620,15 @@ def _draw_base_gui(is_cargo_station: bool) -> Image.Image:
         "................",
     ], rgba("#FFF4B8"), rgba("#F0A422"))
 
-    # 5) Chunk-Loader Active Badge: (u=216, v=64, w=16, h=16)
-    fill_rect(px, 216, 64, 231, 79, rgba("#0F2420"))
-    for gx in (219, 223, 227):
+    # 5) Chunk-Loader Active Badge: UV (396, 64, 16, 16)
+    fill_rect(px, 396, 64, 411, 79, rgba("#0F2420"))
+    for gx in (399, 403, 407):
         for gy in (67, 71, 75):
-            col = rgba("#A8FFEB") if (gx == 223 and gy == 71) else rgba("#24D9AC")
+            col = rgba("#A8FFEB") if (gx == 403 and gy == 71) else rgba("#24D9AC")
             fill_rect(px, gx, gy, gx + 1, gy + 1, col)
+
+    # 6) Swap Arrows Icon: UV (414, 64, 12, 10) — transparent BG for button overlay
+    _draw_swap_arrows_sprite(px, 414, 64)
 
     return im
 
@@ -1479,13 +1662,13 @@ def generate_preview(out_path: Path, generated: dict[str, Image.Image]):
     ]
     guis = ["gui/smart_port", "gui/cargo_station"]
 
-    # Layout canvas width = 1180 px, tight vertical framing
+    # Layout canvas width = 1180 px, stacked 2x 512x256 GUIs cleanly
     W = 1180
-    H = 1412
+    H = 1996
     sheet = Image.new("RGBA", (W, H), bg)
     draw = ImageDraw.Draw(sheet)
 
-    draw.text((20, 14), "LogisticsCraft2 (lc2) - Complete Original Asset Preview (4x Nearest-Neighbor)", fill=hdr_col)
+    draw.text((20, 14), "LogisticsCraft2 (lc2) - Complete Original Asset Preview (Nearest-Neighbor)", fill=hdr_col)
 
     # Section 1: Blocks (2 rows of 5)
     y = 42
@@ -1542,27 +1725,81 @@ def generate_preview(out_path: Path, generated: dict[str, Image.Image]):
     sheet.alpha_composite(d2_img, (dx2 + 46, by + 82))
     draw.text((dx2 + 12, by + 8), "entity/drone/heavy_transport_drone.png (64x64 @ 4x)", fill=text_col)
 
-    # Section 4: GUIs (256x256 @ 2x = 512x512 side-by-side so full 256x256 including sprite margin is crystal clear!)
+    # Section 4: 2-Zone Machine GUIs (512x256 @ 2x = 1024x512 stacked cleanly)
     y += 438
-    draw.text((20, y), "MACHINE GUIs (256x256 atlas with 212x222 panel + u=216..255 sprite strip @ 2x nearest-neighbor)", fill=hdr_col)
+    draw.text((20, y), "MACHINE GUIs (512x256 atlas: 392x234 2-zone panel + u=396..444 sprites @ 2x)", fill=hdr_col)
     y += 18
     for idx, key in enumerate(guis):
-        gx = 20 + idx * 576
-        gy = y
-        draw.rectangle([gx, gy, gx + 556, gy + 552], fill=card_bg, outline=border)
-        g_img = generated[key].resize((256 * 2, 256 * 2), Image.NEAREST)
-        sheet.alpha_composite(g_img, (gx + 22, gy + 28))
-        draw.text((gx + 16, gy + 8), f"{key}.png (256x256 -> 212x222 panel)", fill=text_col)
+        gx = 20
+        gy = y + idx * 564
+        draw.rectangle([gx, gy, gx + 1140, gy + 548], fill=card_bg, outline=border)
+        g_img = generated[key].resize((512 * 2, 256 * 2), Image.NEAREST)
+        sheet.alpha_composite(g_img, (gx + 58, gy + 26))
+        draw.text((gx + 16, gy + 8), f"{key}.png (512x256 atlas -> 392x234 2-zone panel)", fill=text_col)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(out_path)
     print(f"Saved preview contact sheet: {out_path} ({sheet.size[0]}x{sheet.size[1]})")
 
 
+def generate_gui_preview(out_path: Path, generated: dict[str, Image.Image]):
+    """Render a clean 2x nearest-neighbor preview PNG of BOTH 512x256 2-zone GUIs."""
+    bg = rgba("#151A22")
+    card_bg = rgba("#222936")
+    border = rgba("#47556B")
+    text_col = rgba("#E8F0F8")
+    sub_col = rgba("#9AB0C7")
+    hdr_col = rgba("#5CE8FF")
+
+    # Two 512x256 GUIs @ 2x = 1024x512 each, stacked vertically with tight framing
+    W = 1088
+    H = 1172
+    sheet = Image.new("RGBA", (W, H), bg)
+    draw = ImageDraw.Draw(sheet)
+
+    draw.text(
+        (24, 14),
+        "LogisticsCraft2 (v1.1.0) - 2-Zone Inventory GUIs (512x256 Atlas @ 2x Nearest-Neighbor | 392x234 Panel)",
+        fill=hdr_col,
+    )
+
+    entries = [
+        (
+            "gui/smart_port",
+            "Smart Port (assets/lc2/textures/gui/smart_port.png) - 512x256 -> 392x234 | 0..26 Outbound (Amber) | Swap | 27..53 Storage (Cyan)",
+        ),
+        (
+            "gui/cargo_station",
+            "Cargo Station (assets/lc2/textures/gui/cargo_station.png) - 512x256 -> 392x234 | RF + 6 Drone Bays | 0..26 Outbound | Swap | 27..53 Storage",
+        ),
+    ]
+    for idx, (key, caption) in enumerate(entries):
+        cx = 16
+        cy = 40 + idx * 562
+        draw.rectangle([cx, cy, cx + 1055, cy + 548], fill=card_bg, outline=border)
+        draw.text((cx + 16, cy + 9), caption, fill=text_col)
+        # Subtle bounding box around active 512x256 @ 2x region so sprite margin edges are clearly visible
+        ax, ay = cx + 16, cy + 28
+        draw.rectangle([ax - 1, ay - 1, ax + 1024, ay + 512], fill=rgba("#181E28"), outline=rgba("#384457"))
+        g_img = generated[key].resize((512 * 2, 256 * 2), Image.NEAREST)
+        sheet.alpha_composite(g_img, (ax, ay))
+        draw.text(
+            (ax + 792, ay + 180),
+            "Dynamic Sprites (u=396..444):\n- EU Fill (396,0 16x40)\n- EU Bolt (414,0 10x14)\n- Ready Badge (396,44 16x16)\n- Warn Badge (414,44 16x16)\n- Chunk Badge (396,64 16x16)\n- Swap Arrows (414,64 12x10)",
+            fill=sub_col,
+        )
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(out_path)
+    print(f"Saved 2x GUI preview: {out_path} ({sheet.size[0]}x{sheet.size[1]})")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate all LC2 pixel-art textures.")
     parser.add_argument("--output", type=Path, default=TEX_ROOT, help="Output textures directory")
-    parser.add_argument("--preview", type=Path, default=None, help="Optional zoomed preview contact sheet PNG")
+    parser.add_argument("--preview", type=Path, default=None, help="Optional zoomed full contact sheet PNG")
+    parser.add_argument("--gui-preview", type=Path, default=None, help="Optional 2x GUI-only preview PNG")
+    parser.add_argument("--gui-only", action="store_true", help="Regenerate only the 2 GUI textures")
     args = parser.parse_args()
 
     out_root = args.output.resolve()
@@ -1593,6 +1830,8 @@ def main():
 
     generated = {}
     for rel, fn in generators.items():
+        if args.gui_only and not rel.startswith("gui/"):
+            continue
         im = fn()
         dest = out_root / (rel + ".png")
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -1601,7 +1840,11 @@ def main():
         print(f"Wrote {dest.relative_to(REPO_ROOT) if REPO_ROOT in dest.parents else dest} ({im.size[0]}x{im.size[1]})")
 
     if args.preview is not None:
+        if args.gui_only:
+            raise SystemExit("--preview cannot be combined with --gui-only; use --gui-preview instead")
         generate_preview(args.preview.resolve(), generated)
+    if args.gui_preview is not None:
+        generate_gui_preview(args.gui_preview.resolve(), generated)
 
 
 if __name__ == "__main__":

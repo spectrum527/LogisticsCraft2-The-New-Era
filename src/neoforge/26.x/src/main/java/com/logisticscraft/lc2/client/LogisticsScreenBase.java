@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
@@ -45,6 +46,50 @@ public abstract class LogisticsScreenBase<M extends AbstractContainerMenu>
         return box;
     }
 
+    /** Creates an interactive vanilla button rendering a baked icon sprite from the 512x256 GUI atlas. */
+    protected final Button createIconButton(
+            int panelX,
+            int panelY,
+            int width,
+            int height,
+            Component narrationTitle,
+            String guiName,
+            int iconOffsetX,
+            int iconOffsetY,
+            int iconU,
+            int iconV,
+            int iconW,
+            int iconH,
+            Button.OnPress onPress
+    ) {
+        return new Button(
+                leftPos + panelX,
+                topPos + panelY,
+                width,
+                height,
+                Component.empty(),
+                onPress,
+                defaultSupplier -> narrationTitle.copy()
+        ) {
+            @Override
+            protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+                extractDefaultSprite(g);
+                g.blit(
+                        RenderPipelines.GUI_TEXTURED,
+                        guiTexture(guiName),
+                        getX() + iconOffsetX,
+                        getY() + iconOffsetY,
+                        (float) iconU,
+                        (float) iconV,
+                        iconW,
+                        iconH,
+                        512,
+                        256
+                );
+            }
+        };
+    }
+
     protected abstract void paintPanel(ScreenCanvas canvas, int mouseX, int mouseY);
 
     protected abstract void paintOverlayTooltips(ScreenCanvas canvas, int mouseX, int mouseY);
@@ -75,7 +120,7 @@ public abstract class LogisticsScreenBase<M extends AbstractContainerMenu>
                         (float) v,
                         width,
                         height,
-                        256,
+                        512,
                         256
                 );
             }

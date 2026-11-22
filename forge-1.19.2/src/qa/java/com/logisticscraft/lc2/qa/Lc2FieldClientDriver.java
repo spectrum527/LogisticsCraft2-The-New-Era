@@ -1,6 +1,7 @@
 package com.logisticscraft.lc2.qa;
 
 import com.logisticscraft.lc2.core.EnergyPriority;
+import com.logisticscraft.lc2.forge.client.AbstractStationScreen;
 import com.logisticscraft.lc2.forge.client.CargoStationScreen;
 import com.logisticscraft.lc2.forge.client.SmartPortScreen;
 import com.logisticscraft.lc2.forge.entity.ElectricCargoBoatEntity;
@@ -35,6 +36,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
@@ -100,6 +103,8 @@ final class Lc2FieldClientDriver {
     private BlockPos guiOriginalTarget = null;
     private boolean guiOriginalAutoReturn = false;
     private EnergyPriority guiOriginalPriority = EnergyPriority.EU_FIRST;
+    private Item guiPreSwapOutbound0 = Items.AIR;
+    private Item guiPreSwapStorage27 = Items.AIR;
     private boolean guiScreenshotTaken = false;
 
     // Pending framebuffer screenshot captured at RenderTickEvent.Phase.END
@@ -353,6 +358,12 @@ final class Lc2FieldClientDriver {
                     return; // let layout + slots render cleanly
                 }
                 qa.check(prefix + ".opened", true, "screen=" + mc.screen.getClass().getSimpleName());
+                AbstractStationScreen<?> stationScreen = (AbstractStationScreen<?>) mc.screen;
+                qa.check(prefix + ".dimensions_392x234",
+                        stationScreen.getXSize() == 392 && stationScreen.getYSize() == 234,
+                        "size=" + stationScreen.getXSize() + "x" + stationScreen.getYSize());
+                int expectedSlots = isSmartPort ? 95 : 102;
+                qa.checkEquals(prefix + ".slot_count", expectedSlots, mc.player.containerMenu.slots.size());
                 qa.check(prefix + ".sync_received", sync.stationPos().equals(pos),
                         "name=" + sync.stationName() + ", eu=" + sync.storedEu() + "/" + sync.maxEu()
                                 + ", targets=" + sync.targets().size());
@@ -368,6 +379,13 @@ final class Lc2FieldClientDriver {
                 this.guiOriginalTarget = sync.hasTarget() ? sync.targetPos() : null;
                 this.guiOriginalAutoReturn = sync.autoReturn();
                 this.guiOriginalPriority = sync.energyPriority();
+                this.guiPreSwapOutbound0 = mc.player.containerMenu.getSlot(0).getItem().getItem();
+                this.guiPreSwapStorage27 = mc.player.containerMenu.getSlot(27).getItem().getItem();
+                qa.check(prefix + ".dual_zones_populated",
+                        this.guiPreSwapOutbound0 != Items.AIR
+                                && this.guiPreSwapStorage27 != Items.AIR
+                                && this.guiPreSwapOutbound0 != this.guiPreSwapStorage27,
+                        "slot0=" + this.guiPreSwapOutbound0 + ", slot27=" + this.guiPreSwapStorage27);
 
                 // Clear top-right vanilla toast popups before grabbing crisp GUI screenshot
                 mc.getToasts().clear();
@@ -389,11 +407,80 @@ final class Lc2FieldClientDriver {
                 }
                 qa.check(prefix + ".screenshot", true, "saved " + capturedScreenshots.get(screenshotFile));
 
-                // Test 1: Rename over C2SStationActionPacket -> verify S2CStationSyncPacket reflects new name
-                String testName = isSmartPort ? "Harbor Alpha" : "Airfield Alpha";
-                Lc2Network.sendToServer(C2SStationActionPacket.setName(pos, testName));
-                directiveSubStep = 3;
+                // Test 0: Actually CLICK the live Swap Button at (leftPos + 180, topPos + 114) over TCP!
+                AbstractStationScreen<?> stationScreen = (AbstractStationScreen<?>) mc.screen;
+                boolean clicked = stationScreen.mouseClicked(
+                        stationScreen.getGuiLeft() + 180.0,
+                        stationScreen.getGuiTop() + 114.0,
+                        0
+                );
+                qa.check(prefix + ".swap_button_clicked", clicked,
+                        "clicked at (" + (stationScreen.getGuiLeft() + 180) + "," + (stationScreen.getGuiTop() + 114) + ")");
+                directiveSubStep = 20;
                 directiveTicks = 0;
+            }
+            case 20 -> {
+                S2CStationSyncPacket sync = currentSync(mc);
+                Item curOut0 = mc.player.containerMenu.getSlot(0).getItem().getItem();
+                Item curStor27 = mc.player.containerMenu.getSlot(27).getItem().getItem();
+                if (sync != null
+                        && "status.lc2.swapped".equals(sync.statusKey())
+                        && curOut0 == this.guiPreSwapStorage27
+                        && curStor27 == this.guiPreSwapOutbound0) {
+                    qa.check(prefix + ".swap_roundtrip_live", true,
+                            "slot0=" + curOut0 + ", slot27=" + curStor27 + ", status=" + sync.statusKey());
+                    if (isSmartPort) {
+                        mc.getToasts().clear();
+                        this.screenshotDone = false;
+                        this.screenshotError = null;
+                        this.pendingScreenshotName = "02b_smart_port_after_swap.png";
+                        directiveSubStep = 21;
+                        directiveTicks = 0;
+                    } else {
+                        // Click Swap a second time to restore Cargo Station zones!
+                        AbstractStationScreen<?> stationScreen = (AbstractStationScreen<?>) mc.screen;
+                        stationScreen.mouseClicked(stationScreen.getGuiLeft() + 180.0, stationScreen.getGuiTop() + 114.0, 0);
+                        directiveSubStep = 22;
+                        directiveTicks = 0;
+                    }
+                } else if (directiveTicks > 60) {
+                    throw new AssertionError(prefix + " Swap button live roundtrip timed out: status="
+                            + (sync == null ? "null" : sync.statusKey())
+                            + ", slot0=" + curOut0 + ", slot27=" + curStor27);
+                }
+            }
+            case 21 -> {
+                if (!this.screenshotDone) {
+                    if (directiveTicks > 100) {
+                        throw new AssertionError("Timed out capturing post-swap screenshot");
+                    }
+                    return;
+                }
+                if (this.screenshotError != null) {
+                    throw new AssertionError("Post-swap screenshot failed: " + this.screenshotError);
+                }
+                qa.check(prefix + ".post_swap_screenshot", true,
+                        "saved " + capturedScreenshots.get("02b_smart_port_after_swap.png"));
+                // Click Swap a second time to restore Smart Port zones!
+                AbstractStationScreen<?> stationScreen = (AbstractStationScreen<?>) mc.screen;
+                stationScreen.mouseClicked(stationScreen.getGuiLeft() + 180.0, stationScreen.getGuiTop() + 114.0, 0);
+                directiveSubStep = 22;
+                directiveTicks = 0;
+            }
+            case 22 -> {
+                Item curOut0 = mc.player.containerMenu.getSlot(0).getItem().getItem();
+                Item curStor27 = mc.player.containerMenu.getSlot(27).getItem().getItem();
+                if (curOut0 == this.guiPreSwapOutbound0 && curStor27 == this.guiPreSwapStorage27) {
+                    qa.check(prefix + ".swap_restored_live", true,
+                            "restored slot0=" + curOut0 + ", slot27=" + curStor27);
+                    // Test 1: Rename over C2SStationActionPacket -> verify S2CStationSyncPacket reflects new name
+                    String testName = isSmartPort ? "Harbor Alpha" : "Airfield Alpha";
+                    Lc2Network.sendToServer(C2SStationActionPacket.setName(pos, testName));
+                    directiveSubStep = 3;
+                    directiveTicks = 0;
+                } else if (directiveTicks > 60) {
+                    throw new AssertionError(prefix + " second Swap restore timed out: slot0=" + curOut0 + ", slot27=" + curStor27);
+                }
             }
             case 3 -> {
                 String expected = isSmartPort ? "Harbor Alpha" : "Airfield Alpha";

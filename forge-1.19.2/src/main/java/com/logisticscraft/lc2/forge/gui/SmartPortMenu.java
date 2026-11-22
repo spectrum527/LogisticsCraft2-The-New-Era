@@ -15,18 +15,19 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Container menu for {@link SmartPortBlockEntity} matching {@code docs/GUI_LAYOUT.md} slot indices:
+ * Container menu for {@link SmartPortBlockEntity} matching {@code docs/GUI_LAYOUT.md} 2-zone slot indices:
  * <ul>
- *   <li>{@code 0..26}: Cargo Buffer (3x9 at {@code x=8..152, y=79..115})</li>
- *   <li>{@code 27}: Single-Use Battery Slot {@code (186, 79)}</li>
- *   <li>{@code 28..31}: Machine Upgrade Slots {@code (186, 106..160)}</li>
- *   <li>{@code 32..58}: Player Inventory (3x9)</li>
- *   <li>{@code 59..67}: Player Hotbar (1x9)</li>
+ *   <li>{@code 0..26}: Outbound Area (3x9 at {@code x=8..152, y=87..123})</li>
+ *   <li>{@code 27..53}: Storage Area (3x9 at {@code x=190..334, y=87..123})</li>
+ *   <li>{@code 54}: Single-Use Battery Slot {@code (363, 76)}</li>
+ *   <li>{@code 55..58}: Machine Upgrade Slots {@code (363, 102..156)}</li>
+ *   <li>{@code 59..85}: Player Inventory (3x9 at {@code x=99..243, y=153..189})</li>
+ *   <li>{@code 86..94}: Player Hotbar (1x9 at {@code x=99..243, y=211})</li>
  * </ul>
  */
 public class SmartPortMenu extends AbstractStationMenu {
 
-    public static final int MACHINE_SLOTS = SmartPortBlockEntity.TOTAL_SLOTS; // 32
+    public static final int MACHINE_SLOTS = SmartPortBlockEntity.TOTAL_SLOTS; // 59
 
     /** Client constructor invoked by {@code IForgeMenuType}. */
     public SmartPortMenu(int containerId, Inventory playerInventory, FriendlyByteBuf extraData) {
@@ -53,35 +54,43 @@ public class SmartPortMenu extends AbstractStationMenu {
     ) {
         super(Lc2Registries.SMART_PORT_MENU.get(), containerId, playerInventory, pos, container, serverBe);
 
-        // 0..26: Cargo Buffer (3x9)
+        // 0..26: Outbound Area (3x9 at x = 8 + col * 18, y = 87 + row * 18)
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                int index = col + row * 9;
-                addSlot(new StationSlot(container, index, 8 + col * 18, 79 + row * 18, -1));
+                int index = SmartPortBlockEntity.SLOT_OUTBOUND_START + col + row * 9;
+                addSlot(new StationSlot(container, index, 8 + col * 18, 87 + row * 18, -1));
             }
         }
 
-        // 27: Single-Use Battery Slot
+        // 27..53: Storage Area (3x9 at x = 190 + col * 18, y = 87 + row * 18)
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                int index = SmartPortBlockEntity.SLOT_STORAGE_START + col + row * 9;
+                addSlot(new StationSlot(container, index, 190 + col * 18, 87 + row * 18, -1));
+            }
+        }
+
+        // 54: Single-Use Battery Slot (363, 76)
         addSlot(new StationSlot(
                 container,
                 SmartPortBlockEntity.SLOT_BATTERY,
-                186,
-                79,
+                363,
+                76,
                 LogisticsConstants.SINGLE_USE_BATTERY_STACK_LIMIT
         ));
 
-        // 28..31: Machine Upgrade Slots (4)
+        // 55..58: Machine Upgrade Slots (4) at (363, 102..156)
         for (int i = 0; i < LogisticsConstants.MACHINE_UPGRADE_SLOTS; i++) {
             addSlot(new StationSlot(
                     container,
                     SmartPortBlockEntity.SLOT_UPGRADE_START + i,
-                    186,
-                    106 + i * 18,
+                    363,
+                    102 + i * 18,
                     -1
             ));
         }
 
-        // 32..67: Player Inventory & Hotbar
+        // 59..94: Player Inventory & Hotbar
         addPlayerInventorySlots(playerInventory);
     }
 
@@ -124,7 +133,13 @@ public class SmartPortMenu extends AbstractStationMenu {
             } else if (UpgradeSummary.isSupportedUpgrade(id)) {
                 moved = moveItemStackTo(stack, SmartPortBlockEntity.SLOT_UPGRADE_START, MACHINE_SLOTS, false);
             }
-            if (!moved && !moveItemStackTo(stack, 0, SmartPortBlockEntity.SLOT_CARGO_COUNT, false)) {
+            // Shift-clicking normal items moves ONLY into Outbound (0..26), NEVER Storage (27..53)
+            if (!moved && !moveItemStackTo(
+                    stack,
+                    SmartPortBlockEntity.SLOT_OUTBOUND_START,
+                    SmartPortBlockEntity.SLOT_OUTBOUND_START + SmartPortBlockEntity.SLOT_OUTBOUND_COUNT,
+                    false
+            )) {
                 return ItemStack.EMPTY;
             }
         }

@@ -12,8 +12,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * Client screen for {@link CargoStationMenu} bound to {@code lc2:textures/gui/cargo_station.png},
- * rendering the RF Range mini-LCD at {@code (26, 78, 34, 18)} and drone bay / RF range telemetry.
+ * Client screen for {@link CargoStationMenu} bound to the 512x256 {@code lc2:textures/gui/cargo_station.png}
+ * atlas, rendering the RF Range mini-LCD at {@code (26, 56, 42, 18)} and Flight Deck Status LCD at
+ * {@code (186, 56, 161, 18)}.
  */
 public class CargoStationScreen extends AbstractStationScreen<CargoStationMenu> {
 
@@ -25,15 +26,68 @@ public class CargoStationScreen extends AbstractStationScreen<CargoStationMenu> 
 
     @Override
     protected void renderExtraLabels(PoseStack poseStack, int mouseX, int mouseY) {
-        // RF Range Mini-LCD box at (26, 78, 34, 18) -> centered around y=83
+        // RF Range Mini-LCD box at (26, 56, 42, 18) -> centered around (29, 61)
         RfChipTier chip = this.sync != null ? RfChipTier.fromTierIndex(this.sync.rfChipTierIndex()) : RfChipTier.NONE;
         String rangeText = chip.isInstalled()
                 ? Component.translatable("gui.lc2.rf_range", chip.maxRange()).getString()
                 : Component.translatable("gui.lc2.rf_none").getString();
         int rangeColor = chip.isInstalled() ? colorCyan() : colorRed();
-        int textW = this.font.width(rangeText);
-        int rx = 26 + Math.max(0, (34 - textW) / 2);
-        this.font.draw(poseStack, rangeText, rx, 83, rangeColor);
+        int rawRangeW = this.font.width(rangeText);
+        if (rawRangeW <= 38) {
+            int rx = 26 + (42 - rawRangeW) / 2;
+            this.font.draw(poseStack, rangeText, rx, 61, rangeColor);
+        } else {
+            drawFittedLcdText(poseStack, rangeText, 28, 61, 38, rangeColor);
+        }
+
+        // Flight Deck Status LCD at (186, 56, 161, 18) -> text at (190, 61), maxWidth = 153
+        int readyBays = countReadyDroneBays();
+        String baysText = Component.translatable("gui.lc2.flight_deck_ready", readyBays).getString();
+        int baysColor = readyBays > 0 ? colorGreen() : colorAmber();
+
+        String rfStatusText = null;
+        int rfStatusColor = colorMuted();
+        if (!chip.isInstalled()) {
+            rfStatusText = Component.translatable("gui.lc2.rf_none").getString();
+            rfStatusColor = colorRed();
+        } else if (this.sync != null && this.sync.hasTarget()) {
+            S2CStationSyncPacket.TargetSummary summary = findSelectedTargetSummary();
+            int dist = summary != null
+                    ? summary.manhattanDistance()
+                    : this.menu.getStationPos().distManhattan(this.sync.targetPos());
+            boolean inRange = chip.canReach(dist);
+            rfStatusText = Component.translatable(inRange ? "gui.lc2.in_range" : "gui.lc2.out_of_range").getString();
+            rfStatusColor = inRange ? colorCyan() : colorRed();
+        }
+
+        if (rfStatusText == null) {
+            drawFittedLcdText(poseStack, baysText, 190, 61, 153, baysColor);
+        } else {
+            String sep = " | ";
+            int combinedW = this.font.width(baysText) + this.font.width(sep) + this.font.width(rfStatusText);
+            if (combinedW <= 153) {
+                int x = 190;
+                this.font.draw(poseStack, baysText, x, 61, baysColor);
+                x += this.font.width(baysText);
+                this.font.draw(poseStack, sep, x, 61, colorMuted());
+                x += this.font.width(sep);
+                this.font.draw(poseStack, rfStatusText, x, 61, rfStatusColor);
+            } else {
+                int mergedColor = rfStatusColor == colorRed() ? colorRed() : (readyBays > 0 ? colorCyan() : colorAmber());
+                drawFittedLcdText(poseStack, baysText + sep + rfStatusText, 190, 61, 153, mergedColor);
+            }
+        }
+    }
+
+    private int countReadyDroneBays() {
+        int count = 0;
+        for (int bay = 0; bay < CargoStationBlockEntity.DRONE_BAY_COUNT; bay++) {
+            int idx = CargoStationBlockEntity.SLOT_DRONE_BAY_START + bay;
+            if (idx < this.menu.slots.size() && this.menu.getSlot(idx).hasItem()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     @Override
@@ -77,6 +131,14 @@ public class CargoStationScreen extends AbstractStationScreen<CargoStationMenu> 
     @Override
     @Nullable
     protected Component emptySlotTooltip(int slotIndex) {
+        if (slotIndex >= CargoStationBlockEntity.SLOT_OUTBOUND_START
+                && slotIndex < CargoStationBlockEntity.SLOT_OUTBOUND_START + CargoStationBlockEntity.SLOT_OUTBOUND_COUNT) {
+            return Component.translatable("gui.lc2.slot.outbound");
+        }
+        if (slotIndex >= CargoStationBlockEntity.SLOT_STORAGE_START
+                && slotIndex < CargoStationBlockEntity.SLOT_STORAGE_START + CargoStationBlockEntity.SLOT_STORAGE_COUNT) {
+            return Component.translatable("gui.lc2.slot.storage");
+        }
         if (slotIndex == CargoStationBlockEntity.SLOT_RF_CHIP) {
             return Component.translatable("gui.lc2.slot.rf_chip");
         }

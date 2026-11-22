@@ -294,17 +294,20 @@ public final class Suite4UnloadedTransit {
             return;
         }
 
-        Map<String, Integer> boatDelivered = QaChecks.countItemsAcross(level, DISTANT_PORT_CHEST);
-        Map<String, Integer> droneDelivered = QaChecks.countItemsAcross(level, DISTANT_STATION_CHEST);
-        checks.check("s4.delivery.distant_boat_100pct_cargo",
-                expectedBoatCargo.equals(boatDelivered),
-                "expected=" + expectedBoatCargo.size() + ", got=" + boatDelivered.size());
-        checks.check("s4.delivery.distant_drone_100pct_cargo",
-                expectedDroneCargo.equals(droneDelivered),
-                "expected=" + expectedDroneCargo.size() + ", got=" + droneDelivered.size());
-
         SmartPortBlockEntity distantPort = (SmartPortBlockEntity) level.getBlockEntity(DISTANT_PORT);
         CargoStationBlockEntity distantStation = (CargoStationBlockEntity) level.getBlockEntity(DISTANT_STATION);
+        Map<String, Integer> boatDelivered = QaChecks.countStorageItems(distantPort);
+        Map<String, Integer> droneDelivered = QaChecks.countStorageItems(distantStation);
+        checks.check("s4.delivery.distant_boat_100pct_cargo_in_storage",
+                expectedBoatCargo.equals(boatDelivered)
+                        && QaChecks.countOutboundItems(distantPort).isEmpty()
+                        && QaChecks.countItemsAcross(level, DISTANT_PORT_CHEST).isEmpty(),
+                "expected=" + expectedBoatCargo.size() + ", storage=" + boatDelivered.size());
+        checks.check("s4.delivery.distant_drone_100pct_cargo_in_storage",
+                expectedDroneCargo.equals(droneDelivered)
+                        && QaChecks.countOutboundItems(distantStation).isEmpty()
+                        && QaChecks.countItemsAcross(level, DISTANT_STATION_CHEST).isEmpty(),
+                "expected=" + expectedDroneCargo.size() + ", storage=" + droneDelivered.size());
         checks.check("s4.delivery.distant_vehicles_docked",
                 distantPort.findDockedBoat(level).isPresent() && distantStation.countReadyDrones() == 1);
 

@@ -165,9 +165,15 @@ public final class Suite1RegistryPower {
         genPortBe.setItem(0, new ItemStack(Items.COAL, 8));
         genStationBe.setItem(0, new ItemStack(Items.COAL, 8));
 
-        // Verify base EU capacity (14400) & LV packetLimit (32) BEFORE upgrades
+        // Verify base EU capacity (14400) & LV packetLimit (32) BEFORE upgrades, and 2-zone slot counts (59 / 66)
         SmartPortBlockEntity portBe = (SmartPortBlockEntity) level.getBlockEntity(SMART_PORT);
         CargoStationBlockEntity stationBe = (CargoStationBlockEntity) level.getBlockEntity(CARGO_STATION);
+        checks.check("s1.layout.two_zone_slot_counts",
+                portBe != null && stationBe != null
+                        && portBe.getContainerSize() == LogisticsConstants.SMART_PORT_MACHINE_SLOTS
+                        && stationBe.getContainerSize() == LogisticsConstants.CARGO_STATION_MACHINE_SLOTS,
+                "smartPort=" + (portBe != null ? portBe.getContainerSize() : -1)
+                        + ", cargoStation=" + (stationBe != null ? stationBe.getContainerSize() : -1));
         checks.check("s1.power.base_ratings",
                 portBe != null && stationBe != null
                         && portBe.getMaxEu() == 14_400.0 && portBe.packetLimit() == 32.0

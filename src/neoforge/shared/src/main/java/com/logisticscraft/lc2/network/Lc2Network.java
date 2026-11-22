@@ -16,7 +16,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  */
 public final class Lc2Network {
 
-    private static final String PROTOCOL_VERSION = "1";
+    private static final String PROTOCOL_VERSION = "2";
 
     private Lc2Network() {
     }
@@ -62,6 +62,12 @@ public final class Lc2Network {
             case TOGGLE_AUTO_RETURN -> station.setAutoReturn(!station.isAutoReturn());
             case TOGGLE_ENERGY_PRIORITY -> station.setEnergyPriority(station.getEnergyPriority().toggle());
             case MANUAL_DISPATCH -> station.handleManualDispatch(level);
+            case SWAP_CARGO_ZONES -> {
+                station.swapCargoZones();
+                if (player.containerMenu instanceof AbstractLogisticsStationMenu) {
+                    player.containerMenu.broadcastChanges();
+                }
+            }
             case REQUEST_SYNC -> {
                 // Only refresh and send sync below
             }

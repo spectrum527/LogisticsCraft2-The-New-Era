@@ -6,10 +6,13 @@ import java.util.Set;
 import java.util.TreeSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -117,5 +120,22 @@ public final class QaPlatform {
             }
         }
         return result;
+    }
+
+    /** Loads a legacy v1 station NBT payload (without {@code layoutVersion}) into {@code be} on 1.21.1. */
+    public static void loadLegacyV1Station(
+            ServerLevel level,
+            BlockEntity be,
+            List<ItemStack> legacyItems,
+            CompoundTag legacyLc2Tag
+    ) {
+        NonNullList<ItemStack> list = NonNullList.withSize(legacyItems.size(), ItemStack.EMPTY);
+        for (int i = 0; i < legacyItems.size(); i++) {
+            list.set(i, legacyItems.get(i).copy());
+        }
+        CompoundTag root = new CompoundTag();
+        ContainerHelper.saveAllItems(root, list, level.registryAccess());
+        root.put("lc2", legacyLc2Tag.copy());
+        be.loadCustomOnly(root, level.registryAccess());
     }
 }

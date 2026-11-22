@@ -3,6 +3,7 @@ package com.logisticscraft.lc2.qa;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.logisticscraft.lc2.blockentity.AbstractLogisticsStationBlockEntity;
 import com.logisticscraft.lc2.entity.ElectricCargoBoatEntity;
 import com.logisticscraft.lc2.platform.Lc2ItemAccess;
 import com.logisticscraft.lc2.platform.Lc2Native;
@@ -251,6 +252,43 @@ public final class QaChecks {
             total += QaPlatform.readAllStacks(level, pos).size();
         }
         return total;
+    }
+
+    /** Counts items by qualified item ID strictly within a station's Outbound Area ({@code 0..26}). */
+    public static Map<String, Integer> countOutboundItems(AbstractLogisticsStationBlockEntity station) {
+        return countZoneItems(
+                station,
+                AbstractLogisticsStationBlockEntity.OUTBOUND_START,
+                AbstractLogisticsStationBlockEntity.OUTBOUND_SLOTS
+        );
+    }
+
+    /** Counts items by qualified item ID strictly within a station's Storage Area ({@code 27..53}). */
+    public static Map<String, Integer> countStorageItems(AbstractLogisticsStationBlockEntity station) {
+        return countZoneItems(
+                station,
+                AbstractLogisticsStationBlockEntity.STORAGE_START,
+                AbstractLogisticsStationBlockEntity.STORAGE_SLOTS
+        );
+    }
+
+    /** Counts items by qualified item ID within {@code [start, start + count)} of a station. */
+    public static Map<String, Integer> countZoneItems(
+            AbstractLogisticsStationBlockEntity station,
+            int start,
+            int count
+    ) {
+        Map<String, Integer> counts = new TreeMap<>();
+        if (station == null) {
+            return counts;
+        }
+        for (int i = start; i < start + count; i++) {
+            ItemStack s = station.getItem(i);
+            if (!s.isEmpty()) {
+                counts.merge(Lc2Native.itemId(s), s.getCount(), Integer::sum);
+            }
+        }
+        return counts;
     }
 
     /** Invokes protected {@code ElectricCargoBoatEntity#canAddPassenger(Entity)} directly for QA verification. */

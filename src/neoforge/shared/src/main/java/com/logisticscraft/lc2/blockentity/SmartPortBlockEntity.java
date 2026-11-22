@@ -39,22 +39,29 @@ import net.minecraft.world.phys.AABB;
  * Electric Smart Cargo Boat docking, water connectivity verification, EU/battery dispatch
  * payment, and autonomous maritime launches.
  * <p>
- * Slot layout (matches {@code docs/GUI_LAYOUT.md}):
+ * 2-zone slot layout (matches {@code docs/GUI_LAYOUT.md}):
  * <ul>
- *   <li>{@code 0..26}: 27-slot cargo buffer (3x9)</li>
- *   <li>{@code 27}: single-use battery slot ({@code ic2:single_use_battery} only)</li>
- *   <li>{@code 28..31}: 4 machine upgrade slots</li>
+ *   <li>{@code 0..26}: 27-slot Outbound Area (3x9, left)</li>
+ *   <li>{@code 27..53}: 27-slot Storage Area (3x9, right)</li>
+ *   <li>{@code 54}: single-use battery slot ({@code ic2:single_use_battery} only)</li>
+ *   <li>{@code 55..58}: 4 machine upgrade slots</li>
  * </ul>
  */
 public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
 
-    public static final int CARGO_SLOTS = LogisticsConstants.SMART_PORT_BUFFER_SLOTS; // 27
-    public static final int BATTERY_SLOT = 27;
-    public static final int UPGRADE_START = 28;
-    public static final int TOTAL_SLOTS = 32;
+    public static final int BATTERY_SLOT = TOTAL_CARGO_SLOTS; // 54
+    public static final int UPGRADE_START = BATTERY_SLOT + 1; // 55
+    public static final int TOTAL_SLOTS = LogisticsConstants.SMART_PORT_MACHINE_SLOTS; // 59
+    public static final double BOAT_DOCK_RADIUS = 3.5;
+
+    private static final int LEGACY_V1_CARGO_SLOTS = 27;
+    private static final int LEGACY_V1_BATTERY_SLOT = 27;
+    private static final int LEGACY_V1_UPGRADE_START = 28;
+    private static final int LEGACY_V1_TOTAL_SLOTS = 32;
 
     private BlockPos3i waterBerthPos = null;
     private int berthRefreshTimer = 0;
+    private boolean hadDockedBoat = false;
 
     public SmartPortBlockEntity(BlockPos pos, BlockState state) {
         super(Lc2Registries.SMART_PORT_BE.get(), pos, state, TOTAL_SLOTS);
@@ -66,11 +73,6 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
     }
 
     @Override
-    public int cargoBufferSize() {
-        return CARGO_SLOTS;
-    }
-
-    @Override
     public int batterySlotIndex() {
         return BATTERY_SLOT;
     }
@@ -78,6 +80,27 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
     @Override
     public int upgradeSlotStart() {
         return UPGRADE_START;
+    }
+
+    @Override
+    protected void migrateLegacyInventory(int fromVersion) {
+        if (fromVersion >= LAYOUT_VERSION) {
+            return;
+        }
+        ItemStack[] snapshot = new ItemStack[LEGACY_V1_TOTAL_SLOTS];
+        for (int i = 0; i < LEGACY_V1_TOTAL_SLOTS; i++) {
+            snapshot[i] = items.get(i);
+        }
+        for (int i = 0; i < items.size(); i++) {
+            items.set(i, ItemStack.EMPTY);
+        }
+        for (int i = 0; i < LEGACY_V1_CARGO_SLOTS; i++) {
+            items.set(OUTBOUND_START + i, snapshot[i]);
+        }
+        items.set(BATTERY_SLOT, snapshot[LEGACY_V1_BATTERY_SLOT]);
+        for (int i = 0; i < LogisticsConstants.MACHINE_UPGRADE_SLOTS; i++) {
+            items.set(UPGRADE_START + i, snapshot[LEGACY_V1_UPGRADE_START + i]);
+        }
     }
 
     @Override
@@ -146,7 +169,7 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
 
     /**
      * Finds the closest idle (non-autonomous) {@link ElectricCargoBoatEntity} docked within
-     * 2.5 blocks of this port's detected water berth.
+     * {@value #BOAT_DOCK_RADIUS} blocks of this port's detected water berth.
      */
     public Optional<ElectricCargoBoatEntity> findDockedBoat(ServerLevel level) {
         if (waterBerthPos == null) {
@@ -157,8 +180,8 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
         }
         Vec3d berthCenter = waterBerthPos.waterSurfaceCenter();
         AABB box = new AABB(
-                berthCenter.x() - 2.5, berthCenter.y() - 2.0, berthCenter.z() - 2.5,
-                berthCenter.x() + 2.5, berthCenter.y() + 2.0, berthCenter.z() + 2.5
+                berthCenter.x() - BOAT_DOCK_RADIUS, berthCenter.y() - 2.0, berthCenter.z() - BOAT_DOCK_RADIUS,
+                berthCenter.x() + BOAT_DOCK_RADIUS, berthCenter.y() + 2.0, berthCenter.z() + BOAT_DOCK_RADIUS
         );
         List<ElectricCargoBoatEntity> boats = level.getEntitiesOfClass(
                 ElectricCargoBoatEntity.class,
@@ -202,6 +225,7 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
             if (!player.isCreative()) {
                 stack.shrink(1);
             }
+            resetDispatchCooldown();
             setStatusKey("status.lc2.boat_docked");
             Lc2Native.sendActionBar(player, Component.translatable("status.lc2.boat_docked"));
             return true;
@@ -215,10 +239,18 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
             berthRefreshTimer = 0;
             refreshWaterBerth(level);
         }
+        boolean hasDockedBoatNow = findDockedBoat(level).isPresent();
+        if (!hadDockedBoat && hasDockedBoatNow) {
+            resetDispatchCooldown();
+        }
         if (redstoneTriggered && (redstoneRisingEdge || canAttemptAutoDispatch())) {
             VirtualTransitEngine.DispatchResult res = tryDispatch(level, false);
             setDispatchCooldown(res.isSuccess() ? 20 : 40);
+            if (res.isSuccess()) {
+                hasDockedBoatNow = findDockedBoat(level).isPresent();
+            }
         }
+        hadDockedBoat = hasDockedBoatNow;
     }
 
     @Override
@@ -399,6 +431,7 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
                 statusKey,
                 isChunkLoaderActive(),
                 boatDocked,
+                boatDocked ? 1 : 0,
                 0,
                 infos
         );

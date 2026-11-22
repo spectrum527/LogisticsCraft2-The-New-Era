@@ -28,7 +28,8 @@ public record StationActionPayload(
         TOGGLE_AUTO_RETURN,
         TOGGLE_ENERGY_PRIORITY,
         MANUAL_DISPATCH,
-        REQUEST_SYNC;
+        REQUEST_SYNC,
+        SWAP_CARGO_ZONES;
 
         public static Action fromOrdinal(int ordinal) {
             Action[] values = values();

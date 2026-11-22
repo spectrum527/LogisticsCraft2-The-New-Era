@@ -30,6 +30,7 @@ public record C2SStationActionPacket(
         TOGGLE_AUTO_RETURN,
         TOGGLE_ENERGY_PRIORITY,
         DISPATCH,
+        SWAP_CARGO_ZONES,
         REQUEST_SYNC
     }
 
@@ -97,6 +98,12 @@ public record C2SStationActionPacket(
                 case TOGGLE_AUTO_RETURN -> station.toggleAutoReturn();
                 case TOGGLE_ENERGY_PRIORITY -> station.toggleEnergyPriority();
                 case DISPATCH -> station.tryDispatch(level, true);
+                case SWAP_CARGO_ZONES -> {
+                    station.swapCargoZones();
+                    if (player.containerMenu != null) {
+                        player.containerMenu.broadcastChanges();
+                    }
+                }
                 case REQUEST_SYNC -> {
                     // Just send updated sync packet below
                 }

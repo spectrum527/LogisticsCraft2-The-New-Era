@@ -43,9 +43,10 @@ public final class Lc2ScreenProbe {
             out.addProperty("yBoxText", edits.get(2).getValue());
             out.addProperty("zBoxText", edits.get(3).getValue());
         }
-        if (btns.size() >= 7) {
+        if (btns.size() >= 8) {
             out.addProperty("autoReturnBtnText", btns.get(4).getMessage().getString());
             out.addProperty("priorityBtnText", btns.get(5).getMessage().getString());
+            out.addProperty("swapBtnPresent", true);
         }
         StationSyncPayload sync = ls.getMenu().syncedState();
         if (sync != null) {
@@ -61,6 +62,7 @@ public final class Lc2ScreenProbe {
             out.addProperty("syncStatusKey", sync.statusKey());
             out.addProperty("syncChunkLoader", sync.chunkLoaderActive());
             out.addProperty("syncVehicleReady", sync.vehicleReady());
+            out.addProperty("syncReadyVehicleCount", sync.readyVehicleCount());
             out.addProperty("syncRfRange", sync.rfRange());
             out.addProperty("syncTargetCount", sync.targets().size());
         } else {
@@ -91,6 +93,7 @@ public final class Lc2ScreenProbe {
             case "toggle_autoreturn" -> 4;
             case "toggle_priority" -> 5;
             case "dispatch" -> 6;
+            case "swap" -> 7;
             default -> throw new IllegalArgumentException("Unknown GUI button: " + which);
         };
         QaClientPlatform.pressButton(btns.get(idx));

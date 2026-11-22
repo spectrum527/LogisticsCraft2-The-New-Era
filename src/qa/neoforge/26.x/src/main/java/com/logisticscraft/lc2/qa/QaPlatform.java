@@ -7,10 +7,13 @@ import java.util.TreeSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -23,6 +26,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.capabilities.Capabilities;
 
@@ -126,5 +130,22 @@ public final class QaPlatform {
             }
         }
         return result;
+    }
+
+    /** Loads a legacy v1 station NBT payload (without {@code layoutVersion}) into {@code be} on 26.x. */
+    public static void loadLegacyV1Station(
+            ServerLevel level,
+            BlockEntity be,
+            List<ItemStack> legacyItems,
+            CompoundTag legacyLc2Tag
+    ) {
+        CompoundTag root = new CompoundTag();
+        var ops = level.registryAccess().createSerializationContext(NbtOps.INSTANCE);
+        var encodedItems = ItemStack.OPTIONAL_CODEC.listOf()
+                .encodeStart(ops, legacyItems)
+                .getOrThrow();
+        root.put("items", encodedItems);
+        root.put("lc2", legacyLc2Tag.copy());
+        be.loadCustomOnly(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), root));
     }
 }

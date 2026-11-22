@@ -7,7 +7,7 @@ Addon mod for **IndustrialCraft²: The New Era (`ic2` v1.0.5+)** supporting four
 - **NeoForge 26.2** (NeoForge 26.2.0.95, Java 25) — built from root `:neoforge:26.2` (Gradle 9.2.1)
 
 License: **GPL-3.0-only** (code) / **CC BY-SA 4.0** (original authored textures).
-Mod ID: `lc2` · Root Package: `com.logisticscraft.lc2` · Version: `1.0.0`
+Mod ID: `lc2` · Root Package: `com.logisticscraft.lc2` · Version: `1.1.0`
 
 ---
 
@@ -71,15 +71,26 @@ Mod ID: `lc2` · Root Package: `com.logisticscraft.lc2` · Version: `1.0.0`
   - `ic2:transformer_upgrade`: +1 voltage tier per upgrade (LV 32 → MV 128 → HV 512 → EV 2048 → IV 8192 EU/t).
   - `ic2:energy_storage_upgrade`: +10,000 EU max capacity per upgrade.
   - `ic2:overclocker_upgrade`: boosts container transfer throughput (`base + 8 * count` items/tick up to 64) and speeds up dispatch cycle & modest cruise speed boost (up to +40% capped).
-  - `ic2:ejector_upgrade` & `ic2:advanced_ejector_upgrade`: pushes unloaded cargo out to configured side/filter (in addition to default adjacent container output!).
-  - `ic2:pulling_upgrade` & `ic2:advanced_pulling_upgrade`: pulls outgoing cargo from configured side/filter into buffer!
+  - `ic2:ejector_upgrade` & `ic2:advanced_ejector_upgrade`: pushes cargo out **ONLY from the Storage Area (`27..53`)** to configured side/filter (in addition to default adjacent container output!).
+  - `ic2:pulling_upgrade` & `ic2:advanced_pulling_upgrade`: pulls outgoing cargo from configured side/filter **ONLY into the Outbound Area (`0..26`)**!
   - `ic2:redstone_inverter_upgrade`: inverts redstone dispatch trigger (active when unpowered instead of powered!).
   - `lc2:chunk_loading_upgrade`: force-loads a **3×3 chunk area** centered on this block while the block has EU (`>= 2 EU/t`, drains **2 EU/t** standby). Immediately releases chunk ticket if EU runs out, upgrade is removed, or block is broken.
-- **Adjacent Container Connection**:
+- **2-Zone Inventory Architecture & Adjacent Container Connection** (identical on both Smart Port and Cargo Station):
+  - **54 internal cargo slots** (`LogisticsConstants.STATION_TOTAL_CARGO_SLOTS = 54`) divided cleanly into two equal 27-slot (`3×9`) zones:
+    - **Outbound Area / 待发货区 (`0..26`, `STATION_OUTBOUND_SLOTS = 27`)**:
+      - External pipes, hoppers, and adjacent automation (`IItemHandler` / `WorldlyContainer`) **insert ONLY** into `0..26`.
+      - IC2 `pulling_upgrade` / `advanced_pulling_upgrade` pulls **ONLY** into `0..26`.
+      - Outgoing boats and drones ship/load cargo **ONLY** from `0..26` (plus adjacent pull sources when configured, never pulling back from Storage `27..53`).
+    - **Storage Area / 存储区 (`27..53`, `STATION_STORAGE_SLOTS = 27`)**:
+      - Received cargo unloaded from arriving boats/drones goes into `27..53` (and adjacent receiving containers).
+      - External pipes, hoppers, and adjacent automation (`IItemHandler` / `WorldlyContainer`) **extract ONLY** from `27..53`.
+      - IC2 `ejector_upgrade` / `advanced_ejector_upgrade` ejects **ONLY** from `27..53`.
+    - **Atomic Swap (`⇄`)**:
+      - Center Swap Button atomically exchanges every slot pair `i <-> 27 + i` (`i ∈ 0..26`) server-side so players can immediately re-route received cargo back out without manually dragging 27 stacks.
   - Automatically interfaces with adjacent vanilla Chests, Double Chests, Barrels, Shulker Boxes, Hoppers, IC2 Storage Boxes (`iron_storage_box`, `steel_storage_box`, `iridium_storage_box`), and any modded `IItemHandler` / `Container` / `WorldlyContainer`.
   - **Loop-free I/O rule**:
-    - Incoming/unloaded cargo from arriving boats/drones is pushed **immediately** into adjacent containers (respecting `ejector_upgrade` if installed, else any non-port/station adjacent container); overflow stays in the block's internal buffer (and retries pushing periodically without ever being re-loaded as outgoing until room opens or player moves it).
-    - Outgoing loading (when dispatching a vehicle): loads from the block's outgoing cargo buffer first, then pulls remaining vehicle capacity from adjacent containers (respecting `pulling_upgrade` if installed, else any adjacent container). Never drops or deletes items on overflow!
+    - Incoming/unloaded cargo from arriving boats/drones is pushed into adjacent receiving containers (respecting `ejector_upgrade` if installed, else any non-port/station adjacent container); overflow stays in the **Storage Area (`27..53`)** and retries pushing periodically, never re-entering **Outbound (`0..26`)** unless explicitly swapped or moved by the player.
+    - Outgoing loading (when dispatching a vehicle): loads from the **Outbound Area (`0..26`)** first, then pulls remaining vehicle capacity from adjacent containers (respecting `pulling_upgrade` if installed, else any adjacent container). Never drops or deletes items on overflow!
 
 ### 2.2 Waterway System: Smart Port & Electric Smart Cargo Boat
 - **Placement**: `lc2:smart_port` has horizontal facing (`HORIZONTAL_FACING`). Should be placed adjacent to water (front facing water; auto-detects water dock cell in front first, falling back to any horizontal adjacent water cell).
@@ -154,22 +165,22 @@ Mod ID: `lc2` · Root Package: `com.logisticscraft.lc2` · Version: `1.0.0`
   5. **Arrival in unloaded target chunk**: Completes transit into a pending-arrival queue for that target station/port in `LogisticsSavedData`; if the target is loaded (e.g. via player or `lc2:chunk_loading_upgrade`), immediately executes unloading & auto-return; if unloaded, completes immediately when target chunk loads!
 - Full NBT persistence: server restart mid-flight resumes every boat and drone at its exact coordinates with zero item loss!
 
-### 2.5 GUI & Networking Specification
-- **Smart Port GUI** (`176×222` or clean IC2-styled `212×222` panel):
-  - Station Name text input + Save/Apply
-  - Target Selector: scrollable/prev-next list of same-dimension Smart Ports (showing Name, Distance, Water Status) + manual X/Y/Z input boxes
-  - Auto-Return toggle (`自动返回: 开/关`)
-  - Energy Priority toggle (`供电: 优先EU / 优先电池`)
-  - Manual Dispatch button (`立即发车` — convenience alongside redstone trigger)
-  - Live EU bar (`xxxx / 14400 EU`), Status message line (exact feedback: 就绪 / 航行中 / 水域未连通 / 能源不足 / 无停靠船只 / 无目标港口)
-  - Dedicated Single-Use Battery slot (1), Machine Upgrade slots (4), Cargo Buffer slots (27), Player inventory (27+9)
-- **Cargo Station GUI** (`212×222` panel):
-  - Station Name text input
-  - Target Selector: scrollable/prev-next list of same-dimension Cargo Stations (showing Name, Manhattan Distance, Free Bays `x/6`, In-Range indicator) + manual X/Y/Z input boxes
-  - Auto-Return toggle (`自动返回: 开/关`)
-  - Energy Priority toggle (`供电: 优先EU / 优先电池`)
-  - Manual Dispatch button
-  - Live EU bar (`xxxx / 14400 EU`), RF Chip slot (1), Single-Use Battery slot (1), 6 Drone Bay slots (showing standard/heavy icon & status), Machine Upgrade slots (4), Cargo Buffer slots (18), Player inventory (27+9)
+### 2.5 GUI & Networking Specification (v1.1.0 2-Zone Layout — see `docs/GUI_LAYOUT.md`)
+Both **Smart Port** and **Cargo Station** use an identical **`392×234`** IC2-styled dual-zone panel baked into a **`512×256`** RGBA PNG atlas (fits `1280×720` at GUI Scale 3 cleanly; dynamic sprites in right margin `u = 396..444`):
+- **Shared Top Control Bar (`y = 0..55`)**:
+  - Station Name `EditBox` + Save `Button` + Auto-Return toggle (`返航: 开/关`) + Energy Priority toggle (`EU优先 / 电池优先`)
+  - Target Selector: Prev `<` / Target Readout LCD (`256px` wide showing Name, Distance, Waterway/Bay status) / Next `>` + Manual Launch `Button` (`发车`)
+  - Manual X/Y/Z `EditBox` inputs + Set `Button` + Status Readout LCD (`171px` wide showing live status or `DispatchFailure`)
+- **Shared 2-Zone Cargo Section (`y = 77..141`)**:
+  - **Outbound Area / 待发货区 (`0..26`, 3×9, left, warm amber accent)**
+  - **Center Swap Button (`⇄`)** at `(172, 104, 16, 20)` with baked 12×10 swap-arrow icon at UV `(414, 64, 12, 10)` — triggers atomic C2S swap of `i <-> 27 + i` (`0..26`)
+  - **Storage Area / 存储区 (`27..53`, 3×9, right, cool cyan accent)**
+- **Shared Player Inventory (`y = 144..229`)**: centered beneath both zones (`x = 99`, 27 inventory + 9 hotbar)
+- **Shared Right Power & Upgrade Column (`x = 355..388`)**:
+  - Live EU gauge (`xxxx / 14400 EU`), EU bolt indicator, Single-Use Battery slot (1), Machine Upgrade slots (4), Chunk-Loader active badge, Vehicle/Port ready badge
+- **Machine-Specific Middle Deck Strip (`y = 56..73`)**:
+  - **Smart Port** (`59` machine slots + `36` player = `95` total): full-width Harbor Telemetry LCD `(7, 56, 340, 18)` showing docked boat & waterway berth status (`0..26` Outbound, `27..53` Storage, `54` Battery, `55..58` Upgrades).
+  - **Cargo Station** (`66` machine slots + `36` player = `102` total): RF Chip slot `(8, 57)` + RF Range Mini-LCD `(26, 56, 42, 18)` + 6 Drone Bay slots `(74..164, 57)` + Flight Deck Status LCD `(186, 56, 161, 18)` (`0..26` Outbound, `27..53` Storage, `54` RF Chip, `55..60` 6 Drone Bays, `61` Battery, `62..65` Upgrades).
 
 ---
 

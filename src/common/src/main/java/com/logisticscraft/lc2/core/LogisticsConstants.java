@@ -128,11 +128,39 @@ public final class LogisticsConstants {
     /** Number of physical drone landing bays per Cargo Station. */
     public static final int CARGO_STATION_DRONE_BAYS = 6;
 
-    /** Number of internal cargo buffer slots on a Smart Port. */
-    public static final int SMART_PORT_BUFFER_SLOTS = 27;
+    /** Starting cargo slot index for the Outbound (待发货区域) zone on both station types (inclusive). */
+    public static final int STATION_OUTBOUND_START = 0;
 
-    /** Number of internal cargo buffer slots on a Cargo Station. */
-    public static final int CARGO_STATION_BUFFER_SLOTS = 18;
+    /** Number of Outbound (待发货区域) cargo slots on both Smart Port and Cargo Station (3x9, indices 0..26). */
+    public static final int STATION_OUTBOUND_SLOTS = 27;
+
+    /** Starting cargo slot index for the Storage (存储区域) zone on both station types (inclusive). */
+    public static final int STATION_STORAGE_START = STATION_OUTBOUND_SLOTS;
+
+    /** Number of Storage (存储区域) cargo slots on both Smart Port and Cargo Station (3x9, indices 27..53). */
+    public static final int STATION_STORAGE_SLOTS = 27;
+
+    /** Total 2-zone cargo slots (Outbound 0..26 + Storage 27..53 = 54) on both Smart Port and Cargo Station. */
+    public static final int STATION_TOTAL_CARGO_SLOTS = STATION_OUTBOUND_SLOTS + STATION_STORAGE_SLOTS;
+
+    /** Total machine-side inventory slots on a Smart Port (54 cargo + 1 battery + 4 upgrades = 59). */
+    public static final int SMART_PORT_MACHINE_SLOTS = STATION_TOTAL_CARGO_SLOTS + 1 + MACHINE_UPGRADE_SLOTS;
+
+    /** Total machine-side inventory slots on a Cargo Station (54 cargo + 1 RF chip + 6 drone bays + 1 battery + 4 upgrades = 66). */
+    public static final int CARGO_STATION_MACHINE_SLOTS =
+            STATION_TOTAL_CARGO_SLOTS + 1 + CARGO_STATION_DRONE_BAYS + 1 + MACHINE_UPGRADE_SLOTS;
+
+    /**
+     * Per-zone cargo buffer slot count on a Smart Port (legacy alias for {@link #STATION_OUTBOUND_SLOTS};
+     * prefer {@link #STATION_OUTBOUND_SLOTS}, {@link #STATION_STORAGE_SLOTS}, and {@link #STATION_TOTAL_CARGO_SLOTS}).
+     */
+    public static final int SMART_PORT_BUFFER_SLOTS = STATION_OUTBOUND_SLOTS;
+
+    /**
+     * Per-zone cargo buffer slot count on a Cargo Station (legacy alias for {@link #STATION_OUTBOUND_SLOTS};
+     * prefer {@link #STATION_OUTBOUND_SLOTS}, {@link #STATION_STORAGE_SLOTS}, and {@link #STATION_TOTAL_CARGO_SLOTS}).
+     */
+    public static final int CARGO_STATION_BUFFER_SLOTS = STATION_OUTBOUND_SLOTS;
 
     /** Cargo inventory slot count on an Electric Smart Cargo Boat (Double Chest size). */
     public static final int BOAT_CARGO_SLOTS = 54;

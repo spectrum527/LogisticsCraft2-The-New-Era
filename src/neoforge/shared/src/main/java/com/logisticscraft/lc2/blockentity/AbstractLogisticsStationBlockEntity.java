@@ -51,7 +51,8 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
  *   <li>IC2 EU network sink integration ({@link WorldPowerPort}, {@link EuBuffer}, {@link WorldEnergy})</li>
  *   <li>Single-use battery slot & non-hybrid energy priority payment</li>
  *   <li>All 9 supported IC2 + LC2 machine upgrades including 3x3 chunk loading at 2 EU/t</li>
- *   <li>Loop-free adjacent container I/O respecting IC2 ejector and pulling upgrade face routing</li>
+ *   <li>Strict 2-zone inventory (Outbound {@code 0..26} / Storage {@code 27..53}) with atomic swap
+ *       and loop-free IC2 pulling/ejector upgrade automation</li>
  * </ul>
  */
 public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBlockEntityBase
@@ -59,6 +60,24 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
 
     /** Shared {@code active} blockstate property used by both Smart Port and Cargo Station. */
     public static final BooleanProperty ACTIVE = BooleanProperty.create("active");
+
+    /** Starting slot index of the Outbound Area ({@code 0..26}). */
+    public static final int OUTBOUND_START = LogisticsConstants.STATION_OUTBOUND_START;
+
+    /** Number of slots in the Outbound Area ({@code 27}). */
+    public static final int OUTBOUND_SLOTS = LogisticsConstants.STATION_OUTBOUND_SLOTS;
+
+    /** Starting slot index of the Storage Area ({@code 27..53}). */
+    public static final int STORAGE_START = LogisticsConstants.STATION_STORAGE_START;
+
+    /** Number of slots in the Storage Area ({@code 27}). */
+    public static final int STORAGE_SLOTS = LogisticsConstants.STATION_STORAGE_SLOTS;
+
+    /** Total cargo slots across Outbound + Storage ({@code 54}). */
+    public static final int TOTAL_CARGO_SLOTS = LogisticsConstants.STATION_TOTAL_CARGO_SLOTS;
+
+    /** Current persistent inventory layout version (v2 = 2-zone Outbound/Storage). */
+    public static final int LAYOUT_VERSION = 2;
 
     private static final Ports SINK_ALL_FACES = new Ports(EnumSet.allOf(Face.class), Set.of(), false);
 
@@ -70,7 +89,6 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
     protected EnergyPriority energyPriority = EnergyPriority.EU_FIRST;
     protected String statusKey = "status.lc2.ready";
     protected UpgradeSummary upgrades = UpgradeSummary.EMPTY;
-    protected long incomingOverflowMask = 0L;
 
     private int lastServerTick = Integer.MIN_VALUE;
     private boolean chunkLoaderActive = false;
@@ -95,14 +113,29 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
     /** Returns the station type ({@link StationType#SMART_PORT} or {@link StationType#CARGO_STATION}). */
     public abstract StationType stationType();
 
-    /** Returns the number of internal cargo buffer slots ({@code 0..bufferSize-1}). */
-    public abstract int cargoBufferSize();
-
     /** Returns the single-use battery slot index. */
     public abstract int batterySlotIndex();
 
     /** Returns the first machine upgrade slot index (4 consecutive slots). */
     public abstract int upgradeSlotStart();
+
+    /** Remaps legacy v1 inventory slots into the current v2 2-zone layout with zero item loss. */
+    protected abstract void migrateLegacyInventory(int fromVersion);
+
+    /** Returns {@code true} if {@code slot} is inside the Outbound Area ({@code 0..26}). */
+    public static boolean isOutboundSlot(int slot) {
+        return slot >= OUTBOUND_START && slot < OUTBOUND_START + OUTBOUND_SLOTS;
+    }
+
+    /** Returns {@code true} if {@code slot} is inside the Storage Area ({@code 27..53}). */
+    public static boolean isStorageSlot(int slot) {
+        return slot >= STORAGE_START && slot < STORAGE_START + STORAGE_SLOTS;
+    }
+
+    /** Returns {@code true} if {@code slot} is inside either cargo zone ({@code 0..53}). */
+    public static boolean isCargoSlot(int slot) {
+        return slot >= OUTBOUND_START && slot < TOTAL_CARGO_SLOTS;
+    }
 
     /** Registers or updates this station in the dimension's {@link com.logisticscraft.lc2.core.StationRegistry}. */
     protected abstract void registerInWorld(ServerLevel level);
@@ -225,6 +258,11 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         this.dispatchCooldown = Math.max(this.dispatchCooldown, ticks);
     }
 
+    /** Clears any remaining auto-dispatch retry cooldown so newly docked vehicles launch immediately. */
+    protected final void resetDispatchCooldown() {
+        this.dispatchCooldown = 0;
+    }
+
     private void tickChunkLoader(ServerLevel level) {
         if (upgrades.shouldChunkLoad(storedEu)) {
             storedEu = Math.max(0.0, storedEu - upgrades.chunkLoaderStandbyDrainEuPerTick());
@@ -267,7 +305,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         }
     }
 
-    /** Returns the resolved list of adjacent directions to eject incoming cargo to. */
+    /** Returns the configured ejector faces if an ejector upgrade is installed, or empty if none. */
     protected final List<Direction> resolveEjectorFaces() {
         Set<Direction> faces = new LinkedHashSet<>();
         int start = upgradeSlotStart();
@@ -284,13 +322,16 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
                 faces.addAll(MachineAutomation.faces(stack));
             }
         }
-        if (!hasConfiguredEjector || faces.isEmpty()) {
+        if (!hasConfiguredEjector) {
+            return List.of();
+        }
+        if (faces.isEmpty()) {
             return List.of(Direction.values());
         }
         return List.copyOf(faces);
     }
 
-    /** Returns the resolved list of adjacent directions to pull outgoing cargo from. */
+    /** Returns the configured pulling faces if a pulling upgrade is installed, or empty if none. */
     protected final List<Direction> resolvePullingFaces() {
         Set<Direction> faces = new LinkedHashSet<>();
         int start = upgradeSlotStart();
@@ -307,47 +348,58 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
                 faces.addAll(MachineAutomation.faces(stack));
             }
         }
-        if (!hasConfiguredPuller || faces.isEmpty()) {
+        if (!hasConfiguredPuller) {
+            return List.of();
+        }
+        if (faces.isEmpty()) {
             return List.of(Direction.values());
         }
         return List.copyOf(faces);
     }
 
     /**
-     * Pushes incoming unloaded cargo immediately to adjacent containers (respecting ejector upgrades),
-     * storing any overflow safely into internal cargo buffer slots marked in {@code incomingOverflowMask}
-     * so overflow is never re-loaded as outgoing cargo. Returns any items that could not fit anywhere.
+     * Unloads arriving vehicle cargo strictly into the Storage Area ({@code 27..53}).
+     * If an IC2 ejector upgrade is installed, immediately ejects from Storage / overflow through
+     * the configured ejector faces so full 36-slot Heavy Drones and 54-slot Boats unload smoothly.
+     * Any overflow that still cannot fit is returned to the caller so the vehicle retries safely
+     * without ever losing or dropping items.
      */
     public List<ItemStack> receiveIncomingCargo(ServerLevel level, List<ItemStack> incoming) {
+        refreshUpgrades();
         List<ItemStack> unaccepted = new ArrayList<>();
-        List<Direction> ejectFaces = resolveEjectorFaces();
+        boolean hasEjector = upgrades.hasEjector();
+        List<Direction> ejectFaces = hasEjector ? resolveEjectorFaces() : List.of();
 
         for (ItemStack raw : incoming) {
             if (raw.isEmpty()) {
                 continue;
             }
-            ItemStack remaining = raw.copy();
+            ItemStack remaining = insertIntoStorage(raw.copy());
 
-            // Step 1: Push immediately into adjacent containers
-            for (Direction dir : ejectFaces) {
-                if (remaining.isEmpty()) {
-                    break;
+            if (hasEjector && !ejectFaces.isEmpty()) {
+                ejectStorageStacks(level, ejectFaces, Integer.MAX_VALUE);
+                if (!remaining.isEmpty()) {
+                    remaining = insertIntoStorage(remaining);
                 }
-                int pushed = Lc2ItemAccess.push(level, worldPosition.relative(dir), dir.getOpposite(), remaining);
-                if (pushed > 0) {
-                    remaining.shrink(pushed);
+                if (!remaining.isEmpty()) {
+                    for (Direction dir : ejectFaces) {
+                        if (remaining.isEmpty()) {
+                            break;
+                        }
+                        int pushed = Lc2ItemAccess.push(level, worldPosition.relative(dir), dir.getOpposite(), remaining);
+                        if (pushed > 0) {
+                            remaining.shrink(pushed);
+                        }
+                    }
                 }
             }
 
-            // Step 2: Store any overflow safely in internal cargo buffer slots (marked as incoming overflow)
-            if (!remaining.isEmpty()) {
-                remaining = insertIntoBuffer(remaining, true);
-            }
-
-            // Step 3: If both adjacent containers and internal buffer are full, keep for retry without dropping
             if (!remaining.isEmpty()) {
                 unaccepted.add(remaining);
             }
+        }
+        if (hasEjector && !ejectFaces.isEmpty()) {
+            ejectStorageStacks(level, ejectFaces, Integer.MAX_VALUE);
         }
         setChanged();
         return unaccepted;
@@ -355,18 +407,17 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
 
     /**
      * Loads outgoing cargo for a departing vehicle up to {@code maxStacks}:
-     * first from non-overflow internal cargo buffer slots, then pulling remaining capacity
-     * directly from adjacent containers (respecting pulling upgrades).
+     * drains ONLY the Outbound Area ({@code 0..26}) — NEVER Storage ({@code 27..53}).
+     * If a pulling upgrade is installed and the vehicle still has free slots, pulls remaining
+     * capacity strictly from configured pulling upgrade faces. Without a pulling upgrade, never
+     * pulls from adjacent containers during launch.
      */
     public List<ItemStack> loadOutgoingCargo(ServerLevel level, int maxStacks) {
+        refreshUpgrades();
         List<ItemStack> cargo = new ArrayList<>();
-        int bufferSize = cargoBufferSize();
 
-        // Step 1: Drain non-overflow internal buffer slots
-        for (int i = 0; i < bufferSize && cargo.size() < maxStacks; i++) {
-            if (isOverflowSlot(i)) {
-                continue;
-            }
+        // Step 1: Drain ONLY Outbound Area slots (0..26) — NEVER Storage (27..53)
+        for (int i = OUTBOUND_START; i < OUTBOUND_START + OUTBOUND_SLOTS && cargo.size() < maxStacks; i++) {
             ItemStack stack = items.get(i);
             if (!stack.isEmpty()) {
                 cargo.add(stack.copy());
@@ -374,11 +425,11 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
             }
         }
 
-        // Step 2: Pull remaining capacity from adjacent containers
-        if (cargo.size() < maxStacks) {
+        // Step 2: ONLY if pulling upgrade is installed AND vehicle still has free slots
+        if (cargo.size() < maxStacks && upgrades.hasPulling()) {
             List<Direction> pullFaces = resolvePullingFaces();
             boolean pulledAny = true;
-            while (cargo.size() < maxStacks && pulledAny) {
+            while (cargo.size() < maxStacks && pulledAny && !pullFaces.isEmpty()) {
                 pulledAny = false;
                 for (Direction dir : pullFaces) {
                     if (cargo.size() >= maxStacks) {
@@ -394,7 +445,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
                     if (!extracted.isEmpty()) {
                         ItemStack leftover = addToCargoList(cargo, extracted, maxStacks);
                         if (!leftover.isEmpty()) {
-                            ItemStack unreturned = insertIntoBuffer(leftover, false);
+                            ItemStack unreturned = insertIntoOutbound(leftover);
                             if (!unreturned.isEmpty()) {
                                 int pushedBack = Lc2ItemAccess.push(
                                         level, worldPosition.relative(dir), dir.getOpposite(), unreturned);
@@ -422,6 +473,23 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         return cargo;
     }
 
+    /**
+     * Atomically swaps every slot pair {@code i <-> 27 + i} between Outbound ({@code 0..26})
+     * and Storage ({@code 27..53}), marks the station dirty, and updates status to
+     * {@code status.lc2.swapped}.
+     */
+    public final void swapCargoZones() {
+        for (int i = 0; i < OUTBOUND_SLOTS; i++) {
+            int outboundIdx = OUTBOUND_START + i;
+            int storageIdx = STORAGE_START + i;
+            ItemStack tmp = items.get(outboundIdx);
+            items.set(outboundIdx, items.get(storageIdx));
+            items.set(storageIdx, tmp);
+        }
+        setStatusKey("status.lc2.swapped");
+        setChanged();
+    }
+
     private ItemStack addToCargoList(List<ItemStack> cargo, ItemStack stack, int maxStacks) {
         ItemStack remaining = stack.copy();
         for (ItemStack existing : cargo) {
@@ -447,16 +515,13 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
 
     /**
      * Computes a vanilla redstone comparator analog output signal (0..15) strictly over this
-     * station's cargo buffer slots ({@code 0..cargoBufferSize()-1}).
+     * station's Outbound Area slots ({@code 0..26}) so comparators trigger dispatch iff Outbound
+     * has cargo waiting to ship.
      */
     public final int computeCargoComparatorSignal() {
-        int bufferSize = cargoBufferSize();
-        if (bufferSize <= 0) {
-            return 0;
-        }
         int nonEmpty = 0;
         float fillSum = 0.0F;
-        for (int i = 0; i < bufferSize; i++) {
+        for (int i = OUTBOUND_START; i < OUTBOUND_START + OUTBOUND_SLOTS; i++) {
             ItemStack stack = items.get(i);
             if (!stack.isEmpty()) {
                 int limit = Math.min(getMaxStackSize(), Math.max(1, stack.getMaxStackSize()));
@@ -464,7 +529,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
                 nonEmpty++;
             }
         }
-        float avg = fillSum / (float) bufferSize;
+        float avg = fillSum / (float) OUTBOUND_SLOTS;
         return Math.min(15, Mth.floor(avg * 14.0F) + (nonEmpty > 0 ? 1 : 0));
     }
 
@@ -476,50 +541,21 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         }
         ioTickCounter = 0;
         int budget = upgrades.transferRatePerTick();
-        int bufferSize = cargoBufferSize();
 
-        // 1. Retry pushing incoming overflow slots to adjacent containers
-        if (incomingOverflowMask != 0L) {
+        // 1. If ejector upgrade is installed, push strictly from Storage (27..53) to configured faces
+        if (upgrades.hasEjector()) {
             List<Direction> ejectFaces = resolveEjectorFaces();
-            int remainingBudget = budget;
-            for (int i = 0; i < bufferSize && remainingBudget > 0; i++) {
-                if (!isOverflowSlot(i)) {
-                    continue;
-                }
-                ItemStack slotStack = items.get(i);
-                if (slotStack.isEmpty()) {
-                    clearOverflowSlot(i);
-                    continue;
-                }
-                ItemStack offer = slotStack.copyWithCount(Math.min(slotStack.getCount(), remainingBudget));
-                for (Direction dir : ejectFaces) {
-                    if (offer.isEmpty()) {
-                        break;
-                    }
-                    int pushed = Lc2ItemAccess.push(level, worldPosition.relative(dir), dir.getOpposite(), offer);
-                    if (pushed > 0) {
-                        slotStack.shrink(pushed);
-                        offer.shrink(pushed);
-                        remainingBudget -= pushed;
-                        setChanged();
-                    }
-                }
-                if (slotStack.isEmpty()) {
-                    items.set(i, ItemStack.EMPTY);
-                    clearOverflowSlot(i);
-                }
+            if (!ejectFaces.isEmpty()) {
+                ejectStorageStacks(level, ejectFaces, budget);
             }
         }
 
-        // 2. If pulling upgrade is installed, proactively buffer items from configured pulling faces
+        // 2. If pulling upgrade is installed, pull from configured faces strictly into Outbound (0..26)
         if (upgrades.hasPulling()) {
             List<Direction> pullFaces = resolvePullingFaces();
             int remainingBudget = budget;
             for (Direction dir : pullFaces) {
-                if (remainingBudget <= 0) {
-                    break;
-                }
-                if (!hasOutgoingBufferSpace()) {
+                if (remainingBudget <= 0 || !hasOutboundSpace()) {
                     break;
                 }
                 ItemStack pulled = Lc2ItemAccess.pull(
@@ -527,13 +563,12 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
                         worldPosition.relative(dir),
                         dir.getOpposite(),
                         remainingBudget,
-                        stack -> !stack.isEmpty() && canFitInOutgoingBuffer(stack)
+                        stack -> !stack.isEmpty() && canFitInOutbound(stack)
                 );
                 if (!pulled.isEmpty()) {
                     remainingBudget -= pulled.getCount();
-                    ItemStack leftover = insertIntoBuffer(pulled, false);
+                    ItemStack leftover = insertIntoOutbound(pulled);
                     if (!leftover.isEmpty()) {
-                        // Return any unaccepted remainder safely
                         int returned = Lc2ItemAccess.push(
                                 level, worldPosition.relative(dir), dir.getOpposite(), leftover);
                         leftover.shrink(returned);
@@ -553,12 +588,44 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         }
     }
 
-    private boolean hasOutgoingBufferSpace() {
-        int bufferSize = cargoBufferSize();
-        for (int i = 0; i < bufferSize; i++) {
-            if (isOverflowSlot(i)) {
+    private void ejectStorageStacks(ServerLevel level, List<Direction> ejectFaces, int budget) {
+        if (ejectFaces.isEmpty() || budget <= 0) {
+            return;
+        }
+        int remainingBudget = budget;
+        boolean changed = false;
+        for (int i = STORAGE_START; i < STORAGE_START + STORAGE_SLOTS && remainingBudget > 0; i++) {
+            ItemStack slotStack = items.get(i);
+            if (slotStack.isEmpty()) {
                 continue;
             }
+            int offerCount = Math.min(slotStack.getCount(), remainingBudget);
+            ItemStack offer = slotStack.copyWithCount(offerCount);
+            for (Direction dir : ejectFaces) {
+                if (offer.isEmpty()) {
+                    break;
+                }
+                int pushed = Lc2ItemAccess.push(level, worldPosition.relative(dir), dir.getOpposite(), offer);
+                if (pushed > 0) {
+                    slotStack.shrink(pushed);
+                    offer.shrink(pushed);
+                    if (remainingBudget != Integer.MAX_VALUE) {
+                        remainingBudget -= pushed;
+                    }
+                    changed = true;
+                }
+            }
+            if (slotStack.isEmpty()) {
+                items.set(i, ItemStack.EMPTY);
+            }
+        }
+        if (changed) {
+            setChanged();
+        }
+    }
+
+    private boolean hasOutboundSpace() {
+        for (int i = OUTBOUND_START; i < OUTBOUND_START + OUTBOUND_SLOTS; i++) {
             ItemStack s = items.get(i);
             if (s.isEmpty() || s.getCount() < s.getMaxStackSize()) {
                 return true;
@@ -567,12 +634,8 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         return false;
     }
 
-    private boolean canFitInOutgoingBuffer(ItemStack sample) {
-        int bufferSize = cargoBufferSize();
-        for (int i = 0; i < bufferSize; i++) {
-            if (isOverflowSlot(i)) {
-                continue;
-            }
+    private boolean canFitInOutbound(ItemStack sample) {
+        for (int i = OUTBOUND_START; i < OUTBOUND_START + OUTBOUND_SLOTS; i++) {
             ItemStack s = items.get(i);
             if (s.isEmpty()) {
                 return true;
@@ -584,15 +647,19 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         return false;
     }
 
-    protected final ItemStack insertIntoBuffer(ItemStack stack, boolean markAsOverflow) {
-        ItemStack remaining = stack.copy();
-        int bufferSize = cargoBufferSize();
+    protected final ItemStack insertIntoOutbound(ItemStack stack) {
+        return insertIntoRange(stack, OUTBOUND_START, OUTBOUND_START + OUTBOUND_SLOTS);
+    }
 
-        // Pass 1: merge into compatible slots with matching overflow classification
-        for (int i = 0; i < bufferSize && !remaining.isEmpty(); i++) {
-            if (isOverflowSlot(i) != markAsOverflow) {
-                continue;
-            }
+    protected final ItemStack insertIntoStorage(ItemStack stack) {
+        return insertIntoRange(stack, STORAGE_START, STORAGE_START + STORAGE_SLOTS);
+    }
+
+    private ItemStack insertIntoRange(ItemStack stack, int startInclusive, int endExclusive) {
+        ItemStack remaining = stack.copy();
+
+        // Pass 1: merge into compatible existing stacks in the target zone
+        for (int i = startInclusive; i < endExclusive && !remaining.isEmpty(); i++) {
             ItemStack existing = items.get(i);
             if (!existing.isEmpty() && ItemStack.isSameItemSameComponents(existing, remaining)) {
                 int space = existing.getMaxStackSize() - existing.getCount();
@@ -604,35 +671,14 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
             }
         }
 
-        // Pass 2: fill empty slots
-        for (int i = 0; i < bufferSize && !remaining.isEmpty(); i++) {
+        // Pass 2: fill empty slots in the target zone
+        for (int i = startInclusive; i < endExclusive && !remaining.isEmpty(); i++) {
             if (items.get(i).isEmpty()) {
                 int move = Math.min(remaining.getMaxStackSize(), remaining.getCount());
                 items.set(i, remaining.split(move));
-                if (markAsOverflow) {
-                    setOverflowSlot(i);
-                } else {
-                    clearOverflowSlot(i);
-                }
             }
         }
         return remaining;
-    }
-
-    protected final boolean isOverflowSlot(int slot) {
-        return slot >= 0 && slot < 63 && (incomingOverflowMask & (1L << slot)) != 0L;
-    }
-
-    protected final void setOverflowSlot(int slot) {
-        if (slot >= 0 && slot < 63) {
-            incomingOverflowMask |= (1L << slot);
-        }
-    }
-
-    protected final void clearOverflowSlot(int slot) {
-        if (slot >= 0 && slot < 63) {
-            incomingOverflowMask &= ~(1L << slot);
-        }
     }
 
     // --- Energy & Payment ---
@@ -846,6 +892,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
 
     @Override
     protected void saveStationTag(CompoundTag tag) {
+        tag.putInt("layoutVersion", LAYOUT_VERSION);
         tag.putDouble("eu", storedEu);
         tag.putString("name", stationName);
         if (targetPos != null) {
@@ -857,11 +904,14 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         tag.putBoolean("autoReturn", autoReturn);
         tag.putInt("priority", energyPriority.ordinal());
         tag.putString("status", statusKey);
-        tag.putLong("overflowMask", incomingOverflowMask);
     }
 
     @Override
     protected void loadStationTag(CompoundTag tag) {
+        int layoutVersion = Lc2Nbt.getInt(tag, "layoutVersion", 1);
+        if (layoutVersion < LAYOUT_VERSION) {
+            migrateLegacyInventory(layoutVersion);
+        }
         refreshUpgrades();
         storedEu = Math.max(0.0, Math.min(upgrades.maxCapacityEu(), Lc2Nbt.getDouble(tag, "eu", 0.0)));
         stationName = Lc2Nbt.getString(tag, "name", "");
@@ -877,7 +927,6 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         autoReturn = Lc2Nbt.getBoolean(tag, "autoReturn", false);
         energyPriority = EnergyPriority.fromOrdinal(Lc2Nbt.getInt(tag, "priority", 0));
         statusKey = Lc2Nbt.getString(tag, "status", "status.lc2.ready");
-        incomingOverflowMask = Lc2Nbt.getLong(tag, "overflowMask", 0L);
     }
 
     @Override
@@ -948,10 +997,6 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
 
     /** Called whenever a slot is modified by players or automation. */
     protected void onInventorySlotModified(int slot) {
-        if (slot >= 0 && slot < cargoBufferSize()) {
-            // Player/automation edited this buffer slot; treat as normal outgoing buffer again
-            clearOverflowSlot(slot);
-        }
         if (slot >= upgradeSlotStart() && slot < upgradeSlotStart() + LogisticsConstants.MACHINE_UPGRADE_SLOTS) {
             refreshUpgrades();
         }
@@ -975,7 +1020,6 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         for (int i = 0; i < items.size(); i++) {
             items.set(i, ItemStack.EMPTY);
         }
-        incomingOverflowMask = 0L;
         refreshUpgrades();
         setChanged();
     }
@@ -985,7 +1029,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         if (slot < 0 || slot >= items.size()) {
             return false;
         }
-        if (slot < cargoBufferSize()) {
+        if (isCargoSlot(slot)) {
             return true;
         }
         if (slot == batterySlotIndex()) {
@@ -999,22 +1043,27 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
 
     @Override
     public int[] getSlotsForFace(Direction side) {
-        int bufferSize = cargoBufferSize();
-        int[] slots = new int[bufferSize + 1];
-        for (int i = 0; i < bufferSize; i++) {
+        int[] slots = new int[TOTAL_CARGO_SLOTS + 1];
+        for (int i = 0; i < TOTAL_CARGO_SLOTS; i++) {
             slots[i] = i;
         }
-        slots[bufferSize] = batterySlotIndex();
+        slots[TOTAL_CARGO_SLOTS] = batterySlotIndex();
         return slots;
     }
 
     @Override
     public boolean canPlaceItemThroughFace(int slot, ItemStack stack, Direction direction) {
-        return canPlaceItem(slot, stack);
+        if (isOutboundSlot(slot)) {
+            return true;
+        }
+        if (slot == batterySlotIndex()) {
+            return LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(Lc2Native.itemId(stack));
+        }
+        return false;
     }
 
     @Override
     public boolean canTakeItemThroughFace(int slot, ItemStack stack, Direction direction) {
-        return slot >= 0 && slot < cargoBufferSize();
+        return isStorageSlot(slot);
     }
 }

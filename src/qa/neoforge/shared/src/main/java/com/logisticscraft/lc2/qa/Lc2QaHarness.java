@@ -39,6 +39,7 @@ public final class Lc2QaHarness {
     private final Suite4UnloadedTransit suite4 = new Suite4UnloadedTransit();
     private final Suite5ChunkLoader suite5 = new Suite5ChunkLoader();
     private final Suite6CollisionAvoidance suite6 = new Suite6CollisionAvoidance();
+    private final Suite8TwoZoneAndVehicleFix suite8 = new Suite8TwoZoneAndVehicleFix();
     private final Suite7Persistence suite7 = new Suite7Persistence();
     private final FieldTestRunner fieldRunner = new FieldTestRunner();
     private final FieldLiveServer fieldLiveServer = new FieldLiveServer();
@@ -90,7 +91,7 @@ public final class Lc2QaHarness {
                 // Force-load local test area chunks cx=0..3, cz=0..3 for Suites 1-3
                 QaChecks.setChunkRangeForced(level, 0, 3, 0, 3, true);
                 suite1.setup(level, checks);
-                server.tickRateManager().requestGameToSprint(6_000);
+                server.tickRateManager().requestGameToSprint(7_000);
             }
         } catch (Throwable t) {
             complete(server, t);
@@ -139,7 +140,7 @@ public final class Lc2QaHarness {
                 return;
             }
 
-            if (ticks > 5_500) {
+            if (ticks > 6_500) {
                 throw new AssertionError("Global QA write-phase tick budget exceeded at suite " + activeSuite);
             }
 
@@ -157,14 +158,15 @@ public final class Lc2QaHarness {
                 case 4 -> suite4.tick(level, ticks, checks);
                 case 5 -> suite5.tick(level, ticks, checks);
                 case 6 -> suite6.tick(level, ticks, checks);
-                case 7 -> suite7.tickWrite(level, ticks, checks);
+                case 7 -> suite8.tick(level, ticks, checks);
+                case 8 -> suite7.tickWrite(level, ticks, checks);
                 default -> true;
             };
 
             if (suiteDone) {
                 LOGGER.info("[LC2-QA] Completed Suite {} at tick {}", activeSuite, ticks);
                 activeSuite++;
-                if (activeSuite > 7) {
+                if (activeSuite > 8) {
                     checks.check("write.world_saved", server.saveEverything(false, true, true));
                     complete(server, null);
                 }

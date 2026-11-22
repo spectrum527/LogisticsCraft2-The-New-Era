@@ -32,7 +32,7 @@ public final class ContainerIoHelper {
 
     /**
      * Resolves target push faces from installed {@code ic2:ejector_upgrade} /
-     * {@code ic2:advanced_ejector_upgrade} stacks, or returns all 6 faces when none are installed.
+     * {@code ic2:advanced_ejector_upgrade} stacks, or returns an empty list when none are installed.
      */
     public static List<Direction> resolvePushFaces(List<ItemStack> upgradeStacks) {
         EnumSet<Direction> faces = EnumSet.noneOf(Direction.class);
@@ -45,12 +45,12 @@ public final class ContainerIoHelper {
                 faces.addAll(MachineAutomation.faces(stack));
             }
         }
-        return hasEjector ? new ArrayList<>(faces) : List.of(Direction.values());
+        return hasEjector ? new ArrayList<>(faces) : List.of();
     }
 
     /**
      * Resolves source pull faces from installed {@code ic2:pulling_upgrade} /
-     * {@code ic2:advanced_pulling_upgrade} stacks, or returns all 6 faces when none are installed.
+     * {@code ic2:advanced_pulling_upgrade} stacks, or returns an empty list when none are installed.
      */
     public static List<Direction> resolvePullFaces(List<ItemStack> upgradeStacks) {
         EnumSet<Direction> faces = EnumSet.noneOf(Direction.class);
@@ -63,7 +63,7 @@ public final class ContainerIoHelper {
                 faces.addAll(MachineAutomation.faces(stack));
             }
         }
-        return hasPulling ? new ArrayList<>(faces) : List.of(Direction.values());
+        return hasPulling ? new ArrayList<>(faces) : List.of();
     }
 
     /**

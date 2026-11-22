@@ -8,19 +8,24 @@
 
 前置要求：请先安装对应 Minecraft 版本的 **IndustrialCraft²: The New Era (`ic2` v1.0.5+)**。将对应版本的 `lc2` JAR 放入 `mods/` 目录，联机时客户端与服务端均需安装。
 
-[v1.0.1 发行说明](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/tag/v1.0.1) · [SHA-256 校验](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.1/SHA256SUMS.txt)
+[v1.1.0 发行说明](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/tag/v1.1.0) · [SHA-256 校验](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.0/SHA256SUMS.txt)
 
 | Minecraft | 加载器 | Java | 下载 |
 | --- | --- | ---: | --- |
-| 1.19.2 | Forge 43.5.0 | 17 | [Forge 1.19.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.1/lc2-forge-1.19.2-1.0.1.jar) |
-| 1.21.1 | NeoForge 21.1.265 | 21 | [NeoForge 1.21.1 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.1/lc2-neoforge-1.21.1-1.0.1.jar) |
-| 26.1.2 | NeoForge 26.1.2.128 | 25 | [NeoForge 26.1.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.1/lc2-neoforge-26.1.2-1.0.1.jar) |
-| 26.2 | NeoForge 26.2.0.95 | 25 | [NeoForge 26.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.1/lc2-neoforge-26.2-1.0.1.jar) |
+| 1.19.2 | Forge 43.5.0 | 17 | [Forge 1.19.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.0/lc2-forge-1.19.2-1.1.0.jar) |
+| 1.21.1 | NeoForge 21.1.265 | 21 | [NeoForge 1.21.1 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.0/lc2-neoforge-1.21.1-1.1.0.jar) |
+| 26.1.2 | NeoForge 26.1.2.128 | 25 | [NeoForge 26.1.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.0/lc2-neoforge-26.1.2-1.1.0.jar) |
+| 26.2 | NeoForge 26.2.0.95 | 25 | [NeoForge 26.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.0/lc2-neoforge-26.2-1.1.0.jar) |
 
 ## 核心玩法
 
+### 双区物品隔离与一键互换（智能港口 & 货运基站通用）
+- **待发货区（Outbound，27 格）**：外部管道/漏斗存入或 IC2 **抽入升级**抽入的货物进入此区；**运输船与无人机发车时仅装载此区域的货物**；原版红石比较器信号仅反映待发货区填充度。
+- **存储区（Storage，27 格）**：运输船与无人机到达后卸载的货物放入此区；外部管道/漏斗抽出或 IC2 **弹出升级**弹出的均为此区域的货物。
+- **互换按钮（Swap `⇄`）**：GUI 双区之间提供一键互换按钮，可将待发货区与存储区全部 27 格物品无损对调（方便中转接力或手动回发）。
+
 ### 水路：智能港口与电动智能运输船
-- **智能港口（`lc2:smart_port`）**：放置在水边（正面朝向水域），内置 27 格缓冲槽，并自动连接相邻的箱子、大箱子、潜影盒、IC2 储物箱及兼容容器。
+- **智能港口（`lc2:smart_port`）**：放置在水边（正面朝向水域），内置 **27 格待发货区 + 27 格存储区**，并支持通过漏斗/管道或 IC2 抽入/弹出升级连接箱子、大箱子、潜影盒、IC2 储物箱等容器。
 - **电动智能运输船（`lc2:electric_cargo_boat`）**：拥有 **54 格**（大箱子）货舱容量。停靠待命时玩家可潜行右键查看货舱或直接右键登船；**自动运行途中禁止登船，但可先登船再触发红石发车随船航行**。
 - **启动与能耗**：确认两港口间**水域连通**并收到红石信号后发车（可 GUI 命名、列表选择同维度目标或手动填坐标，支持自动返回开关）。
   - 电容量 **14,400 EU**（默认 LV 32 EU/t 输入），另设独立**一次性电池槽**（仅接受 `ic2:single_use_battery`）及 GUI **供电优先级开关**（优先 EU / 优先电池，不足时自动切换，不混扣）。
@@ -28,7 +33,7 @@
 - **水路避撞与航路**：A* 水道连通检测与航点缓存，宽航道右侧通行偏移 + 窄航道让行防死锁。
 
 ### 空路：货运基站与运输无人机
-- **货运基站（`lc2:cargo_station`）**：拥有 **6 个无人机停机位**（顶面可视化停靠渲染）与 18 格缓冲槽，自动连接相邻容器；目标基站无空位时拒绝起飞（发车时原子预占目标机位）。
+- **货运基站（`lc2:cargo_station`）**：拥有 **6 个无人机停机位**（顶面可视化停靠渲染）与 **27 格待发货区 + 27 格存储区**，支持通过漏斗/管道或 IC2 抽入/弹出升级对接相邻容器；目标基站无空位时拒绝起飞（发车时原子预占目标机位）。
 - **两种无人机**：
   - **运输无人机（`lc2:transport_drone`）**：高速飞行（`0.80` 格/tick），**12 格**货舱。
   - **重型运输无人机（`lc2:heavy_transport_drone`）**：稳重重型载具（`0.50` 格/tick），**36 格**货舱，能耗翻倍。

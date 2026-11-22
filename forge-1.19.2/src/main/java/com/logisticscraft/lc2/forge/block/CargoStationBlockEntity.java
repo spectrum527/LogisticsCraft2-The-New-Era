@@ -37,25 +37,37 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 /**
  * Block entity for {@link CargoStationBlock} ({@code lc2:cargo_station}).
  * <p>
- * Slot layout matching {@code docs/GUI_LAYOUT.md}:
+ * 2-Zone slot layout matching {@code docs/GUI_LAYOUT.md}:
  * <ul>
- *   <li>{@code 0..17}: 18-slot internal cargo buffer</li>
- *   <li>{@code 18}: RF chip slot ({@code lc2:rf_chip_1/2/3})</li>
- *   <li>{@code 19..24}: 6 drone bay slots ({@code lc2:transport_drone} / {@code lc2:heavy_transport_drone}, max stack 1)</li>
- *   <li>{@code 25}: dedicated {@code ic2:single_use_battery} slot</li>
- *   <li>{@code 26..29}: 4 machine upgrade slots</li>
+ *   <li>{@code 0..26}: 27-slot Outbound Area (pending shipment)</li>
+ *   <li>{@code 27..53}: 27-slot Storage Area (received cargo)</li>
+ *   <li>{@code 54}: RF chip slot ({@code lc2:rf_chip_1/2/3})</li>
+ *   <li>{@code 55..60}: 6 drone bay slots ({@code lc2:transport_drone} / {@code lc2:heavy_transport_drone}, max stack 1)</li>
+ *   <li>{@code 61}: dedicated {@code ic2:single_use_battery} slot</li>
+ *   <li>{@code 62..65}: 4 machine upgrade slots</li>
  * </ul>
  */
 public class CargoStationBlockEntity extends AbstractLogisticsStationBlockEntity {
 
+    public static final int SLOT_OUTBOUND_START = LogisticsConstants.STATION_OUTBOUND_START; // 0
+    public static final int SLOT_OUTBOUND_COUNT = LogisticsConstants.STATION_OUTBOUND_SLOTS; // 27
+    public static final int SLOT_STORAGE_START = LogisticsConstants.STATION_STORAGE_START; // 27
+    public static final int SLOT_STORAGE_COUNT = LogisticsConstants.STATION_STORAGE_SLOTS; // 27
     public static final int SLOT_CARGO_START = 0;
-    public static final int SLOT_CARGO_COUNT = LogisticsConstants.CARGO_STATION_BUFFER_SLOTS; // 18
-    public static final int SLOT_RF_CHIP = 18;
-    public static final int SLOT_DRONE_BAY_START = 19;
+    public static final int SLOT_CARGO_COUNT = LogisticsConstants.STATION_TOTAL_CARGO_SLOTS; // 54
+    public static final int SLOT_RF_CHIP = 54;
+    public static final int SLOT_DRONE_BAY_START = 55;
     public static final int DRONE_BAY_COUNT = LogisticsConstants.CARGO_STATION_DRONE_BAYS; // 6
-    public static final int SLOT_BATTERY = 25;
-    public static final int SLOT_UPGRADE_START = 26;
-    public static final int TOTAL_SLOTS = 30;
+    public static final int SLOT_BATTERY = 61;
+    public static final int SLOT_UPGRADE_START = 62;
+    public static final int TOTAL_SLOTS = LogisticsConstants.CARGO_STATION_MACHINE_SLOTS; // 66
+
+    private static final int LEGACY_TOTAL_SLOTS = 30;
+    private static final int LEGACY_CARGO_COUNT = 18;
+    private static final int LEGACY_SLOT_RF_CHIP = 18;
+    private static final int LEGACY_SLOT_DRONE_BAY_START = 19;
+    private static final int LEGACY_SLOT_BATTERY = 25;
+    private static final int LEGACY_SLOT_UPGRADE_START = 26;
 
     /** Client-synced drone visual state per bay (0=empty, 1=standard, 2=heavy) for {@code CargoStationRenderer}. */
     private final byte[] clientBayRenderKinds = new byte[DRONE_BAY_COUNT];
@@ -72,6 +84,33 @@ public class CargoStationBlockEntity extends AbstractLogisticsStationBlockEntity
     @Override
     public int cargoSlotCount() {
         return SLOT_CARGO_COUNT;
+    }
+
+    @Override
+    protected int legacyTotalSlots() {
+        return LEGACY_TOTAL_SLOTS;
+    }
+
+    @Override
+    protected int remapLegacySlot(int legacySlot) {
+        if (legacySlot >= 0 && legacySlot < LEGACY_CARGO_COUNT) {
+            return SLOT_OUTBOUND_START + legacySlot;
+        }
+        if (legacySlot == LEGACY_SLOT_RF_CHIP) {
+            return SLOT_RF_CHIP;
+        }
+        if (legacySlot >= LEGACY_SLOT_DRONE_BAY_START
+                && legacySlot < LEGACY_SLOT_DRONE_BAY_START + DRONE_BAY_COUNT) {
+            return SLOT_DRONE_BAY_START + (legacySlot - LEGACY_SLOT_DRONE_BAY_START);
+        }
+        if (legacySlot == LEGACY_SLOT_BATTERY) {
+            return SLOT_BATTERY;
+        }
+        if (legacySlot >= LEGACY_SLOT_UPGRADE_START
+                && legacySlot < LEGACY_SLOT_UPGRADE_START + LogisticsConstants.MACHINE_UPGRADE_SLOTS) {
+            return SLOT_UPGRADE_START + (legacySlot - LEGACY_SLOT_UPGRADE_START);
+        }
+        return -1;
     }
 
     @Override
@@ -213,7 +252,13 @@ public class CargoStationBlockEntity extends AbstractLogisticsStationBlockEntity
     @Override
     protected void onSlotChanged(int slot) {
         super.onSlotChanged(slot);
+        if (slot == SLOT_RF_CHIP && getRfChipTier().isInstalled()) {
+            this.dispatchCooldown = 0;
+        }
         if (slot >= SLOT_DRONE_BAY_START && slot < SLOT_DRONE_BAY_START + DRONE_BAY_COUNT) {
+            if (!this.items.get(slot).isEmpty() && isDroneItem(this.items.get(slot))) {
+                this.dispatchCooldown = 0;
+            }
             refreshClientBayBytes();
             if (this.level instanceof ServerLevel serverLevel) {
                 syncBayStateAndVisuals(serverLevel);

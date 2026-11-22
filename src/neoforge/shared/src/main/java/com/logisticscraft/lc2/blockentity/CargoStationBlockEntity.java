@@ -39,24 +39,31 @@ import net.minecraft.world.level.block.state.BlockState;
  * 6 physical drone landing bays (with roof rendering sync), atomic target bay reservation,
  * target-side auto-return parking, and EU/battery dispatch payment.
  * <p>
- * Slot layout (matches {@code docs/GUI_LAYOUT.md}):
+ * 2-zone slot layout (matches {@code docs/GUI_LAYOUT.md}):
  * <ul>
- *   <li>{@code 0..17}: 18-slot cargo buffer (2x9)</li>
- *   <li>{@code 18}: RF chip slot ({@code lc2:rf_chip_1/2/3} only)</li>
- *   <li>{@code 19..24}: 6 drone landing bay slots ({@code lc2:transport_drone} / {@code lc2:heavy_transport_drone}, max stack 1)</li>
- *   <li>{@code 25}: single-use battery slot ({@code ic2:single_use_battery} only)</li>
- *   <li>{@code 26..29}: 4 machine upgrade slots</li>
+ *   <li>{@code 0..26}: 27-slot Outbound Area (3x9, left)</li>
+ *   <li>{@code 27..53}: 27-slot Storage Area (3x9, right)</li>
+ *   <li>{@code 54}: RF chip slot ({@code lc2:rf_chip_1/2/3} only)</li>
+ *   <li>{@code 55..60}: 6 drone landing bay slots ({@code lc2:transport_drone} / {@code lc2:heavy_transport_drone}, max stack 1)</li>
+ *   <li>{@code 61}: single-use battery slot ({@code ic2:single_use_battery} only)</li>
+ *   <li>{@code 62..65}: 4 machine upgrade slots</li>
  * </ul>
  */
 public final class CargoStationBlockEntity extends AbstractLogisticsStationBlockEntity {
 
-    public static final int CARGO_SLOTS = LogisticsConstants.CARGO_STATION_BUFFER_SLOTS; // 18
-    public static final int RF_CHIP_SLOT = 18;
-    public static final int DRONE_BAY_START = 19;
+    public static final int RF_CHIP_SLOT = TOTAL_CARGO_SLOTS; // 54
+    public static final int DRONE_BAY_START = RF_CHIP_SLOT + 1; // 55
     public static final int DRONE_BAY_COUNT = LogisticsConstants.CARGO_STATION_DRONE_BAYS; // 6
-    public static final int BATTERY_SLOT = 25;
-    public static final int UPGRADE_START = 26;
-    public static final int TOTAL_SLOTS = 30;
+    public static final int BATTERY_SLOT = DRONE_BAY_START + DRONE_BAY_COUNT; // 61
+    public static final int UPGRADE_START = BATTERY_SLOT + 1; // 62
+    public static final int TOTAL_SLOTS = LogisticsConstants.CARGO_STATION_MACHINE_SLOTS; // 66
+
+    private static final int LEGACY_V1_CARGO_SLOTS = 18;
+    private static final int LEGACY_V1_RF_CHIP_SLOT = 18;
+    private static final int LEGACY_V1_DRONE_BAY_START = 19;
+    private static final int LEGACY_V1_BATTERY_SLOT = 25;
+    private static final int LEGACY_V1_UPGRADE_START = 26;
+    private static final int LEGACY_V1_TOTAL_SLOTS = 30;
 
     /** Bay visual encoding synced to client renderer: 0 = empty, 1 = STANDARD, 2 = HEAVY. */
     public static final byte BAY_EMPTY = 0;
@@ -68,6 +75,7 @@ public final class CargoStationBlockEntity extends AbstractLogisticsStationBlock
 
     private final Map<Integer, WaitingReturnDrone> waitingReturnBays = new HashMap<>();
     private final byte[] clientBayKinds = new byte[DRONE_BAY_COUNT];
+    private int lastReadyDroneCount = 0;
 
     public CargoStationBlockEntity(BlockPos pos, BlockState state) {
         super(Lc2Registries.CARGO_STATION_BE.get(), pos, state, TOTAL_SLOTS);
@@ -79,11 +87,6 @@ public final class CargoStationBlockEntity extends AbstractLogisticsStationBlock
     }
 
     @Override
-    public int cargoBufferSize() {
-        return CARGO_SLOTS;
-    }
-
-    @Override
     public int batterySlotIndex() {
         return BATTERY_SLOT;
     }
@@ -91,6 +94,32 @@ public final class CargoStationBlockEntity extends AbstractLogisticsStationBlock
     @Override
     public int upgradeSlotStart() {
         return UPGRADE_START;
+    }
+
+    @Override
+    protected void migrateLegacyInventory(int fromVersion) {
+        if (fromVersion >= LAYOUT_VERSION) {
+            return;
+        }
+        ItemStack[] snapshot = new ItemStack[LEGACY_V1_TOTAL_SLOTS];
+        for (int i = 0; i < LEGACY_V1_TOTAL_SLOTS; i++) {
+            snapshot[i] = items.get(i);
+        }
+        for (int i = 0; i < items.size(); i++) {
+            items.set(i, ItemStack.EMPTY);
+        }
+        for (int i = 0; i < LEGACY_V1_CARGO_SLOTS; i++) {
+            items.set(OUTBOUND_START + i, snapshot[i]);
+        }
+        items.set(RF_CHIP_SLOT, snapshot[LEGACY_V1_RF_CHIP_SLOT]);
+        for (int bay = 0; bay < DRONE_BAY_COUNT; bay++) {
+            items.set(DRONE_BAY_START + bay, snapshot[LEGACY_V1_DRONE_BAY_START + bay]);
+        }
+        items.set(BATTERY_SLOT, snapshot[LEGACY_V1_BATTERY_SLOT]);
+        for (int i = 0; i < LogisticsConstants.MACHINE_UPGRADE_SLOTS; i++) {
+            items.set(UPGRADE_START + i, snapshot[LEGACY_V1_UPGRADE_START + i]);
+        }
+        recomputeVisualBays();
     }
 
     @Override
@@ -270,10 +299,18 @@ public final class CargoStationBlockEntity extends AbstractLogisticsStationBlock
 
     @Override
     protected void tickStationLogic(ServerLevel level, boolean redstoneTriggered, boolean redstoneRisingEdge) {
+        int readyNow = countReadyDrones();
+        if (readyNow > lastReadyDroneCount) {
+            resetDispatchCooldown();
+        }
         if (redstoneTriggered && (redstoneRisingEdge || canAttemptAutoDispatch())) {
             VirtualTransitEngine.DispatchResult res = tryDispatch(level, false);
             setDispatchCooldown(res.isSuccess() ? 20 : 40);
+            if (res.isSuccess()) {
+                readyNow = countReadyDrones();
+            }
         }
+        lastReadyDroneCount = readyNow;
     }
 
     @Override
@@ -397,7 +434,8 @@ public final class CargoStationBlockEntity extends AbstractLogisticsStationBlock
                     entry.freeBays()
             ));
         }
-        boolean ready = chip.isInstalled() && countReadyDrones() > 0;
+        int readyDrones = countReadyDrones();
+        boolean ready = chip.isInstalled() && readyDrones > 0;
         return new StationSyncPayload(
                 worldPosition,
                 stationName,
@@ -412,6 +450,7 @@ public final class CargoStationBlockEntity extends AbstractLogisticsStationBlock
                 statusKey,
                 isChunkLoaderActive(),
                 ready,
+                readyDrones,
                 chip.maxRange(),
                 infos
         );
@@ -444,10 +483,15 @@ public final class CargoStationBlockEntity extends AbstractLogisticsStationBlock
     protected void onInventorySlotModified(int slot) {
         super.onInventorySlotModified(slot);
         if (slot >= DRONE_BAY_START && slot < DRONE_BAY_START + DRONE_BAY_COUNT) {
+            if (droneKindInSlot(slot - DRONE_BAY_START).isPresent()) {
+                resetDispatchCooldown();
+            }
             if (level instanceof ServerLevel serverLevel) {
                 syncDockedMaskToRegistry(serverLevel);
             }
             syncVisualBaysToClient();
+        } else if (slot == RF_CHIP_SLOT && installedRfChip().isInstalled()) {
+            resetDispatchCooldown();
         }
     }
 
