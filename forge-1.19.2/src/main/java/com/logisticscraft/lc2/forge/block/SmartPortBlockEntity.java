@@ -184,7 +184,9 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
         if (candidates.isEmpty()) {
             return null;
         }
-        candidates.sort(Comparator.comparingDouble(b -> b.position().distanceToSqr(berthCenter)));
+        candidates.sort(Comparator
+                .<ElectricCargoBoatEntity>comparingInt(b -> b.getPassengers().isEmpty() ? 1 : 0)
+                .thenComparingDouble(b -> b.position().distanceToSqr(berthCenter)));
         return candidates.get(0);
     }
 

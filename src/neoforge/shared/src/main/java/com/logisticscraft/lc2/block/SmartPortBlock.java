@@ -133,4 +133,12 @@ public final class SmartPortBlock extends Lc2StationBlockBase
             port.onRedstoneUpdate(serverLevel);
         }
     }
+
+    @Override
+    protected int computeAnalogOutputSignal(Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof AbstractLogisticsStationBlockEntity station) {
+            return station.computeCargoComparatorSignal();
+        }
+        return 0;
+    }
 }

@@ -347,19 +347,22 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
 
     @Override
     protected void renderLabels(PoseStack poseStack, int mouseX, int mouseY) {
-        this.font.draw(poseStack, this.title, this.titleLabelX, this.titleLabelY, TITLE_COLOR);
+        Component headerTitle = (this.sync != null && !this.sync.stationName().isBlank())
+                ? Component.literal(this.sync.stationName())
+                : this.title;
+        this.font.draw(poseStack, headerTitle, this.titleLabelX, this.titleLabelY, TITLE_COLOR);
         this.font.draw(poseStack, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, TITLE_COLOR);
 
-        // Target Readout LCD at (23, 28, 132, 12) -> text at (26, 30)
+        // Target Readout LCD at (23, 28, 132, 12) -> text inside [25..153] (128px max)
         String targetLine = formatTargetReadout();
         int targetColor = targetReadoutColor();
-        this.font.draw(poseStack, trimToWidth(targetLine, 126), 26, 30, targetColor);
+        drawFittedLcdText(poseStack, targetLine, 26, 30, 126, targetColor);
 
-        // Status Readout LCD at (7, 67, 164, 10) -> text at (10, 68)
+        // Status Readout LCD at (7, 67, 164, 10) -> text inside [9..169] (160px max)
         String statusKey = this.sync != null ? this.sync.statusKey() : "status.lc2.ready";
         String statusText = Component.translatable(statusKey).getString();
         int statusColor = statusKey.contains(".failure.") ? LCD_TEXT_RED : LCD_TEXT_GREEN;
-        this.font.draw(poseStack, trimToWidth(statusText, 158), 10, 68, statusColor);
+        drawFittedLcdText(poseStack, statusText, 10, 68, 158, statusColor);
 
         renderExtraLabels(poseStack, mouseX, mouseY);
     }
@@ -421,6 +424,23 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
             }
         }
         return null;
+    }
+
+    protected void drawFittedLcdText(PoseStack poseStack, String text, int x, int y, int maxWidth, int color) {
+        int rawW = this.font.width(text);
+        if (rawW <= maxWidth) {
+            this.font.draw(poseStack, text, x, y, color);
+            return;
+        }
+        float scale = Math.max(0.75F, (float) maxWidth / (float) rawW);
+        int scaledMaxW = (int) Math.floor(maxWidth / scale);
+        String display = trimToWidth(text, scaledMaxW);
+        float yOffset = (8.0F - 8.0F * scale) * 0.5F;
+        poseStack.pushPose();
+        poseStack.translate(x, y + yOffset, 0.0D);
+        poseStack.scale(scale, scale, 1.0F);
+        this.font.draw(poseStack, display, 0, 0, color);
+        poseStack.popPose();
     }
 
     protected String trimToWidth(String text, int maxWidth) {
@@ -495,13 +515,29 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
 
             int textColor = this.active ? 0xFFFFFFFF : 0xFFA0A0A0;
             String label = getMessage().getString();
-            int maxTextW = this.width - 4;
-            if (mc.font.width(label) > maxTextW) {
-                label = mc.font.plainSubstrByWidth(label, maxTextW);
+            int maxTextW = Math.max(4, this.width - 4);
+            int rawW = mc.font.width(label);
+            if (rawW <= maxTextW) {
+                int tx = this.x + (this.width - rawW) / 2;
+                int ty = this.y + (this.height - 8) / 2;
+                mc.font.drawShadow(poseStack, label, tx, ty, textColor);
+            } else {
+                float scale = Math.max(0.65F, (float) maxTextW / (float) rawW);
+                int scaledMax = (int) Math.floor(maxTextW / scale);
+                if (rawW > scaledMax) {
+                    label = mc.font.plainSubstrByWidth(label, scaledMax);
+                    rawW = mc.font.width(label);
+                }
+                float drawW = rawW * scale;
+                float drawH = 8.0F * scale;
+                float tx = this.x + (this.width - drawW) * 0.5F;
+                float ty = this.y + (this.height - drawH) * 0.5F;
+                poseStack.pushPose();
+                poseStack.translate(tx, ty, 0.0D);
+                poseStack.scale(scale, scale, 1.0F);
+                mc.font.drawShadow(poseStack, label, 0.0F, 0.0F, textColor);
+                poseStack.popPose();
             }
-            int tx = this.x + (this.width - mc.font.width(label)) / 2;
-            int ty = this.y + (this.height - 8) / 2;
-            mc.font.drawShadow(poseStack, label, tx, ty, textColor);
         }
     }
 }

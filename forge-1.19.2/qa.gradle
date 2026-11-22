@@ -26,13 +26,37 @@ dependencies {
 
 minecraft {
     runs {
-        // ForgeGradle merges run configs by name; derived runs sort after parent ('server').
+        // ForgeGradle merges run configs by name; derived runs sort after parent ('server'/'client').
         serverQaLc2 {
             taskName 'runQaLc2Server'
             parent runs.server
             workingDirectory layout.buildDirectory.dir('run/qa-lc2').get().asFile
             property 'forge.logging.console.level', 'info'
             property 'lc2.qa.phase', providers.gradleProperty('lc2QaPhase').getOrElse('write')
+            mods {
+                lc2_qa {
+                    source sourceSets.qa
+                }
+            }
+        }
+        serverFieldLc2 {
+            taskName 'runFieldLc2Server'
+            parent runs.server
+            workingDirectory layout.buildDirectory.dir('run/field-server').get().asFile
+            property 'forge.logging.console.level', 'info'
+            property 'lc2.qa.phase', 'field_server'
+            mods {
+                lc2_qa {
+                    source sourceSets.qa
+                }
+            }
+        }
+        clientFieldLc2 {
+            taskName 'runFieldLc2Client'
+            parent runs.client
+            workingDirectory layout.buildDirectory.dir('run/field-client').get().asFile
+            property 'forge.logging.console.level', 'info'
+            property 'lc2.qa.phase', 'field_client'
             mods {
                 lc2_qa {
                     source sourceSets.qa
@@ -165,13 +189,59 @@ def deobfPackagedLc2Jar = tasks.register('deobfPackagedLc2Jar', JavaExec) {
 }
 
 // 3. Stage the mods directory and export exact ForgeGradle server launch manifest (with ONLY lc2_qa in MOD_CLASSES).
-// Skip client-only sound/music asset downloads for dedicated-server QA runs (keeps --offline fast & deterministic).
+// Skip client-only sound/music asset downloads for dedicated-server QA runs (or offline runs when 1.19 assets are already cached).
 tasks.matching { it.name == 'downloadAssets' }.configureEach {
     onlyIf {
-        !gradle.startParameter.taskNames.any { name ->
+        if (gradle.startParameter.taskNames.any { name ->
             name == 'runLc2Qa' || name.endsWith(':runLc2Qa') || name == 'prepareLc2Qa' || name.endsWith(':prepareLc2Qa')
+        }) {
+            return false
         }
+        File cachedIndex = new File(gradle.gradleUserHomeDir, 'caches/forge_gradle/assets/indexes/1.19.json')
+        return !(gradle.startParameter.offline && cachedIndex.isFile())
     }
+}
+
+def exportQaHostLaunch = { run, side ->
+    def generator = plugins.getPlugin('net.minecraftforge.gradle').class.classLoader.loadClass(
+            'net.minecraftforge.gradle.common.util.runs.RunConfigGenerator')
+    def config = run.runConfig.get()
+    def folders = generator.mapModClassesToGradle(project, config)
+    def tokens = generator.configureTokensLazy(project, config, folders,
+            run.minecraftArtifacts, run.runtimeClasspathArtifacts)
+    def expand = { value -> config.replace(tokens, value.toString()) }
+
+    def jvm = config.jvmArgs.collect(expand)
+    if (side == 'client') {
+        jvm += run.additionalClientArgs.get().collect(expand)
+    }
+    jvm += config.properties.collect { key, value -> "-D${key}=${expand(value)}" }
+    def env = config.environment.collectEntries { key, value -> [(key): expand(value)] }
+
+    // Keep ONLY lc2_qa in MOD_CLASSES so Forge MUST load lc2 from mods/lc2-forge-1.19.2-1.0.0.jar!
+    if (env.containsKey('MOD_CLASSES')) {
+        def sep = File.pathSeparator
+        def kept = env['MOD_CLASSES'].split(java.util.regex.Pattern.quote(sep))
+                .findAll { it.startsWith('lc2_qa%%') }
+        if (kept.isEmpty()) {
+            throw new GradleException("Expected lc2_qa entries in MOD_CLASSES for ${side}, got: ${env['MOD_CLASSES']}")
+        }
+        env['MOD_CLASSES'] = kept.join(sep)
+    }
+
+    // Remove sourceSets.main output directories from JVM classpath so they cannot shadow mods/lc2-*.jar
+    Set<File> mainOutputs = sourceSets.main.output.files.collect { it.canonicalFile } as Set
+    def cpFiles = files(run.classpath, sourceSets.qa.runtimeClasspath).files
+            .findAll { !mainOutputs.contains(it.canonicalFile) }
+
+    return [
+            java     : run.javaLauncher.get().executablePath.asFile.absolutePath,
+            main     : run.mainClass.get(),
+            jvm      : jvm,
+            args     : config.args.collect(expand),
+            env      : env,
+            classpath: cpFiles.collect { it.absolutePath }.join(File.pathSeparator)
+    ]
 }
 
 def prepareLc2Qa = tasks.register('prepareLc2Qa') {
@@ -248,5 +318,65 @@ tasks.register('runLc2Qa', Exec) {
         commandLine 'python3',
                 file('src/qa/run_qa_server.py').absolutePath,
                 '--manifest', qaBuildDir.get().file('launch.json').asFile.absolutePath
+    }
+}
+
+// 5. Stage packaged IC2 + LC2 JARs and export both Dedicated Server and Graphical Client launch specs
+//    for the real-world natural-seed IC2 mining/refining + live Client-Server field test.
+def prepareFieldTest = tasks.register('prepareFieldTest') {
+    group = 'verification'
+    description = 'Exports Forge 1.19.2 Dedicated Server + Graphical Client launch manifest for runFieldTest.'
+    dependsOn 'qaClasses', deobfPackagedLc2Jar
+    dependsOn {
+        ['runFieldLc2Server', 'runFieldLc2Client'].collectMany { name ->
+            def run = tasks.getByName(name)
+            run.taskDependencies.getDependencies(run).toList()
+        }
+    }
+    def launchManifest = qaBuildDir.map { it.file('field-launch.json') }
+    outputs.file(launchManifest)
+    outputs.upToDateWhen { false }
+    doLast {
+        File ic2DeobfJar = configurations.qaIc2Mod.singleFile
+        File lc2DeobfJar = deobfPackagedLc2Jar.get().outputs.files.singleFile
+        def manifest = [
+                server        : exportQaHostLaunch(tasks.getByName('runFieldLc2Server'), 'server'),
+                client        : exportQaHostLaunch(tasks.getByName('runFieldLc2Client'), 'client'),
+                ic2ModJar     : ic2DeobfJar.absolutePath,
+                lc2ModJar     : lc2DeobfJar.absolutePath,
+                packagedIc2Jar: packagedIc2Jar.absolutePath,
+                packagedLc2Jar: packagedLc2Jar.get().asFile.absolutePath,
+                serverRunDir  : layout.buildDirectory.dir('run/field-server').get().asFile.absolutePath,
+                clientRunDir  : layout.buildDirectory.dir('run/field-client').get().asFile.absolutePath,
+                reportDir     : qaBuildDir.get().asFile.absolutePath
+        ]
+        File target = launchManifest.get().asFile
+        target.parentFile.mkdirs()
+        target.setText(JsonOutput.prettyPrint(JsonOutput.toJson(manifest)) + '\n', 'UTF-8')
+    }
+}
+
+// 6. Execute full natural-seed IC2 mining & refining production-line + real Graphical Client <-> Server field test!
+tasks.register('runFieldTest', Exec) {
+    group = 'verification'
+    description = 'Runs natural-seed Forge 1.19.2 automated IC2 mining/refining factory + real Graphical Client-Server field test.'
+    dependsOn prepareFieldTest
+    outputs.upToDateWhen { false }
+    doFirst {
+        def seed = providers.gradleProperty('lc2FieldSeed').getOrElse('20261121')
+        def shotsDir = providers.gradleProperty('lc2FieldScreenshotsDir').orNull
+        def cmd = [
+                'python3',
+                file('src/qa/run_field_test.py').absolutePath,
+                '--manifest', qaBuildDir.get().file('field-launch.json').asFile.absolutePath,
+                '--seed', seed
+        ]
+        if (shotsDir != null && !shotsDir.trim().isEmpty()) {
+            cmd.addAll(['--screenshots-dir', shotsDir])
+        }
+        if (providers.gradleProperty('lc2FieldServerOnly').getOrElse('false').toBoolean()) {
+            cmd.add('--server-only')
+        }
+        commandLine cmd
     }
 }

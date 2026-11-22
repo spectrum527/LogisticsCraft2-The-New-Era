@@ -95,9 +95,13 @@ public abstract class LogisticsScreenBase<M extends AbstractContainerMenu>
         paintPanel(wrapCanvas(g), mouseX, mouseY);
     }
 
+    protected Component headerTitle() {
+        return title;
+    }
+
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        g.drawString(font, title, titleLabelX, titleLabelY, 0xFF2C3440, false);
+        g.drawString(font, headerTitle(), titleLabelX, titleLabelY, 0xFF2C3440, false);
         g.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFF2C3440, false);
     }
 

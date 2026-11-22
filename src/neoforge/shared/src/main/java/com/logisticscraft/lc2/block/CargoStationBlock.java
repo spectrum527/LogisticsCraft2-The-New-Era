@@ -81,4 +81,12 @@ public final class CargoStationBlock extends Lc2StationBlockBase
             station.onRedstoneUpdate(serverLevel);
         }
     }
+
+    @Override
+    protected int computeAnalogOutputSignal(Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof AbstractLogisticsStationBlockEntity station) {
+            return station.computeCargoComparatorSignal();
+        }
+        return 0;
+    }
 }

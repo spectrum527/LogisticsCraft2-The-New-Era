@@ -46,6 +46,21 @@ public abstract class Lc2StationBlockBase extends Block implements EntityBlock {
     protected void onStationBlockRemoved(BlockState state, ServerLevel level, BlockPos pos) {
     }
 
+    /** Computes the 0..15 redstone comparator signal for this station's cargo buffer. */
+    protected int computeAnalogOutputSignal(Level level, BlockPos pos) {
+        return 0;
+    }
+
+    @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        return computeAnalogOutputSignal(level, pos);
+    }
+
     @Override
     protected ItemInteractionResult useItemOn(
             ItemStack stack,

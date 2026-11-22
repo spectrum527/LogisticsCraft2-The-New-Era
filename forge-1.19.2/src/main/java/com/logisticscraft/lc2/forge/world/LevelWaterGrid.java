@@ -77,7 +77,8 @@ public final class LevelWaterGrid implements WaterGrid {
         }
         cursor.set(x, y, z);
         BlockState state = chunk.getBlockState(cursor);
-        if (state.getFluidState().is(FluidTags.LAVA)) {
+        FluidState fluid = state.getFluidState();
+        if (fluid.is(FluidTags.LAVA) || fluid.is(FluidTags.WATER)) {
             return false;
         }
         return state.getCollisionShape(chunk, cursor).isEmpty();

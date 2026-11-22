@@ -8,14 +8,14 @@
 
 Requires **IndustrialCraft²: The New Era (`ic2` v1.0.5+)** for the matching Minecraft version. Place the matching `lc2` JAR into `mods/` on both client and server.
 
-[v1.0.0 Release Notes](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/tag/v1.0.0) · [SHA-256 Checksums](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.0/SHA256SUMS.txt)
+[v1.0.1 Release Notes](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/tag/v1.0.1) · [SHA-256 Checksums](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.1/SHA256SUMS.txt)
 
 | Minecraft | Loader | Java | Download |
 | --- | --- | ---: | --- |
-| 1.19.2 | Forge 43.5.0 | 17 | [Forge 1.19.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.0/lc2-forge-1.19.2-1.0.0.jar) |
-| 1.21.1 | NeoForge 21.1.265 | 21 | [NeoForge 1.21.1 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.0/lc2-neoforge-1.21.1-1.0.0.jar) |
-| 26.1.2 | NeoForge 26.1.2.128 | 25 | [NeoForge 26.1.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.0/lc2-neoforge-26.1.2-1.0.0.jar) |
-| 26.2 | NeoForge 26.2.0.95 | 25 | [NeoForge 26.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.0/lc2-neoforge-26.2-1.0.0.jar) |
+| 1.19.2 | Forge 43.5.0 | 17 | [Forge 1.19.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.1/lc2-forge-1.19.2-1.0.1.jar) |
+| 1.21.1 | NeoForge 21.1.265 | 21 | [NeoForge 1.21.1 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.1/lc2-neoforge-1.21.1-1.0.1.jar) |
+| 26.1.2 | NeoForge 26.1.2.128 | 25 | [NeoForge 26.1.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.1/lc2-neoforge-26.1.2-1.0.1.jar) |
+| 26.2 | NeoForge 26.2.0.95 | 25 | [NeoForge 26.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.0.1/lc2-neoforge-26.2-1.0.1.jar) |
 
 ## Features
 

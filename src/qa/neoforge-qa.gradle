@@ -1,3 +1,4 @@
+import groovy.json.JsonOutput
 import java.nio.file.Files
 import java.time.Duration
 
@@ -12,7 +13,9 @@ sourceSets {
     qa {
         java.setSrcDirs([
                 qaRoot.dir('shared/src/main/java'),
-                qaRoot.dir(platformJava == 21 ? '1.21.1/src/main/java' : '26.x/src/main/java')
+                qaRoot.dir(platformJava == 21 ? '1.21.1/src/main/java' : '26.x/src/main/java'),
+                qaRoot.dir(minecraftVersion == '26.2' ? 'client-26.2/src/main/java'
+                        : (platformJava == 21 ? 'client-1.21.1/src/main/java' : 'client-26.1.2/src/main/java'))
         ])
         resources.setSrcDirs([qaRoot.dir('resources')])
     }
@@ -175,4 +178,139 @@ tasks.register('lc2QaTest') {
     group = 'verification'
     description = "Runs the full LC2 + IC2 live dedicated-server E2E QA suite (write + cold-restart read) on NeoForge ${minecraftVersion}."
     dependsOn 'runQaRead'
+}
+
+def fieldRunDir = layout.buildDirectory.dir('run/lc2-field-test')
+def fieldSeedProp = providers.gradleProperty('lc2.field.seed').orElse('20261121')
+
+neoForge.runs.create('fieldTest') {
+    server()
+    programArgument '--nogui'
+    sourceSet.set(sourceSets.qa)
+    loadedMods.set([qaMod])
+    gameDirectory.set(fieldRunDir)
+    systemProperty 'lc2.qa.mode', 'field'
+    systemProperty 'lc2.qa.phase', 'field'
+    systemProperty 'lc2.qa.mcVersion', minecraftVersion
+    systemProperty 'lc2.qa.expectedLc2Jar', "lc2-neoforge-${minecraftVersion}-${project.version}.jar"
+    systemProperty 'lc2.qa.expectedIc2Jar', ic2DepJar.name
+}
+
+tasks.named('runFieldTest', JavaExec) {
+    group = 'verification'
+    description = "Runs the real-world natural-seed IC2+LC2 Mining & Refining Field Test on NeoForge ${minecraftVersion}."
+    timeout.set(Duration.ofMinutes(10))
+    dependsOn 'jar'
+    doFirst {
+        def dir = fieldRunDir.get().asFile
+        def lc2Artifact = productionLc2Jar.get().asFile
+        delete dir
+        dir.mkdirs()
+        def modsDir = new File(dir, 'mods')
+        modsDir.mkdirs()
+        copy {
+            from lc2Artifact
+            from ic2DepJar
+            into modsDir
+        }
+        new File(dir, 'eula.txt').text = 'eula=true\n'
+        new File(dir, 'server.properties').text = """server-ip=127.0.0.1
+server-port=0
+online-mode=false
+level-name=world
+level-seed=${fieldSeedProp.get()}
+generate-structures=true
+spawn-protection=0
+view-distance=6
+simulation-distance=6
+difficulty=peaceful
+level-type=minecraft:normal
+"""
+    }
+    doLast {
+        def dir = fieldRunDir.get().asFile
+        def lc2Artifact = productionLc2Jar.get().asFile
+        def reportFile = new File(dir, 'qa-report-field.properties')
+        def jsonFile = new File(dir, 'qa-report-field.json')
+        def result = loadQaProperties(reportFile)
+        if (!jsonFile.isFile()) {
+            throw new GradleException("Missing structured JSON Field Test report: ${jsonFile}")
+        }
+        if (result.status != 'passed') {
+            throw new GradleException(
+                    "LC2 NeoForge ${minecraftVersion} Field Test FAILED: ${result.problem}\n${result.getProperty('trace', '')}"
+            )
+        }
+        if (result.lc2Artifact != lc2Artifact.name || result.ic2Artifact != ic2DepJar.name) {
+            throw new GradleException(
+                    "Field Test loaded unexpected JARs: lc2=${result.lc2Artifact}, ic2=${result.ic2Artifact}"
+            )
+        }
+        if (!new File(dir, 'world/level.dat').isFile()) {
+            throw new GradleException("Missing saved world/level.dat in ${dir}")
+        }
+        scanLatestLogForErrors(dir, 'field')
+        logger.lifecycle("LC2 NeoForge ${minecraftVersion} FIELD TEST PASSED (${result.passedCount} checks, ticks=${result.ticks}, seed=${result.seed}, dist=${result.waterwayDistance}, advMined=${result.advOresMined}, basicMined=${result.basicOresMined}, ingots=${result.finishedIngots})")
+    }
+}
+
+def fieldClientOutput = layout.buildDirectory.dir('field-client-live')
+def fieldLiveRuns = [:]
+['server', 'client'].each { side ->
+    def runName = "fieldLive${side.capitalize()}"
+    def runDir = layout.buildDirectory.dir("run/field-client-live/standalone-${side}")
+    neoForge.runs.create(runName) {
+        if (side == 'client') {
+            client()
+            programArguments.addAll '--username', 'Lc2FieldTester', '--width', '1280', '--height', '720'
+            systemProperty 'lc2.qa.mode', 'client_only'
+            systemProperty 'lc2.qa.clientDriver', 'true'
+        } else {
+            server()
+            programArgument '--nogui'
+            systemProperty 'lc2.qa.mode', 'field_live'
+        }
+        sourceSet.set(sourceSets.qa)
+        loadedMods.set([qaMod])
+        gameDirectory.set(runDir)
+        systemProperty 'lc2.qa.mcVersion', minecraftVersion
+        systemProperty 'lc2.qa.expectedLc2Jar', "lc2-neoforge-${minecraftVersion}-${project.version}.jar"
+        systemProperty 'lc2.qa.expectedIc2Jar', ic2DepJar.name
+    }
+    fieldLiveRuns[side] = tasks.named("run${runName.capitalize()}", JavaExec)
+}
+
+tasks.register('prepareFieldClientPlay') {
+    group = 'verification'
+    description = "Exports launch parameters for live graphical Client + Dedicated Server field testing on NeoForge ${minecraftVersion}."
+    dependsOn 'jar', 'qaClasses'
+    dependsOn {
+        fieldLiveRuns.values().collectMany { provider ->
+            def run = provider.get()
+            run.taskDependencies.getDependencies(run).toList()
+        }
+    }
+    def manifest = fieldClientOutput.map { it.file('launch.json') }
+    outputs.file(manifest)
+    outputs.upToDateWhen { false }
+    doLast {
+        def launch = fieldLiveRuns.collectEntries { side, provider ->
+            def run = provider.get()
+            [(side): [
+                    java: run.javaLauncher.get().executablePath.asFile.absolutePath,
+                    jvmArgs: run.allJvmArgs,
+                    classpath: files(run.classpath, run.classpathProvider).asPath,
+                    mainClass: run.mainClass.get(),
+                    args: run.args + run.argumentProviders.collectMany { it.asArguments().toList() },
+                    environment: run.environmentProperty.get().findAll { key, value -> key == 'MOD_CLASSES' }
+            ]]
+        }
+        launch.minecraftVersion = minecraftVersion
+        launch.lc2Jar = productionLc2Jar.get().asFile.absolutePath
+        launch.ic2Jar = ic2DepJar.absolutePath
+        launch.seed = fieldSeedProp.get()
+        def outFile = manifest.get().asFile
+        outFile.parentFile.mkdirs()
+        outFile.setText(JsonOutput.prettyPrint(JsonOutput.toJson(launch)) + '\n', 'UTF-8')
+    }
 }

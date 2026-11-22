@@ -165,9 +165,12 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
                 box,
                 boat -> !boat.isRemoved() && !boat.isAutonomousTransit()
         );
-        return boats.stream().min(Comparator.comparingDouble(
-                b -> b.distanceToSqr(berthCenter.x(), berthCenter.y(), berthCenter.z())
-        ));
+        return boats.stream().min(
+                Comparator.comparingInt((ElectricCargoBoatEntity b) -> b.getPassengers().isEmpty() ? 1 : 0)
+                        .thenComparingDouble(
+                                b -> b.distanceToSqr(berthCenter.x(), berthCenter.y(), berthCenter.z())
+                        )
+        );
     }
 
     /**

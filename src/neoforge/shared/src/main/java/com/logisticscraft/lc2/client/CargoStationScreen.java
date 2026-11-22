@@ -30,9 +30,9 @@ public final class CargoStationScreen extends AbstractLogisticsScreen<CargoStati
         if (info == null) {
             return "(" + state.targetPos().getX() + "," + state.targetPos().getY() + "," + state.targetPos().getZ() + ")";
         }
-        return info.displayName()
-                + " " + info.distance() + "m "
+        String suffix = " " + info.distance() + "m "
                 + info.freeBays() + "/" + LogisticsConstants.CARGO_STATION_DRONE_BAYS;
+        return fitTargetReadout(info.displayName(), suffix, 126);
     }
 
     @Override

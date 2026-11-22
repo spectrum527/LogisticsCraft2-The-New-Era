@@ -10,6 +10,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -61,6 +62,35 @@ public final class QaPlatform {
             throw new AssertionError("Failed to add Villager passenger to level");
         }
         return mob;
+    }
+
+    /** Teleports a player to exact coordinates and view angles on 26.x. */
+    public static void teleportPlayer(
+            ServerPlayer player,
+            ServerLevel level,
+            double x,
+            double y,
+            double z,
+            float yaw,
+            float pitch
+    ) {
+        player.stopRiding();
+        player.teleportTo(level, x, y, z, Set.of(), yaw, pitch, false);
+    }
+
+    /** Returns the world spawn position. */
+    public static BlockPos spawnPos(ServerLevel level) {
+        return level.getRespawnData().pos();
+    }
+
+    /** Returns the qualified biome ID at {@code pos}. */
+    public static String biomeId(ServerLevel level, BlockPos pos) {
+        return level.getBiome(pos).unwrapKey().map(k -> k.identifier().toString()).orElse("unknown");
+    }
+
+    /** Reads the block's vanilla comparator analog output signal (0..15). */
+    public static int analogOutputSignal(ServerLevel level, BlockPos pos, Direction side) {
+        return level.getBlockState(pos).getAnalogOutputSignal(level, pos, side);
     }
 
     /** Non-destructively reads all non-empty ItemStacks stored in the container/capability at {@code pos}. */

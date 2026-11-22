@@ -53,6 +53,29 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
     /** Returns the PNG filename (without extension) inside {@code assets/lc2/textures/gui/}. */
     protected abstract String guiTextureName();
 
+    /** Returns the live header title, reflecting renames immediately once synced from the server. */
+    @Override
+    protected Component headerTitle() {
+        StationSyncPayload state = menu.syncedState();
+        if (state != null && state.stationName() != null && !state.stationName().isBlank()) {
+            return Component.literal(state.stationName());
+        }
+        return title;
+    }
+
+    /** Formats a target readout preserving the right-hand telemetry suffix while truncating long names. */
+    protected final String fitTargetReadout(String displayName, String suffix, int maxWidthPx) {
+        String full = displayName + suffix;
+        if (font.width(full) <= maxWidthPx) {
+            return full;
+        }
+        int suffixWidth = font.width(suffix);
+        int ellipsisWidth = font.width("..");
+        int nameBudget = Math.max(8, maxWidthPx - suffixWidth - ellipsisWidth);
+        String trimmed = font.plainSubstrByWidth(displayName, nameBudget).trim();
+        return trimmed + ".." + suffix;
+    }
+
     /** Formats the Target Readout LCD text for the currently selected target. */
     protected abstract String formatTargetReadout(StationSyncPayload state);
 
@@ -114,23 +137,23 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
                 b -> applyManualCoords()
         ).bounds(leftPos + 122, topPos + 41, 48, 12).build());
 
-        // Auto-Return Toggle Button: (8, 54, 54, 12)
+        // Auto-Return Toggle Button: (8, 54, 62, 12) — fits "Return: OFF" cleanly with padding
         autoReturnBtn = addRenderableWidget(Button.builder(
                 Component.translatable("gui.lc2.auto_return.off"),
                 b -> Lc2Native.sendToServer(StationActionPayload.simple(menu.stationPos(), StationActionPayload.Action.TOGGLE_AUTO_RETURN))
-        ).bounds(leftPos + 8, topPos + 54, 54, 12).build());
+        ).bounds(leftPos + 8, topPos + 54, 62, 12).build());
 
-        // Energy Priority Toggle Button: (64, 54, 56, 12)
+        // Energy Priority Toggle Button: (72, 54, 52, 12) — fits "Bat First" / "EU First" cleanly
         priorityBtn = addRenderableWidget(Button.builder(
                 Component.translatable("gui.lc2.priority.eu_first"),
                 b -> Lc2Native.sendToServer(StationActionPayload.simple(menu.stationPos(), StationActionPayload.Action.TOGGLE_ENERGY_PRIORITY))
-        ).bounds(leftPos + 64, topPos + 54, 56, 12).build());
+        ).bounds(leftPos + 72, topPos + 54, 52, 12).build());
 
-        // Manual Dispatch Button: (122, 54, 48, 12)
+        // Manual Dispatch Button: (126, 54, 44, 12) — fits "Launch" cleanly
         dispatchBtn = addRenderableWidget(Button.builder(
                 Component.translatable("gui.lc2.dispatch"),
                 b -> Lc2Native.sendToServer(StationActionPayload.simple(menu.stationPos(), StationActionPayload.Action.MANUAL_DISPATCH))
-        ).bounds(leftPos + 122, topPos + 54, 48, 12).build());
+        ).bounds(leftPos + 126, topPos + 54, 44, 12).build());
 
         menu.setSyncListener(this::onSyncUpdated);
         onSyncUpdated();

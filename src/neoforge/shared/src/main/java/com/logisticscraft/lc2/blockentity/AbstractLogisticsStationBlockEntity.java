@@ -32,6 +32,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.Containers;
 import net.minecraft.world.MenuProvider;
@@ -391,7 +392,24 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
                             stack -> !stack.isEmpty()
                     );
                     if (!extracted.isEmpty()) {
-                        addToCargoList(cargo, extracted, maxStacks);
+                        ItemStack leftover = addToCargoList(cargo, extracted, maxStacks);
+                        if (!leftover.isEmpty()) {
+                            ItemStack unreturned = insertIntoBuffer(leftover, false);
+                            if (!unreturned.isEmpty()) {
+                                int pushedBack = Lc2ItemAccess.push(
+                                        level, worldPosition.relative(dir), dir.getOpposite(), unreturned);
+                                unreturned.shrink(pushedBack);
+                            }
+                            if (!unreturned.isEmpty()) {
+                                Containers.dropItemStack(
+                                        level,
+                                        worldPosition.getX() + 0.5,
+                                        worldPosition.getY() + 1.0,
+                                        worldPosition.getZ() + 0.5,
+                                        unreturned
+                                );
+                            }
+                        }
                         pulledAny = true;
                     }
                 }
@@ -404,11 +422,11 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         return cargo;
     }
 
-    private void addToCargoList(List<ItemStack> cargo, ItemStack stack, int maxStacks) {
+    private ItemStack addToCargoList(List<ItemStack> cargo, ItemStack stack, int maxStacks) {
         ItemStack remaining = stack.copy();
         for (ItemStack existing : cargo) {
             if (remaining.isEmpty()) {
-                return;
+                return ItemStack.EMPTY;
             }
             if (ItemStack.isSameItemSameComponents(existing, remaining)) {
                 int space = existing.getMaxStackSize() - existing.getCount();
@@ -420,9 +438,34 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
             }
         }
         while (!remaining.isEmpty() && cargo.size() < maxStacks) {
-            int move = Math.min(remaining.getMaxStackSize(), remaining.getCount());
+            int maxStack = Math.max(1, remaining.getMaxStackSize());
+            int move = Math.min(maxStack, remaining.getCount());
             cargo.add(remaining.split(move));
         }
+        return remaining;
+    }
+
+    /**
+     * Computes a vanilla redstone comparator analog output signal (0..15) strictly over this
+     * station's cargo buffer slots ({@code 0..cargoBufferSize()-1}).
+     */
+    public final int computeCargoComparatorSignal() {
+        int bufferSize = cargoBufferSize();
+        if (bufferSize <= 0) {
+            return 0;
+        }
+        int nonEmpty = 0;
+        float fillSum = 0.0F;
+        for (int i = 0; i < bufferSize; i++) {
+            ItemStack stack = items.get(i);
+            if (!stack.isEmpty()) {
+                int limit = Math.min(getMaxStackSize(), Math.max(1, stack.getMaxStackSize()));
+                fillSum += Math.min(1.0F, (float) stack.getCount() / (float) limit);
+                nonEmpty++;
+            }
+        }
+        float avg = fillSum / (float) bufferSize;
+        return Math.min(15, Mth.floor(avg * 14.0F) + (nonEmpty > 0 ? 1 : 0));
     }
 
     private void tickAdjacentContainerIo(ServerLevel level) {

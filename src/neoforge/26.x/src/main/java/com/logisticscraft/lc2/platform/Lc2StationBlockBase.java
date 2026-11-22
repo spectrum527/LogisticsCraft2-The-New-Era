@@ -1,6 +1,7 @@
 package com.logisticscraft.lc2.platform;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -45,6 +46,21 @@ public abstract class Lc2StationBlockBase extends Block implements EntityBlock {
 
     /** Called on the server when the station block is truly removed. */
     protected void onStationBlockRemoved(BlockState state, ServerLevel level, BlockPos pos) {
+    }
+
+    /** Computes the 0..15 redstone comparator signal for this station's cargo buffer. */
+    protected int computeAnalogOutputSignal(Level level, BlockPos pos) {
+        return 0;
+    }
+
+    @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    @Override
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos, Direction side) {
+        return computeAnalogOutputSignal(level, pos);
     }
 
     @Override

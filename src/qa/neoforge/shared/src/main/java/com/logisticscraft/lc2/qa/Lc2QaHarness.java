@@ -5,6 +5,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
@@ -14,15 +16,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Live dedicated-server QA harness mod ({@code lc2_qa}) executing all 7 end-to-end verification
- * suites across a two-phase cold restart ({@code write} -> {@code read}) alongside the exact
- * packaged {@code ic2} and {@code lc2} production JARs.
+ * Live dedicated-server & physical-client QA harness mod ({@code lc2_qa}) supporting:
+ * <ul>
+ *   <li>{@code lc2.qa.mode=flat}: 7-suite flat-world E2E + cold-restart persistence verification</li>
+ *   <li>{@code lc2.qa.mode=field}: natural-seed automated IC2 mining + LC2 transport + IC2 refining factory</li>
+ *   <li>{@code lc2.qa.mode=field_live}: persistent natural-world server for live graphical client-server testing</li>
+ *   <li>{@code lc2.qa.clientDriver=true}: physical graphical client QA driver & screenshot probe</li>
+ * </ul>
  */
 @Mod("lc2_qa")
 public final class Lc2QaHarness {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Lc2QaHarness.class);
 
+    private final String mode = System.getProperty("lc2.qa.mode", "flat");
     private final String phase = System.getProperty("lc2.qa.phase", "write");
     private final QaChecks checks = new QaChecks();
 
@@ -33,21 +40,48 @@ public final class Lc2QaHarness {
     private final Suite5ChunkLoader suite5 = new Suite5ChunkLoader();
     private final Suite6CollisionAvoidance suite6 = new Suite6CollisionAvoidance();
     private final Suite7Persistence suite7 = new Suite7Persistence();
+    private final FieldTestRunner fieldRunner = new FieldTestRunner();
+    private final FieldLiveServer fieldLiveServer = new FieldLiveServer();
 
     private int activeSuite = 1;
     private int ticks = 0;
     private boolean finished = false;
 
-    public Lc2QaHarness() {
+    public Lc2QaHarness(IEventBus modBus, Dist side) {
+        if (side == Dist.CLIENT) {
+            ClientEntry.install();
+        }
+        if ("client_only".equals(mode)) {
+            return;
+        }
+        if ("field_live".equals(mode)) {
+            fieldLiveServer.install();
+        }
         NeoForge.EVENT_BUS.addListener(ServerStartedEvent.class, this::onServerStarted);
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, this::onServerTick);
+    }
+
+    private static final class ClientEntry {
+        private static void install() {
+            FieldClientDriver.install();
+        }
     }
 
     private void onServerStarted(ServerStartedEvent event) {
         MinecraftServer server = event.getServer();
         ServerLevel level = server.overworld();
         checks.putMeta("mcVersion", System.getProperty("lc2.qa.mcVersion", "unknown"));
+        checks.putMeta("mode", mode);
         try {
+            if ("field_live".equals(mode)) {
+                fieldLiveServer.onServerStarted(server, checks);
+                return;
+            }
+            if ("field".equals(mode)) {
+                fieldRunner.setup(level, checks);
+                server.tickRateManager().requestGameToSprint(8_000);
+                return;
+            }
             if ("read".equals(phase)) {
                 verifyProductionJarsOnRead();
                 suite7.startRead(level, checks);
@@ -86,6 +120,17 @@ public final class Lc2QaHarness {
         ServerLevel level = server.overworld();
         ticks++;
         try {
+            if ("field_live".equals(mode)) {
+                fieldLiveServer.onServerTick(server);
+                return;
+            }
+            if ("field".equals(mode)) {
+                if (fieldRunner.tick(level, ticks, checks)) {
+                    checks.check("field.world_saved", server.saveEverything(false, true, true));
+                    complete(server, null);
+                }
+                return;
+            }
             if ("read".equals(phase)) {
                 if (suite7.tickRead(level, ticks, checks)) {
                     checks.check("read.world_saved", server.saveEverything(false, true, true));
@@ -96,6 +141,13 @@ public final class Lc2QaHarness {
 
             if (ticks > 5_500) {
                 throw new AssertionError("Global QA write-phase tick budget exceeded at suite " + activeSuite);
+            }
+
+            // Wait for async entity-section loading on forced Suite 2 chunks before spawning boats
+            if (activeSuite == 2
+                    && (!com.logisticscraft.lc2.platform.Lc2Native.isChunkEntityTicking(level, 0, 1)
+                            || !com.logisticscraft.lc2.platform.Lc2Native.isChunkEntityTicking(level, 2, 1))) {
+                return;
             }
 
             boolean suiteDone = switch (activeSuite) {

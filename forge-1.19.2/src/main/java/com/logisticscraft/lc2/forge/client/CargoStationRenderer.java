@@ -6,6 +6,7 @@ import com.logisticscraft.lc2.core.VehicleKind;
 import com.logisticscraft.lc2.forge.block.CargoStationBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -34,6 +35,11 @@ public class CargoStationRenderer implements BlockEntityRenderer<CargoStationBlo
             int packedLight,
             int packedOverlay
     ) {
+        // Sample sky/block light directly ABOVE the opaque Cargo Station roof so parked drones are properly lit!
+        int roofLight = station.getLevel() != null
+                ? LevelRenderer.getLightColor(station.getLevel(), station.getBlockPos().above())
+                : packedLight;
+
         for (int bay = 0; bay < CargoStationBlockEntity.DRONE_BAY_COUNT; bay++) {
             VehicleKind kind = station.getBayDroneKind(bay);
             if (kind == null) {
@@ -45,7 +51,7 @@ public class CargoStationRenderer implements BlockEntityRenderer<CargoStationBlo
             poseStack.pushPose();
             // Position miniature drone neatly on its 3x2 landing pad atop the 1x1 block roof
             poseStack.translate(offset.x(), 1.005D, offset.z());
-            float scale = heavy ? 0.30F : 0.26F;
+            float scale = heavy ? 0.33F : 0.28F;
             poseStack.scale(-scale, -scale, scale);
             poseStack.translate(0.0D, -1.5D, 0.0D);
 
@@ -55,7 +61,7 @@ public class CargoStationRenderer implements BlockEntityRenderer<CargoStationBlo
             this.droneModel.renderToBuffer(
                     poseStack,
                     consumer,
-                    packedLight,
+                    roofLight,
                     OverlayTexture.NO_OVERLAY,
                     1.0F,
                     1.0F,

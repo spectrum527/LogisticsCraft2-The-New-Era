@@ -106,6 +106,21 @@ public class CargoStationBlock extends Block implements EntityBlock, WrenchTarge
     }
 
     @Override
+    @SuppressWarnings("deprecation")
+    public boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof AbstractLogisticsStationBlockEntity station) {
+            return station.getCargoComparatorSignal();
+        }
+        return 0;
+    }
+
+    @Override
     @Nullable
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new CargoStationBlockEntity(pos, state);

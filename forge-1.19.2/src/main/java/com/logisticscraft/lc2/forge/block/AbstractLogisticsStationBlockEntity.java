@@ -31,6 +31,7 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.MenuProvider;
@@ -787,6 +788,30 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
         if (slot >= 0 && slot < cargoSlotCount()) {
             this.incomingOverflowSlots.clear(slot);
         }
+    }
+
+    /**
+     * Computes the vanilla 0..15 Redstone Comparator analog output signal strictly over the
+     * internal cargo buffer slots {@code [0, cargoSlotCount())}, excluding batteries, RF chips,
+     * docked drones, and machine upgrades.
+     */
+    public int getCargoComparatorSignal() {
+        int cargoSlots = cargoSlotCount();
+        if (cargoSlots <= 0) {
+            return 0;
+        }
+        int nonEmpty = 0;
+        float fillFractionSum = 0.0F;
+        for (int i = 0; i < cargoSlots; i++) {
+            ItemStack stack = this.items.get(i);
+            if (!stack.isEmpty()) {
+                int maxStack = Math.max(1, Math.min(getMaxStackSize(), stack.getMaxStackSize()));
+                fillFractionSum += (float) stack.getCount() / (float) maxStack;
+                nonEmpty++;
+            }
+        }
+        fillFractionSum /= (float) cargoSlots;
+        return Mth.floor(fillFractionSum * 14.0F) + (nonEmpty > 0 ? 1 : 0);
     }
 
     @Override

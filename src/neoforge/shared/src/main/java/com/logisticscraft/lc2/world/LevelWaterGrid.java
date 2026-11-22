@@ -68,11 +68,14 @@ public final class LevelWaterGrid implements WaterGrid {
 
     @Override
     public boolean isNavigableWater(int x, int y, int z) {
-        BlockState state = blockStateAt(x, y, z);
-        if (state == null) {
+        ChunkAccess chunk = chunkAt(x, y, z);
+        if (chunk == null) {
             return false;
         }
-        return state.getFluidState().is(FluidTags.WATER);
+        cursor.set(x, y, z);
+        BlockState state = Lc2Native.getBlockStateFromChunk(chunk, cursor);
+        return state.getFluidState().is(FluidTags.WATER)
+                && state.getCollisionShape(chunk, cursor).isEmpty();
     }
 
     @Override
@@ -80,39 +83,34 @@ public final class LevelWaterGrid implements WaterGrid {
         if (y >= maxY) {
             return true;
         }
-        BlockState state = blockStateAt(x, y, z);
-        if (state == null) {
-            return false;
-        }
-        if (state.getFluidState().is(FluidTags.WATER) || state.getFluidState().is(FluidTags.LAVA)) {
+        ChunkAccess chunk = chunkAt(x, y, z);
+        if (chunk == null) {
             return false;
         }
         cursor.set(x, y, z);
-        return state.getCollisionShape(level, cursor).isEmpty();
+        BlockState state = Lc2Native.getBlockStateFromChunk(chunk, cursor);
+        if (state.getFluidState().is(FluidTags.WATER) || state.getFluidState().is(FluidTags.LAVA)) {
+            return false;
+        }
+        return state.getCollisionShape(chunk, cursor).isEmpty();
     }
 
-    private BlockState blockStateAt(int x, int y, int z) {
+    private ChunkAccess chunkAt(int x, int y, int z) {
         if (y < minY || y >= maxY) {
             return null;
         }
         int cx = x >> 4;
         int cz = z >> 4;
         long key = (((long) cx) & 0xFFFFFFFFL) | ((((long) cz) & 0xFFFFFFFFL) << 32);
-        ChunkAccess chunk;
         if (chunkCache.containsKey(key)) {
-            chunk = chunkCache.get(key);
-        } else {
-            chunk = Lc2Native.getLoadedChunk(level, cx, cz);
-            if (chunk == null && allowProbing && probedUnloadedChunks < maxProbedChunks) {
-                chunk = Lc2Native.loadChunkForProbe(level, cx, cz);
-                probedUnloadedChunks++;
-            }
-            chunkCache.put(key, chunk);
+            return chunkCache.get(key);
         }
-        if (chunk == null) {
-            return null;
+        ChunkAccess chunk = Lc2Native.getLoadedChunk(level, cx, cz);
+        if (chunk == null && allowProbing && probedUnloadedChunks < maxProbedChunks) {
+            chunk = Lc2Native.loadChunkForProbe(level, cx, cz);
+            probedUnloadedChunks++;
         }
-        cursor.set(x, y, z);
-        return Lc2Native.getBlockStateFromChunk(chunk, cursor);
+        chunkCache.put(key, chunk);
+        return chunk;
     }
 }

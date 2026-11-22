@@ -29,8 +29,8 @@ public final class SmartPortScreen extends AbstractLogisticsScreen<SmartPortMenu
         if (info == null) {
             return "(" + state.targetPos().getX() + "," + state.targetPos().getY() + "," + state.targetPos().getZ() + ")";
         }
-        String tag = info.reachableFlag() ? "OK" : "?";
-        return info.displayName() + " " + info.distance() + "m [" + tag + "]";
+        String suffix = " " + info.distance() + "m [" + (info.reachableFlag() ? "OK" : "?") + "]";
+        return fitTargetReadout(info.displayName(), suffix, 126);
     }
 
     @Override
