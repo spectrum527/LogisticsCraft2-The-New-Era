@@ -1,0 +1,31 @@
+modLoader="javafml"
+loaderVersion="[43,44)"
+license="GPL-3.0-only"
+
+[[mods]]
+modId="lc2"
+version="${version}"
+displayName="LogisticsCraft²: The New Era"
+displayURL="https://github.com/spectrum527/LogisticsCraft2-The-New-Era"
+description="Autonomous maritime and aerial industrial logistics addon for IndustrialCraft²: The New Era."
+
+[[dependencies.lc2]]
+modId="forge"
+mandatory=true
+versionRange="[${forgeVersion},44)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.lc2]]
+modId="minecraft"
+mandatory=true
+versionRange="[${minecraftVersion}]"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.lc2]]
+modId="ic2"
+mandatory=true
+versionRange="[1.0.0,)"
+ordering="AFTER"
+side="BOTH"

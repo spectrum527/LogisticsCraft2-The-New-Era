@@ -1,0 +1,178 @@
+import java.nio.file.Files
+import java.time.Duration
+
+def qaRoot = rootProject.layout.projectDirectory.dir('src/qa/neoforge')
+def ic2VersionProp = rootProject.property('ic2_version')
+def ic2DepJar = rootProject.file(".ic2-deps/ic2-neoforge-${minecraftVersion}-${ic2VersionProp}.jar")
+if (!ic2DepJar.isFile()) {
+    throw new GradleException("Missing IC2 dependency JAR for QA: ${ic2DepJar}")
+}
+
+sourceSets {
+    qa {
+        java.setSrcDirs([
+                qaRoot.dir('shared/src/main/java'),
+                qaRoot.dir(platformJava == 21 ? '1.21.1/src/main/java' : '26.x/src/main/java')
+        ])
+        resources.setSrcDirs([qaRoot.dir('resources')])
+    }
+}
+
+neoForge.addModdingDependenciesTo(sourceSets.qa)
+
+dependencies {
+    qaCompileOnly sourceSets.main.output
+    qaCompileOnly project(':common')
+    qaCompileOnly files(ic2DepJar)
+}
+
+tasks.named('processQaResources') {
+    filteringCharset = 'UTF-8'
+    inputs.property('loaderMetadata', loaderMetadata)
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand(loaderMetadata: loaderMetadata)
+    }
+}
+
+def qaMod = neoForge.mods.create('lc2_qa') {
+    sourceSet sourceSets.qa
+}
+
+def productionLc2Jar = tasks.named('jar', Jar).flatMap { it.archiveFile }
+
+def loadQaProperties = { File file ->
+    if (!file.isFile()) {
+        throw new GradleException("Missing LC2 QA report file: ${file}")
+    }
+    def props = new Properties()
+    file.withReader('UTF-8') { props.load(it) }
+    props
+}
+
+def scanLatestLogForErrors = { File runDir, String phaseName ->
+    def logFile = new File(runDir, 'logs/latest.log')
+    if (!logFile.isFile()) {
+        throw new GradleException("Missing server latest.log after QA ${phaseName}: ${logFile}")
+    }
+    def badLines = []
+    def lines = logFile.readLines('UTF-8')
+    lines.eachWithIndex { line, idx ->
+        def lower = line.toLowerCase(Locale.ROOT)
+        boolean isMixinError = line.contains('MixinApplyError')
+                || line.contains('InvalidMixinException')
+                || line.contains('MixinTransformerError')
+                || line.contains('Critical injection failure')
+                || (lower.contains('mixin') && lower.contains('lc2') && lower.contains('error'))
+        boolean isLc2Error = (line.contains('/ERROR]') || line.contains('Exception') || line.contains('AssertionError'))
+                && (line.contains('com.logisticscraft.lc2')
+                    || line.contains('lc2:')
+                    || line.contains('lc2.mixins.json')
+                    || lower.contains('failed to load mod') && lower.contains('lc2')
+                    || lower.contains('error loading recipe') && lower.contains('lc2'))
+        if (isMixinError || isLc2Error) {
+            badLines << "L${idx + 1}: ${line}"
+        }
+    }
+    if (!badLines.isEmpty()) {
+        throw new GradleException(
+                "LC2/Mixin errors detected in ${logFile} during QA ${phaseName}:\n" + badLines.take(20).join('\n')
+        )
+    }
+}
+
+['write', 'read'].each { phase ->
+    def runDir = layout.buildDirectory.dir('run/lc2-qa')
+    def runName = "qa${phase.capitalize()}"
+    neoForge.runs.create(runName) {
+        server()
+        programArgument '--nogui'
+        sourceSet.set(sourceSets.qa)
+        loadedMods.set([qaMod])
+        gameDirectory.set(runDir)
+        systemProperty 'lc2.qa.phase', phase
+        systemProperty 'lc2.qa.mcVersion', minecraftVersion
+        systemProperty 'lc2.qa.expectedLc2Jar', "lc2-neoforge-${minecraftVersion}-${project.version}.jar"
+        systemProperty 'lc2.qa.expectedIc2Jar', ic2DepJar.name
+    }
+
+    tasks.named("run${runName.capitalize()}", JavaExec) {
+        timeout.set(Duration.ofMinutes(8))
+        dependsOn 'jar'
+        if (phase == 'read') {
+            dependsOn 'runQaWrite'
+        }
+        doFirst {
+            def dir = runDir.get().asFile
+            def lc2Artifact = productionLc2Jar.get().asFile
+            if (phase == 'write') {
+                delete dir
+                dir.mkdirs()
+                def modsDir = new File(dir, 'mods')
+                modsDir.mkdirs()
+                copy {
+                    from lc2Artifact
+                    from ic2DepJar
+                    into modsDir
+                }
+                new File(dir, 'eula.txt').text = 'eula=true\n'
+                new File(dir, 'server.properties').text = '''server-ip=127.0.0.1
+server-port=0
+online-mode=false
+level-name=world
+level-seed=20261122
+generate-structures=false
+spawn-protection=0
+view-distance=2
+simulation-distance=2
+level-type=minecraft:flat
+generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:stone","height":124},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains","structure_overrides":[]}
+'''
+            }
+            def installedLc2 = new File(dir, "mods/${lc2Artifact.name}")
+            def installedIc2 = new File(dir, "mods/${ic2DepJar.name}")
+            if (!installedLc2.isFile() || Files.mismatch(installedLc2.toPath(), lc2Artifact.toPath()) != -1) {
+                throw new GradleException("QA must load the exact packaged LC2 JAR: ${lc2Artifact}")
+            }
+            if (!installedIc2.isFile() || Files.mismatch(installedIc2.toPath(), ic2DepJar.toPath()) != -1) {
+                throw new GradleException("QA must load the exact packaged IC2 JAR: ${ic2DepJar}")
+            }
+        }
+        doLast {
+            def dir = runDir.get().asFile
+            def lc2Artifact = productionLc2Jar.get().asFile
+            def reportFile = new File(dir, "qa-report-${phase}.properties")
+            def jsonFile = new File(dir, "qa-report-${phase}.json")
+            def result = loadQaProperties(reportFile)
+            if (!jsonFile.isFile()) {
+                throw new GradleException("Missing structured JSON QA report: ${jsonFile}")
+            }
+            if (result.status != 'passed') {
+                throw new GradleException(
+                        "LC2 NeoForge ${minecraftVersion} QA ${phase} FAILED: ${result.problem}\n${result.getProperty('trace', '')}"
+                )
+            }
+            if (result.lc2Artifact != lc2Artifact.name || result.ic2Artifact != ic2DepJar.name) {
+                throw new GradleException(
+                        "QA loaded unexpected JARs: lc2=${result.lc2Artifact}, ic2=${result.ic2Artifact}"
+                )
+            }
+            if (!new File(dir, 'world/level.dat').isFile()) {
+                throw new GradleException("Missing saved world/level.dat in ${dir}")
+            }
+            if (phase == 'read') {
+                def writeResult = loadQaProperties(new File(dir, 'qa-report-write.properties'))
+                if (result.pid == writeResult.pid) {
+                    throw new GradleException("Cold-restart QA read phase reused write process PID ${result.pid}")
+                }
+            }
+            scanLatestLogForErrors(dir, phase)
+            logger.lifecycle("LC2 NeoForge ${minecraftVersion} QA [${phase}] PASSED (${result.passedCount} checks, ticks=${result.ticks}, pid=${result.pid})")
+        }
+    }
+}
+
+tasks.register('lc2QaTest') {
+    group = 'verification'
+    description = "Runs the full LC2 + IC2 live dedicated-server E2E QA suite (write + cold-restart read) on NeoForge ${minecraftVersion}."
+    dependsOn 'runQaRead'
+}

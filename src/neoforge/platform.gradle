@@ -1,0 +1,80 @@
+java.toolchain.languageVersion = JavaLanguageVersion.of(platformJava)
+base.archivesName = "lc2-neoforge-$minecraftVersion"
+sourceSets.main.java.srcDir('../shared/src/main/java')
+
+def ic2Version = rootProject.property('ic2_version')
+def ic2Jar = rootProject.file(".ic2-deps/ic2-neoforge-${minecraftVersion}-${ic2Version}.jar")
+if (!ic2Jar.isFile()) {
+    throw new GradleException("Missing IC2 dependency JAR: ${ic2Jar}")
+}
+
+dependencies {
+    implementation project(':common')
+    compileOnly files(ic2Jar)
+}
+
+neoForge {
+    enable {
+        version = neoForgeVersion
+        disableRecompilation = true
+    }
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+            programArgument '--nogui'
+        }
+    }
+    mods {
+        lc2 {
+            sourceSet sourceSets.main
+            sourceSet project(':common').sourceSets.main
+        }
+    }
+}
+
+def generatedLc2Resources = layout.buildDirectory.dir('generated/lc2-resources')
+def generateLc2Resources = tasks.register('generateLc2Resources', Exec) {
+    def generator = rootProject.file('src/datagen/generate_resources.py')
+    onlyIf { generator.isFile() }
+    inputs.files(rootProject.fileTree('src/datagen') { include '*.py', '*.json', '*.tsv' })
+    inputs.files(rootProject.fileTree('assets/lc2/lang') { include '*.json' })
+    inputs.property('minecraftTarget', minecraftVersion)
+    outputs.dir(generatedLc2Resources)
+    commandLine 'python3', generator, '--target', "neoforge-${minecraftVersion}",
+            '--output', generatedLc2Resources.get().asFile
+}
+
+tasks.named('processResources') {
+    dependsOn generateLc2Resources
+    filteringCharset = 'UTF-8'
+    inputs.properties(
+            version: project.version,
+            neoForgeVersion: neoForgeVersion,
+            minecraftVersion: minecraftVersion,
+            ic2Version: ic2Version,
+            loaderMetadata: loaderMetadata
+    )
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    includeEmptyDirs = false
+    doFirst { delete destinationDir }
+    from(rootProject.file('assets')) {
+        into 'assets'
+        exclude '**/*.md', '**/*.csv', '**/.git*', '**/.DS_Store', 'preview/**'
+    }
+    from(generatedLc2Resources) { exclude '.lc2-generated-output' }
+    from('../metadata') {
+        expand version: project.version,
+                neoForgeVersion: neoForgeVersion,
+                minecraftVersion: minecraftVersion,
+                ic2Version: ic2Version,
+                loaderMetadata: loaderMetadata
+    }
+}
+
+tasks.named('jar') {
+    from project(':common').sourceSets.main.output
+    from(rootProject.file('LICENSE'))
+}

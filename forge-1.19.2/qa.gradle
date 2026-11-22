@@ -1,0 +1,252 @@
+import groovy.json.JsonOutput
+import java.util.jar.JarFile
+
+// Dedicated Forge 1.19.2 live-server QA sourceSet and tasks.
+// Strictly isolated from sourceSets.main so ZERO QA classes or resources enter lc2-forge-1.19.2-1.0.0.jar.
+
+sourceSets {
+    qa {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        // Do NOT put sourceSets.main.output on qa.runtimeClasspath: at runtime Forge loads the
+        // packaged lc2-forge-1.19.2-1.0.0.jar and ic2-forge-1.19.2-1.0.5.jar directly from mods/.
+        runtimeClasspath += configurations.runtimeClasspath
+    }
+}
+
+configurations {
+    qaIc2Mod {
+        canBeConsumed = false
+        canBeResolved = true
+    }
+}
+
+dependencies {
+    qaIc2Mod fg.deobf("com.industrialage.ia2:ic2-forge-1.19.2:${ic2_version}")
+}
+
+minecraft {
+    runs {
+        // ForgeGradle merges run configs by name; derived runs sort after parent ('server').
+        serverQaLc2 {
+            taskName 'runQaLc2Server'
+            parent runs.server
+            workingDirectory layout.buildDirectory.dir('run/qa-lc2').get().asFile
+            property 'forge.logging.console.level', 'info'
+            property 'lc2.qa.phase', providers.gradleProperty('lc2QaPhase').getOrElse('write')
+            mods {
+                lc2_qa {
+                    source sourceSets.qa
+                }
+            }
+        }
+    }
+}
+
+def qaBuildDir = layout.buildDirectory.dir('qa-lc2')
+def qaModsDir = qaBuildDir.map { it.dir('mods') }
+def packagedLc2Jar = tasks.named('jar', Jar).flatMap { it.archiveFile }
+def packagedIc2Jar = file("../.ic2-deps/ic2-forge-1.19.2-${ic2_version}.jar")
+
+// 1. Audit the exact SRG-reobfuscated production JAR before runtime execution.
+def auditPackagedLc2Jar = tasks.register('auditPackagedLc2Jar') {
+    group = 'verification'
+    description = 'Verifies production lc2-forge-1.19.2 JAR has no QA leaks, valid MixinConfigs, recipes, and SRG bytecode.'
+    dependsOn 'reobfJar'
+    inputs.file(packagedLc2Jar)
+    doLast {
+        File jarFile = packagedLc2Jar.get().asFile
+        if (!jarFile.isFile()) {
+            throw new GradleException("Missing packaged production JAR: ${jarFile}")
+        }
+        def expectedRecipes = [
+                'smart_port', 'cargo_station', 'electric_cargo_boat',
+                'transport_drone', 'heavy_transport_drone',
+                'rf_chip_1', 'rf_chip_2', 'rf_chip_3', 'chunk_loading_upgrade'
+        ]
+        new JarFile(jarFile).withCloseable { jf ->
+            def manifest = jf.manifest
+            if (manifest == null) {
+                throw new GradleException("Packaged JAR missing META-INF/MANIFEST.MF")
+            }
+            def mixinCfg = manifest.mainAttributes.getValue('MixinConfigs')
+            if (mixinCfg != 'lc2.mixins.json') {
+                throw new GradleException("Expected MixinConfigs=lc2.mixins.json in MANIFEST.MF, got: ${mixinCfg}")
+            }
+            def entries = jf.entries().toList().collect { it.name }
+            def qaLeaks = entries.findAll { it.contains('lc2_qa') || it.startsWith('com/logisticscraft/lc2/qa/') }
+            if (!qaLeaks.isEmpty()) {
+                throw new GradleException("Production JAR leaked QA entries: ${qaLeaks}")
+            }
+            for (String required : ['lc2.mixins.json', 'META-INF/mods.toml',
+                                    'data/lc2/loot_tables/blocks/smart_port.json',
+                                    'data/lc2/loot_tables/blocks/cargo_station.json']) {
+                if (!entries.contains(required)) {
+                    throw new GradleException("Production JAR missing required entry: ${required}")
+                }
+            }
+            for (String recipe : expectedRecipes) {
+                String path = "data/lc2/recipes/${recipe}.json"
+                if (!entries.contains(path)) {
+                    throw new GradleException("Production JAR missing recipe: ${path}")
+                }
+            }
+            // Confirm CableBlockMixin.class was SRG-reobfuscated (references m_60734_ for BlockState.getBlock)
+            def mixinEntry = jf.getEntry('com/logisticscraft/lc2/forge/mixin/CableBlockMixin.class')
+            if (mixinEntry == null) {
+                throw new GradleException("Production JAR missing CableBlockMixin.class")
+            }
+            byte[] mixinBytes = jf.getInputStream(mixinEntry).bytes
+            String mixinAscii = new String(mixinBytes, 'ISO-8859-1')
+            if (!mixinAscii.contains('m_60734_')) {
+                throw new GradleException("CableBlockMixin.class does not appear SRG-reobfuscated (missing m_60734_)")
+            }
+            logger.lifecycle("[LC2-QA] Packaged production JAR audit PASSED: ${jarFile.name} (${jarFile.length()} bytes, ${entries.size()} entries, 0 QA leaks)")
+        }
+    }
+}
+
+// 2. Round-trip the exact SRG-reobfuscated production JAR to Mojang mappings for ForgeGradle's dev runtime
+//    so the live server boots from the exact packaged JAR (with its MANIFEST.MF, MixinConfigs, mods.toml,
+//    recipes, loot tables, and SRG-remapped bytecode) rather than exploded sourceSets.main directories.
+def deobfPackagedLc2Jar = tasks.register('deobfPackagedLc2Jar', JavaExec) {
+    group = 'verification'
+    description = 'Deobfuscates the exact packaged reobfuscated LC2 JAR for ForgeGradle server runtime.'
+    dependsOn 'reobfJar', auditPackagedLc2Jar, 'createMcpToSrg'
+    def outJar = qaModsDir.map { it.file("lc2-forge-${minecraft_version}-${version}.jar") }
+    def mappingsFile = tasks.named('createMcpToSrg').flatMap { it.output }
+    inputs.file(packagedLc2Jar)
+    inputs.file(packagedIc2Jar)
+    inputs.file(mappingsFile)
+    outputs.file(outJar)
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+    mainClass = 'net.minecraftforge.renamer.Main'
+    doFirst {
+        File outFile = outJar.get().asFile
+        outFile.parentFile.mkdirs()
+        if (outFile.exists()) {
+            outFile.delete()
+        }
+        File fgCache = new File(gradle.gradleUserHomeDir, 'caches/forge_gradle')
+        File renamerJar = new File(fgCache, 'maven_downloader/net/minecraftforge/renamer/2.0.4/renamer-2.0.4-all.jar')
+        if (!renamerJar.isFile()) {
+            // Fallback: locate any cached Forge renamer jar
+            def found = fileTree(new File(fgCache, 'maven_downloader/net/minecraftforge/renamer')) {
+                include '**/*-all.jar'
+            }.files
+            if (found.isEmpty()) {
+                throw new GradleException("Could not find Forge renamer jar under ${fgCache}")
+            }
+            renamerJar = found.first()
+        }
+        File srgForgeJar = new File(fgCache,
+                "minecraft_user_repo/net/minecraftforge/forge/${minecraft_version}-${forge_version}/forge-${minecraft_version}-${forge_version}-srg.jar")
+        if (!srgForgeJar.isFile()) {
+            throw new GradleException("Missing SRG Forge inheritance jar: ${srgForgeJar}")
+        }
+        classpath = files(renamerJar)
+        def toolArgs = [
+                '--reverse',
+                '--input', packagedLc2Jar.get().asFile.absolutePath,
+                '--output', outFile.absolutePath,
+                '--names', mappingsFile.get().asFile.absolutePath,
+                '--log', qaBuildDir.get().file('deobf-lc2.log').asFile.absolutePath,
+                '--lib', srgForgeJar.absolutePath,
+                '--lib', packagedIc2Jar.absolutePath
+        ]
+        // Supply external non-MC compile libraries for clean inheritance resolution
+        configurations.compileClasspath.files.each { File lib ->
+            String n = lib.name
+            if (!n.contains('_mapped_official_') && !n.startsWith('ic2-forge-')) {
+                toolArgs.addAll(['--lib', lib.absolutePath])
+            }
+        }
+        args = toolArgs
+    }
+}
+
+// 3. Stage the mods directory and export exact ForgeGradle server launch manifest (with ONLY lc2_qa in MOD_CLASSES).
+// Skip client-only sound/music asset downloads for dedicated-server QA runs (keeps --offline fast & deterministic).
+tasks.matching { it.name == 'downloadAssets' }.configureEach {
+    onlyIf {
+        !gradle.startParameter.taskNames.any { name ->
+            name == 'runLc2Qa' || name.endsWith(':runLc2Qa') || name == 'prepareLc2Qa' || name.endsWith(':prepareLc2Qa')
+        }
+    }
+}
+
+def prepareLc2Qa = tasks.register('prepareLc2Qa') {
+    group = 'verification'
+    description = 'Stages packaged IC2 + LC2 JARs and exports Forge 1.19.2 dedicated server launch command.'
+    dependsOn 'qaClasses', deobfPackagedLc2Jar
+    dependsOn {
+        def run = tasks.getByName('runQaLc2Server')
+        run.taskDependencies.getDependencies(run).toList()
+    }
+    def launchManifest = qaBuildDir.map { it.file('launch.json') }
+    outputs.file(launchManifest)
+    outputs.upToDateWhen { false }
+    doLast {
+        def run = tasks.getByName('runQaLc2Server')
+        def generator = plugins.getPlugin('net.minecraftforge.gradle').class.classLoader.loadClass(
+                'net.minecraftforge.gradle.common.util.runs.RunConfigGenerator')
+        def config = run.runConfig.get()
+        def folders = generator.mapModClassesToGradle(project, config)
+        def tokens = generator.configureTokensLazy(project, config, folders,
+                run.minecraftArtifacts, run.runtimeClasspathArtifacts)
+        def expand = { value -> config.replace(tokens, value.toString()) }
+
+        def jvm = config.jvmArgs.collect(expand)
+        jvm += config.properties.collect { key, value -> "-D${key}=${expand(value)}" }
+        def env = config.environment.collectEntries { key, value -> [(key): expand(value)] }
+
+        // Keep ONLY lc2_qa in MOD_CLASSES so Forge MUST load lc2 from mods/lc2-forge-1.19.2-1.0.0.jar!
+        if (env.containsKey('MOD_CLASSES')) {
+            def sep = File.pathSeparator
+            def kept = env['MOD_CLASSES'].split(java.util.regex.Pattern.quote(sep))
+                    .findAll { it.startsWith('lc2_qa%%') }
+            if (kept.isEmpty()) {
+                throw new GradleException("Expected lc2_qa entries in MOD_CLASSES, got: ${env['MOD_CLASSES']}")
+            }
+            env['MOD_CLASSES'] = kept.join(sep)
+        }
+
+        // Remove sourceSets.main output directories from JVM classpath so they cannot shadow mods/lc2-*.jar
+        Set<File> mainOutputs = sourceSets.main.output.files.collect { it.canonicalFile } as Set
+        def cpFiles = files(run.classpath, sourceSets.qa.runtimeClasspath).files
+                .findAll { !mainOutputs.contains(it.canonicalFile) }
+
+        File ic2DeobfJar = configurations.qaIc2Mod.singleFile
+        File lc2DeobfJar = deobfPackagedLc2Jar.get().outputs.files.singleFile
+
+        def manifest = [
+                java            : run.javaLauncher.get().executablePath.asFile.absolutePath,
+                main            : run.mainClass.get(),
+                jvm             : jvm,
+                args            : config.args.collect(expand),
+                env             : env,
+                classpath       : cpFiles.collect { it.absolutePath }.join(File.pathSeparator),
+                ic2ModJar       : ic2DeobfJar.absolutePath,
+                lc2ModJar       : lc2DeobfJar.absolutePath,
+                packagedIc2Jar  : packagedIc2Jar.absolutePath,
+                packagedLc2Jar  : packagedLc2Jar.get().asFile.absolutePath,
+                runDir          : layout.buildDirectory.dir('run/qa-lc2').get().asFile.absolutePath,
+                reportDir       : qaBuildDir.get().asFile.absolutePath
+        ]
+        File target = launchManifest.get().asFile
+        target.parentFile.mkdirs()
+        target.setText(JsonOutput.prettyPrint(JsonOutput.toJson(manifest)) + '\n', 'UTF-8')
+    }
+}
+
+// 4. Execute full two-phase (write + cold-restart read) live Forge 1.19.2 dedicated server QA suite.
+tasks.register('runLc2Qa', Exec) {
+    group = 'verification'
+    description = 'Runs the full Forge 1.19.2 live dedicated server QA suite (write + cold-restart read) against packaged IC2 and LC2 JARs.'
+    dependsOn prepareLc2Qa
+    outputs.upToDateWhen { false }
+    doFirst {
+        commandLine 'python3',
+                file('src/qa/run_qa_server.py').absolutePath,
+                '--manifest', qaBuildDir.get().file('launch.json').asFile.absolutePath
+    }
+}

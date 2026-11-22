@@ -1,0 +1,1608 @@
+#!/usr/bin/env python3
+"""Reproducible pixel-art texture generator for LogisticsCraft²: The New Era (lc2).
+
+Generates all original CC BY-SA 4.0 textures under assets/lc2/textures/:
+  - 10 block textures (16x16)
+  - 7 item textures (16x16)
+  - 3 entity textures (128x128 ChestBoat UV + two 64x64 CargoDrone UVs)
+  - 2 GUI textures (256x256, 212x222 panel + dynamic sprite atlas)
+
+Optionally writes a 4x nearest-neighbor visual contact sheet via --preview <path>.
+"""
+
+import argparse
+from pathlib import Path
+from PIL import Image, ImageDraw
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+TEX_ROOT = REPO_ROOT / "assets" / "lc2" / "textures"
+
+
+def rgba(hex_color: str, alpha: int = 255) -> tuple[int, int, int, int]:
+    h = hex_color.lstrip("#")
+    if len(h) == 8:
+        return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), int(h[6:8], 16))
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), alpha)
+
+
+def render_grid(grid: list[str], palette: dict[str, tuple[int, int, int, int]]) -> Image.Image:
+    h = len(grid)
+    w = len(grid[0])
+    im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    px = im.load()
+    for y, row in enumerate(grid):
+        assert len(row) == w, f"Row {y} width {len(row)} != {w}"
+        for x, ch in enumerate(row):
+            if ch != ".":
+                px[x, y] = palette[ch]
+    return im
+
+
+def fill_rect(px, x0: int, y0: int, x1: int, y1: int, col):
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            px[x, y] = col
+
+
+def hline(px, x0: int, x1: int, y: int, col):
+    for x in range(x0, x1 + 1):
+        px[x, y] = col
+
+
+def vline(px, x: int, y0: int, y1: int, col):
+    for y in range(y0, y1 + 1):
+        px[x, y] = col
+
+
+def draw_bevel_box(px, x0: int, y0: int, x1: int, y1: int, fill, tl, br, border=None):
+    if border is not None:
+        fill_rect(px, x0, y0, x1, y1, border)
+        x0, y0, x1, y1 = x0 + 1, y0 + 1, x1 - 1, y1 - 1
+    fill_rect(px, x0, y0, x1, y1, fill)
+    hline(px, x0, x1, y0, tl)
+    vline(px, x0, y0, y1, tl)
+    hline(px, x0, x1, y1, br)
+    vline(px, x1, y0, y1, br)
+    px[x1, y0] = fill
+    px[x0, y1] = fill
+
+
+def draw_ic2_casing(dark: bool = False) -> Image.Image:
+    """Create a crisp 16x16 IC2-inspired industrial steel machine block face."""
+    im = Image.new("RGBA", (16, 16), (0, 0, 0, 255))
+    px = im.load()
+    if dark:
+        c_out = rgba("#141920")
+        c_hi = rgba("#92A4B9")
+        c_mid = rgba("#5F7086")
+        c_base = rgba("#475567")
+        c_sh = rgba("#2C3644")
+        c_deep = rgba("#1E2530")
+        c_spec = rgba("#B8C8DC")
+    else:
+        c_out = rgba("#151A22")
+        c_hi = rgba("#A8B9CE")
+        c_mid = rgba("#78899F")
+        c_base = rgba("#5D6E83")
+        c_sh = rgba("#3A4656")
+        c_deep = rgba("#242C37")
+        c_spec = rgba("#CDDCEF")
+
+    # Outer dark border
+    fill_rect(px, 0, 0, 15, 15, c_out)
+    # Beveled steel rim
+    fill_rect(px, 1, 1, 14, 14, c_mid)
+    hline(px, 1, 14, 1, c_hi)
+    vline(px, 1, 1, 14, c_hi)
+    hline(px, 1, 14, 14, c_sh)
+    vline(px, 14, 1, 14, c_sh)
+    px[1, 1] = c_spec
+    px[14, 1] = c_mid
+    px[1, 14] = c_mid
+    px[14, 14] = c_deep
+
+    # Inner recessed panel
+    fill_rect(px, 2, 2, 13, 13, c_base)
+    hline(px, 2, 13, 2, c_sh)
+    vline(px, 2, 2, 13, c_sh)
+    hline(px, 2, 13, 13, c_hi)
+    vline(px, 13, 2, 13, c_hi)
+    # Subtle brushed steel noise
+    for y in range(3, 13):
+        for x in range(3, 13):
+            if (x * 7 + y * 13) % 11 == 0:
+                px[x, y] = c_mid
+            elif (x * 5 + y * 3) % 13 == 0:
+                px[x, y] = c_sh
+
+    # Corner bolts
+    for bx, by in ((2, 2), (13, 2), (2, 13), (13, 13)):
+        px[bx, by] = c_deep
+    px[1, 2] = c_spec
+    px[2, 1] = c_spec
+    return im
+
+
+# =============================================================================
+# 1. BLOCK TEXTURES (16x16)
+# =============================================================================
+
+def make_smart_port_bottom() -> Image.Image:
+    im = draw_ic2_casing(dark=False)
+    px = im.load()
+    c_dk = rgba("#1C232D")
+    c_sl = rgba("#303B4A")
+    c_lt = rgba("#8899AE")
+    c_bl = rgba("#26528A")
+    # Recessed dark baseplate
+    fill_rect(px, 3, 3, 12, 12, c_sl)
+    hline(px, 3, 12, 3, c_dk)
+    vline(px, 3, 3, 12, c_dk)
+    # Industrial cooling/drain slats
+    for y in (5, 7, 9, 11):
+        hline(px, 5, 10, y, c_dk)
+        hline(px, 5, 10, y - 1 if y > 5 else 4, c_sl)
+    # Corner rivets & maritime bolt ring
+    for rx, ry in ((4, 4), (11, 4), (4, 11), (11, 11)):
+        px[rx, ry] = c_lt
+    px[7, 7] = c_bl
+    px[8, 7] = c_bl
+    px[7, 8] = c_bl
+    px[8, 8] = c_bl
+    return im
+
+
+def make_smart_port_top() -> Image.Image:
+    im = draw_ic2_casing(dark=False)
+    px = im.load()
+    c_dk = rgba("#1A222C")
+    c_sl = rgba("#2B3544")
+    c_hi = rgba("#9FB2C8")
+    c_blue_d = rgba("#1B4782")
+    c_blue = rgba("#2D6EC4")
+    c_cyan = rgba("#4CD8F5")
+    c_yel = rgba("#EBB926")
+
+    # Maritime dock edge strip along NORTH (top y=2..3)
+    hline(px, 3, 12, 2, c_blue_d)
+    hline(px, 3, 12, 3, c_blue)
+    px[7, 3] = c_cyan
+    px[8, 3] = c_cyan
+
+    # Recessed central directional dock plate
+    fill_rect(px, 4, 5, 11, 12, c_sl)
+    hline(px, 4, 11, 5, c_dk)
+    vline(px, 4, 5, 12, c_dk)
+    hline(px, 4, 11, 12, c_hi)
+    vline(px, 11, 5, 12, c_hi)
+
+    # Crisp north-pointing dock chevron arrow inside center plate
+    arrow = [(7, 6), (8, 6), (6, 7), (7, 7), (8, 7), (9, 7), (5, 8), (6, 8), (9, 8), (10, 8),
+             (7, 9), (8, 9), (7, 10), (8, 10), (7, 11), (8, 11)]
+    for x, y in arrow:
+        px[x, y] = c_blue
+    for x, y in ((7, 6), (8, 6), (7, 7), (8, 7)):
+        px[x, y] = c_cyan
+
+    # Signal beacon at top-right corner
+    px[12, 4] = c_dk
+    px[13, 4] = c_yel
+    px[12, 12] = c_dk
+    px[3, 12] = c_dk
+    return im
+
+
+def make_smart_port_side() -> Image.Image:
+    im = draw_ic2_casing(dark=False)
+    px = im.load()
+    c_dk = rgba("#161C24")
+    c_in = rgba("#26303D")
+    c_bar = rgba("#4D5D70")
+    c_hi = rgba("#9DB0C4")
+    c_blue = rgba("#2C6DC2")
+    c_yel = rgba("#E8B723")
+    c_blk = rgba("#1A2029")
+
+    # Container intake/output hatch (upper center y=3..10)
+    fill_rect(px, 3, 3, 12, 10, c_dk)
+    fill_rect(px, 4, 4, 11, 9, c_in)
+    # Blue maritime trim bar at top of hatch
+    hline(px, 4, 11, 4, c_blue)
+    # Metallic shutter slats
+    for y in (6, 8):
+        hline(px, 5, 10, y, c_bar)
+        hline(px, 5, 10, y + 1, c_dk)
+    # Hatch center handle
+    px[7, 7] = c_hi
+    px[8, 7] = c_hi
+
+    # Yellow/black industrial safety hazard stripe (y=12..13)
+    for x in range(2, 14):
+        px[x, 12] = c_yel if ((x) % 4 < 2) else c_blk
+        px[x, 13] = c_yel if ((x + 1) % 4 < 2) else c_blk
+    hline(px, 2, 13, 11, c_dk)
+    return im
+
+
+def make_smart_port_front(active: bool) -> Image.Image:
+    im = draw_ic2_casing(dark=False)
+    px = im.load()
+    c_dk = rgba("#131922")
+    c_bay_d = rgba("#162B47")
+    c_bay_m = rgba("#224673")
+    c_bay_l = rgba("#30629C")
+    c_bumper = rgba("#333F4F")
+    c_bump_hi = rgba("#7E90A6")
+
+    # Top status lamps (x=3..4 and x=11..12, y=2)
+    if active:
+        lamp_c = rgba("#38EB67")
+        lamp_hi = rgba("#C2FFD2")
+        glow = rgba("#2DE8FF")
+        glow_hi = rgba("#CCFCFF")
+        glow_mid = rgba("#1799D6")
+    else:
+        lamp_c = rgba("#2B3C4D")
+        lamp_hi = rgba("#42576B")
+        glow = rgba("#3D6287")
+        glow_hi = rgba("#5780A8")
+        glow_mid = rgba("#264466")
+
+    # Lamp housings
+    px[2, 2] = c_dk
+    px[3, 2] = lamp_hi
+    px[4, 2] = lamp_c
+    px[11, 2] = lamp_c
+    px[12, 2] = lamp_hi
+    px[13, 2] = c_dk
+
+    # Maritime dock bay recessed shutter (x=3..12, y=4..12)
+    fill_rect(px, 2, 3, 13, 13, c_dk)
+    for y in range(4, 13):
+        slat = c_bay_l if (y % 2 == 0) else c_bay_m
+        hline(px, 3, 12, y, slat)
+        px[3, y] = c_bay_d
+        px[12, y] = c_bay_d
+
+    # Illuminated vertical dock-guide side strips when active
+    if active:
+        for y in (5, 7, 9, 11):
+            px[3, y] = glow_mid
+            px[12, y] = glow_mid
+
+    # Center anchor / downward dock chevron emblem
+    for x, y in ((7, 5), (8, 5), (7, 6), (8, 6), (5, 7), (6, 7), (7, 7), (8, 7), (9, 7), (10, 7),
+                 (6, 8), (7, 8), (8, 8), (9, 8), (7, 9), (8, 9), (5, 10), (10, 10), (6, 11), (7, 11), (8, 11), (9, 11)):
+        px[x, y] = glow
+    for x, y in ((7, 6), (8, 6), (7, 7), (8, 7), (7, 8), (8, 8)):
+        px[x, y] = glow_hi
+
+    # Heavy rubber/steel dock bumper along bottom (y=13..14)
+    hline(px, 2, 13, 13, c_bumper)
+    for x in (4, 7, 8, 11):
+        px[x, 13] = c_bump_hi
+    return im
+
+
+def make_cargo_station_bottom() -> Image.Image:
+    im = draw_ic2_casing(dark=True)
+    px = im.load()
+    c_dk = rgba("#131820")
+    c_sl = rgba("#242D39")
+    c_lt = rgba("#7E90A6")
+    c_cu = rgba("#B56D34")
+
+    fill_rect(px, 3, 3, 12, 12, c_sl)
+    hline(px, 3, 12, 3, c_dk)
+    vline(px, 3, 3, 12, c_dk)
+    # Central RF grounding ring
+    for x in range(6, 10):
+        px[x, 5] = c_lt
+        px[x, 10] = c_lt
+    for y in range(6, 10):
+        px[5, y] = c_lt
+        px[10, y] = c_lt
+    fill_rect(px, 6, 6, 9, 9, c_dk)
+    px[7, 7] = c_cu
+    px[8, 8] = c_cu
+    px[8, 7] = c_sl
+    px[7, 8] = c_sl
+    return im
+
+
+def make_cargo_station_top(active: bool) -> Image.Image:
+    im = draw_ic2_casing(dark=True)
+    px = im.load()
+    c_dk = rgba("#141A22")
+    c_deck = rgba("#1E2631")
+    c_line = rgba("#303C4C")
+    c_pad = rgba("#263140")
+    c_amber = rgba("#E5A924")
+    if active:
+        c_mk = rgba("#27E6FF")
+        c_core = rgba("#B8FFFF")
+        c_grn = rgba("#39E86A")
+    else:
+        c_mk = rgba("#3E586B")
+        c_core = rgba("#547287")
+        c_grn = rgba("#364D42")
+
+    # Dark helipad landing deck inside steel rim (x=2..13, y=2..13)
+    fill_rect(px, 2, 2, 13, 13, c_deck)
+    # Crisp bay divider grid (3 columns x 2 rows = 6 miniature drone pads!)
+    # Cols: x=2..5, x=6..9, x=10..13; Rows: y=2..7, y=8..13
+    vline(px, 6, 2, 13, c_line)
+    vline(px, 10, 2, 13, c_line)
+    hline(px, 2, 13, 7, c_line)
+    hline(px, 2, 13, 8, c_dk)
+
+    # 6 miniature helipads (each 3x4 with corner guidance ticks & center landing beacon)
+    pad_origins = [
+        (2, 2), (6, 2), (10, 2),
+        (2, 9), (6, 9), (10, 9),
+    ]
+    for ox, oy in pad_origins:
+        # 4x5 region with 3x4 pad centered
+        fill_rect(px, ox + 1, oy + 1, ox + 3, oy + 3, c_pad)
+        # Corner markers
+        px[ox + 1, oy + 1] = c_mk
+        px[ox + 3, oy + 1] = c_mk
+        px[ox + 1, oy + 3] = c_grn
+        px[ox + 3, oy + 3] = c_grn
+        # Center beacon
+        px[ox + 2, oy + 2] = c_core
+
+    # Corner helipad amber safety ticks on outer steel frame
+    for x, y in ((1, 2), (2, 1), (14, 2), (13, 1), (1, 13), (2, 14), (14, 13), (13, 14)):
+        px[x, y] = c_amber
+    return im
+
+
+def make_cargo_station_side(active: bool) -> Image.Image:
+    im = draw_ic2_casing(dark=True)
+    px = im.load()
+    c_dk = rgba("#12171F")
+    c_in = rgba("#1E2632")
+    c_hi = rgba("#92A5BB")
+    c_amb = rgba("#D98526")
+    c_amb_d = rgba("#8F4F14")
+
+    # Upper RF transceiver grille (x=3..10, y=3..6)
+    fill_rect(px, 3, 3, 10, 6, c_dk)
+    for x in range(4, 10):
+        px[x, 4] = rgba("#2DE6FF") if (active and x % 2 == 0) else rgba("#3A4B5E")
+        px[x, 5] = rgba("#1A7E9E") if (active and x % 2 == 1) else rgba("#26313E")
+    if active:
+        px[6, 4] = rgba("#C4FFFF")
+        px[7, 4] = rgba("#C4FFFF")
+
+    # Right vertical EU / status LED bar (x=12..13, y=3..12)
+    fill_rect(px, 11, 3, 13, 12, c_dk)
+    if active:
+        led_colors = [
+            rgba("#3CE862"), rgba("#3CE862"),
+            rgba("#2DE6FF"), rgba("#2DE6FF"),
+            rgba("#2DE6FF"), rgba("#FFB833"),
+            rgba("#FF8C24"), rgba("#FF5224"),
+        ]
+    else:
+        led_colors = [rgba("#25303D")] * 8
+    for idx, col in enumerate(led_colors):
+        px[12, 4 + idx] = col
+
+    # Lower-left cargo loading port hatch (x=3..9, y=8..12)
+    fill_rect(px, 3, 8, 9, 12, c_dk)
+    fill_rect(px, 4, 9, 8, 11, c_in)
+    hline(px, 4, 8, 8, c_amb)
+    hline(px, 4, 8, 12, c_amb_d)
+    px[6, 10] = c_hi
+    px[5, 10] = rgba("#3CE862") if active else rgba("#33443C")
+    px[7, 10] = rgba("#3CE862") if active else rgba("#33443C")
+    return im
+
+
+# =============================================================================
+# 2. ITEM TEXTURES (16x16)
+# =============================================================================
+
+def make_item_electric_cargo_boat() -> Image.Image:
+    # Combines IC2's electric boat silhouette & silver-steel + cobalt/cyan palette
+    # with an unmistakable vanilla oak/iron-latched cargo chest mounted inside!
+    grid = [
+        "................",
+        "......oooo......",
+        ".....oWLLWo.....",
+        "....oWLMMLWo.yo.",
+        "...ooWKKKKWooYo.",
+        "..oSSoMSSMoSSSo.",
+        ".oSLLoWLLWoHLSSo",
+        "oSLCCooooooCLLSo",
+        "oSLLLLSSSSLCCSSo",
+        ".oSSBBBBBBBBSSo.",
+        "..oSBBBBBBBBSo..",
+        "..oSSMBBBBMSSoo.",
+        "...ooSSSSSSooPco",
+        ".....oooooo..oPo",
+        "..............oo",
+        "................",
+    ]
+    pal = {
+        "o": rgba("#1A2530"),  # dark outline
+        "S": rgba("#8598AB"),  # steel mid
+        "L": rgba("#C8D6E2"),  # bright aluminum hull
+        "H": rgba("#EBF2F7"),  # white specular
+        "C": rgba("#4DE4F7"),  # electric cyan core/trim
+        "B": rgba("#2864B8"),  # IC2 electric cobalt blue stripe
+        "M": rgba("#495B6E"),  # shaded metal
+        "y": rgba("#F7C844"),  # amber beacon highlight
+        "Y": rgba("#D98A1E"),  # amber beacon
+        "W": rgba("#C9923E"),  # oak chest wood
+        "K": rgba("#6B4414"),  # dark oak chest rim/seam
+        "P": rgba("#3C4D5E"),  # carbon paddle
+        "c": rgba("#38D9F0"),  # paddle electric trim
+    }
+    # Refine chest lid & bright iron latch pixels cleanly
+    im = render_grid(grid, pal)
+    px = im.load()
+    # Make chest unmistakably warm oak with dark oak trim & gleaming iron latch!
+    chest_oak_hi = rgba("#DEAA54")
+    chest_oak = rgba("#BD8534")
+    chest_oak_dk = rgba("#8C5B1A")
+    chest_rim = rgba("#54330C")
+    latch_hi = rgba("#EDF4FA")
+    latch_mid = rgba("#9BAAB8")
+    # Chest sits cleanly at x=5..10, y=1..6
+    for x in range(5, 11):
+        px[x, 1] = chest_rim
+        px[x, 6] = chest_rim
+    for y in range(2, 6):
+        px[5, y] = chest_rim
+        px[10, y] = chest_rim
+    for x in range(6, 10):
+        px[x, 2] = chest_oak_hi
+        px[x, 3] = chest_oak
+        px[x, 4] = chest_rim  # lid seam
+        px[x, 5] = chest_oak_dk
+    # Crisp 2px iron latch right across lid seam
+    px[7, 3] = latch_hi
+    px[8, 3] = latch_mid
+    px[7, 4] = latch_mid
+    px[8, 4] = latch_hi
+    return im
+
+
+def make_item_transport_drone() -> Image.Image:
+    # Crisp quad-rotor light industrial transport drone
+    grid = [
+        "................",
+        ".ooo........ooo.",
+        "oRCro......orCRo",
+        "oRRRo..oo..oRRRo",
+        ".oooRoHLLHoRooo.",
+        "....oHLCCHHo....",
+        "....oLLCCLLo....",
+        "....oMMLLMMo....",
+        "....oMDWWDMo....",
+        "...oRoWWWWoRo...",
+        "..oRRoWKKWoRRo..",
+        ".oRCroWDDWorCRo.",
+        ".oRRRo.oo.oRRRo.",
+        "..ooo......ooo..",
+        "................",
+        "................",
+    ]
+    pal = {
+        "o": rgba("#151C24"),
+        "R": rgba("#3B4756"),  # carbon rotor blade
+        "r": rgba("#687A8F"),  # rotor sheen
+        "C": rgba("#3CEEFF"),  # glowing cyan LED / rotor tips
+        "H": rgba("#E2ECF5"),  # bright IC2 light-steel
+        "L": rgba("#AEC0D2"),  # light steel body
+        "M": rgba("#6C7E93"),  # shaded steel
+        "D": rgba("#323E4D"),  # dark chassis
+        "W": rgba("#C48C3B"),  # compact cargo crate wood
+        "K": rgba("#7D5118"),  # cargo crate trim
+    }
+    return render_grid(grid, pal)
+
+
+def make_item_heavy_transport_drone() -> Image.Image:
+    # Bulky reinforced armored heavy-lift drone with twin amber cargo pods & hazard stripes
+    grid = [
+        ".oooo......oooo.",
+        "oRYRRo....oRRYRo",
+        "oRRRRo.oo.oRRRRo",
+        "oRRoRoACCAoRoRRo",
+        ".oooDDYYYYDDooo.",
+        "...oDDKYYKDDoo..",
+        "..ooHMDDDDMHoo..",
+        "..oPPHMMMMHPPo..",
+        "..oPPHDDDDHPPo..",
+        "..oPPoWWWWoPPo..",
+        "..oPPoWLLWoPPo..",
+        ".oRRo.oWwo.oRRo.",
+        "oRRRRo.oo.oRRRRo",
+        "oRYRRo....oRRYRo",
+        ".oooo......oooo.",
+        "................",
+    ]
+    pal = {
+        "o": rgba("#12171F"),
+        "R": rgba("#2B3440"),  # heavy carbon rotor
+        "Y": rgba("#F2BC27"),  # hazard yellow stripe & rotor tips
+        "K": rgba("#1C222B"),  # hazard black stripe
+        "A": rgba("#FFB833"),  # amber avionics visor
+        "C": rgba("#44EEFF"),  # cyan core sensor
+        "H": rgba("#A3B4C7"),  # steel armor highlight
+        "M": rgba("#66778B"),  # steel armor mid
+        "D": rgba("#3B4757"),  # dark armored frame
+        "P": rgba("#EB8A1E"),  # twin orange/amber cargo pods
+        "W": rgba("#C47B2B"),  # reinforced central crate
+        "w": rgba("#8A4E14"),  # shaded crate
+        "L": rgba("#E5EEF7"),  # steel cargo latch
+    }
+    im = render_grid(grid, pal)
+    px = im.load()
+    # Add bright highlights on twin amber cargo pods so they pop cleanly
+    for y in (7, 8):
+        px[3, y] = rgba("#FFC247")
+        px[12, y] = rgba("#FFC247")
+    for y in (9, 10):
+        px[3, y] = rgba("#B85A10")
+        px[12, y] = rgba("#B85A10")
+    return im
+
+
+def make_item_rf_chip(tier: int) -> Image.Image:
+    # Progressive IC2-style RF transceiver microchips (Tier 1/2/3)
+    if tier == 1:
+        # Tier I: Classic green PCB + copper pins + 1-arc RF wave
+        grid = [
+            "................",
+            "....p..p..p.....",
+            "...ooooooooo....",
+            "..oGGGGGgGGGo...",
+            ".poGdddddddGop..",
+            "..oGd..w..dGo...",
+            "..oGd.w.w.dGo...",
+            ".poGd..D..dGop..",
+            "..oGd..D..dGo...",
+            "..oGd.ddd.dGo...",
+            ".poGdddddddGop..",
+            "..oGGgGGGgGGo...",
+            "...ooooooooo....",
+            "....p..p..p.....",
+            "................",
+            "................",
+        ]
+        pal = {
+            "o": rgba("#151C22"),
+            "p": rgba("#D98245"),  # copper pins
+            "G": rgba("#257A42"),  # green PCB
+            "g": rgba("#3BB564"),  # PCB trace highlight
+            "d": rgba("#1B232C"),  # dark silicon IC
+            "w": rgba("#F2B077"),  # copper-amber 1-wave arc
+            "D": rgba("#52F287"),  # emitter dot
+        }
+        return render_grid(grid, pal)
+    elif tier == 2:
+        # Tier II: Deep sapphire-blue PCB + gold pins + 2-arc cyan/gold RF wave
+        grid = [
+            "................",
+            "...p..p..p..p...",
+            "..ooooooooooo...",
+            ".oBBBgBBBgBBBo..",
+            "poBdddddddddBop.",
+            ".oBd.wwwww.dBo..",
+            ".oBdw.....wdBo..",
+            "poBd..ccc..dBop.",
+            ".oBd.c.D.c.dBo..",
+            ".oBd...D...dBo..",
+            "poBdddddddddBop.",
+            ".oBBgBBBBBgBBo..",
+            "..ooooooooooo...",
+            "...p..p..p..p...",
+            "................",
+            "................",
+        ]
+        pal = {
+            "o": rgba("#131822"),
+            "p": rgba("#F5C438"),  # gold pins
+            "B": rgba("#1E4D94"),  # blue PCB
+            "g": rgba("#3E85E6"),  # trace highlight
+            "d": rgba("#141B26"),  # dark silicon IC
+            "w": rgba("#FFE066"),  # outer gold RF arc
+            "c": rgba("#4CEEFF"),  # inner cyan RF arc
+            "D": rgba("#E0FFFF"),  # bright emitter core
+        }
+        return render_grid(grid, pal)
+    else:
+        # Tier III: Lapotron-violet PCB + gold/cyan pins + 3-arc radiant cyan/gold RF waves
+        grid = [
+            "................",
+            "..p.c.p..p.c.p..",
+            ".ooooooooooooo..",
+            ".oPPgPPPPPggPo..",
+            "poPdddddddddPop.",
+            "coP.wwwwwww.Poc.",
+            ".oPw.ccccc.wPo..",
+            "poP.c.HHH.c.Pop.",
+            ".oP..H.D.H..Po..",
+            "coP....D....Poc.",
+            "poPdddddddddPop.",
+            ".oPPggPPPggPPo..",
+            ".ooooooooooooo..",
+            "..p.c.p..p.c.p..",
+            "................",
+            "................",
+        ]
+        pal = {
+            "o": rgba("#121220"),
+            "p": rgba("#FFD447"),  # gold pins
+            "c": rgba("#30ECFF"),  # lapotron cyan pins & mid wave
+            "P": rgba("#4A2487"),  # violet PCB
+            "g": rgba("#854CE6"),  # violet trace highlight
+            "d": rgba("#161329"),  # obsidian IC core
+            "w": rgba("#FFD95C"),  # outer gold wave
+            "H": rgba("#9EFAFF"),  # inner radiant wave
+            "D": rgba("#FFFFFF"),  # pure white lapotron core
+        }
+        return render_grid(grid, pal)
+
+
+def make_item_chunk_loading_upgrade() -> Image.Image:
+    # Matches IC2 upgrade card silhouette (energy_storage / overclocker / remote_interface)
+    # with ender-teal LEDs & crisp luminous 3x3 chunk grid emblem inside!
+    grid = [
+        "..oooooooooooo..",
+        ".oEHHHHHHHHHHEo.",
+        ".oHooooooooooHo.",
+        ".oHoTTdTTdTToHo.",
+        ".oHoTTdTTdTToHo.",
+        ".oHodddddddddHo.",
+        ".oHoTTdCCdTToHo.",
+        ".oHoTTdCCdTToHo.",
+        ".oHodddddddddHo.",
+        ".oHoTTdTTdTToHo.",
+        ".oHoTTdTTdTToHo.",
+        ".oHooooooooooHo.",
+        ".oMMMMMMMMMMMMo.",
+        "..oGGooGGooGGo..",
+        "..oYYooYYooYYo..",
+        "...oo..oo..oo...",
+    ]
+    pal = {
+        "o": rgba("#141922"),  # IC2 upgrade dark frame
+        "H": rgba("#D8E3EE"),  # IC2 brushed silver top/side rail
+        "M": rgba("#6E7D8F"),  # IC2 lower metallic bezel
+        "E": rgba("#2AF0BE"),  # ender-teal corner LEDs
+        "d": rgba("#0E151C"),  # dark interior screen / chunk grid lines
+        "T": rgba("#1BC29A"),  # outer 8 loaded chunks (ender-teal)
+        "C": rgba("#6BFFDF"),  # center anchor chunk
+        "G": rgba("#B87616"),  # IC2 gold connector pin top
+        "Y": rgba("#FFE87C"),  # IC2 gold connector pin highlight
+    }
+    im = render_grid(grid, pal)
+    px = im.load()
+    # Add crisp bevel shimmer on each 2x2 chunk cell and center core!
+    for ox in (4, 7, 10):
+        for oy in (3, 6, 9):
+            if ox == 7 and oy == 6:
+                px[ox, oy] = rgba("#E2FFF8")
+                px[ox + 1, oy] = rgba("#88FFE6")
+                px[ox, oy + 1] = rgba("#54F5CF")
+                px[ox + 1, oy + 1] = rgba("#26D9AE")
+            else:
+                px[ox, oy] = rgba("#3DEBC0")
+                px[ox + 1, oy] = rgba("#1EC29B")
+                px[ox, oy + 1] = rgba("#18A684")
+                px[ox + 1, oy + 1] = rgba("#107D63")
+    # Silver side-rail shading to match IC2 energy_storage.png
+    for y in range(2, 12):
+        px[2, y] = rgba("#B8C6D6")
+        px[13, y] = rgba("#8494A6")
+    # Corner LED speculars
+    px[2, 1] = rgba("#B8FFF0")
+    px[13, 1] = rgba("#2AF0BE")
+    return im
+
+
+# =============================================================================
+# 3. ENTITY TEXTURES
+# =============================================================================
+
+def make_entity_electric_cargo_boat() -> Image.Image:
+    """128x128 RGBA texture matching vanilla Minecraft ChestBoatModel exactly across 1.19.2..26.2."""
+    im = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
+    px = im.load()
+
+    # Palette (inspired by IC2 boat_electric.png steel + cobalt blue + cyan, plus oak cargo chest)
+    s_hi = rgba("#D4DFEA")
+    s_lt = rgba("#BCC9D6")
+    s_md = rgba("#9BAAB9")
+    s_dk = rgba("#697A8D")
+    s_bd = rgba("#252F3B")
+    s_in = rgba("#4E5E70")
+    blue_d = rgba("#1C4CA8")
+    blue_m = rgba("#2B6AD1")
+    cyan = rgba("#5CE8FF")
+    amber = rgba("#F2B632")
+    pad_d = rgba("#242D38")
+    pad_m = rgba("#3B4859")
+    pad_l = rgba("#5C6E85")
+
+    def paint_hull_panel(x0, y0, x1, y1, stripe_y=None, rivets_y=None, segment_w=8):
+        fill_rect(px, x0, y0, x1, y1, s_lt)
+        hline(px, x0, x1, y0, s_bd)
+        hline(px, x0, x1, y1, s_bd)
+        vline(px, x0, y0, y1, s_bd)
+        vline(px, x1, y0, y1, s_bd)
+        if y1 - y0 >= 3:
+            hline(px, x0 + 1, x1 - 1, y0 + 1, s_hi)
+            hline(px, x0 + 1, x1 - 1, y1 - 1, s_md)
+        for sx in range(x0 + segment_w, x1, segment_w):
+            vline(px, sx, y0 + 1, y1 - 1, s_dk)
+            if sx + 1 < x1:
+                vline(px, sx + 1, y0 + 1, y1 - 1, s_hi)
+        if stripe_y is not None:
+            hline(px, x0 + 1, x1 - 1, stripe_y, blue_m)
+            for sx in range(x0 + 2, x1 - 1, 4):
+                px[sx, stripe_y] = blue_d
+            if stripe_y + 1 < y1 - 1:
+                hline(px, x0 + 1, x1 - 1, stripe_y + 1, s_md)
+                for sx in range(x0 + 2, x1 - 1, segment_w):
+                    px[sx, stripe_y + 1] = cyan
+                    if sx + 1 < x1 - 1:
+                        px[sx + 1, stripe_y + 1] = cyan
+        if rivets_y is not None:
+            for rx in range(x0 + 3, x1 - 1, segment_w):
+                px[rx, rivets_y] = s_bd
+                if rx + 1 < x1:
+                    px[rx + 1, rivets_y] = s_hi
+
+    # --- 1) BOTTOM (texOffs 0,0; box 28x16x3 -> y=0..2 x=3..58; y=3..18 x=0..61) ---
+    fill_rect(px, 3, 0, 58, 2, s_md)
+    hline(px, 3, 58, 0, s_bd)
+    hline(px, 3, 58, 1, blue_m)
+    hline(px, 3, 58, 2, s_lt)
+    fill_rect(px, 0, 3, 61, 18, s_lt)
+    hline(px, 0, 61, 18, s_bd)
+    vline(px, 0, 3, 18, s_bd)
+    vline(px, 61, 3, 18, s_bd)
+    # Interior deck floor (x=3..30, y=3..18): non-slip ribbed industrial steel deck
+    fill_rect(px, 3, 3, 30, 18, s_md)
+    for y in range(4, 18):
+        if y % 2 == 0:
+            hline(px, 4, 29, y, s_lt)
+    vline(px, 3, 3, 18, s_bd)
+    vline(px, 30, 3, 18, s_bd)
+    # Blue electric conduit line down center of deck
+    hline(px, 4, 29, 10, blue_d)
+    hline(px, 4, 29, 11, blue_m)
+    # Subtle yellow-black stern caution strip
+    for y in range(5, 16):
+        px[5, y] = amber if (y % 2 == 0) else s_bd
+    # Hull underside (x=34..61, y=3..18)
+    fill_rect(px, 34, 3, 61, 18, s_dk)
+    for y in (6, 10, 14):
+        hline(px, 35, 60, y, s_in)
+    vline(px, 31, 3, 18, blue_d)
+    vline(px, 32, 3, 18, blue_m)
+    vline(px, 33, 3, 18, s_bd)
+
+    # --- 2) BACK / STERN (texOffs 0,19; box 18x6x2 -> y=19..20 x=2..37; y=21..26 x=0..39) ---
+    fill_rect(px, 2, 19, 37, 20, s_bd)
+    hline(px, 3, 36, 20, s_md)
+    paint_hull_panel(0, 21, 39, 26, stripe_y=23, rivets_y=22, segment_w=6)
+    # Stern navigation amber/cyan indicator lights
+    px[4, 23] = amber
+    px[5, 23] = amber
+    px[14, 23] = amber
+    px[15, 23] = amber
+    px[23, 23] = cyan
+    px[24, 23] = cyan
+
+    # --- 3) FRONT / BOW (texOffs 0,27; box 16x6x2 -> y=27..28 x=2..35; y=29..34 x=0..35) ---
+    fill_rect(px, 2, 27, 35, 28, s_bd)
+    hline(px, 3, 34, 28, s_md)
+    paint_hull_panel(0, 29, 35, 34, stripe_y=31, rivets_y=30, segment_w=6)
+    # Bow cyan electric headlamp strip
+    hline(px, 6, 11, 31, cyan)
+    hline(px, 23, 28, 31, cyan)
+
+    # --- 4) RIGHT WALL (texOffs 0,35; box 28x6x2 -> y=35..36 x=2..57; y=37..42 x=0..59) ---
+    fill_rect(px, 2, 35, 57, 36, s_bd)
+    hline(px, 3, 56, 36, s_md)
+    paint_hull_panel(0, 37, 59, 42, stripe_y=39, rivets_y=38, segment_w=7)
+
+    # --- 5) LEFT WALL (texOffs 0,43; box 28x6x2 -> y=43..44 x=2..57; y=45..50 x=0..59) ---
+    fill_rect(px, 2, 43, 57, 44, s_bd)
+    hline(px, 3, 56, 44, s_md)
+    paint_hull_panel(0, 45, 59, 50, stripe_y=47, rivets_y=46, segment_w=7)
+
+    # --- 6) LEFT & RIGHT PADDLES (texOffs 62,0 and 62,20) ---
+    for py0 in (0, 20):
+        # Blade top/bottom (x=69..70, y=py0..py0+6)
+        fill_rect(px, 69, py0, 70, py0 + 6, pad_m)
+        # Blade sides (x=62..77, y=py0+7..py0+12)
+        fill_rect(px, 62, py0 + 7, 77, py0 + 12, pad_m)
+        hline(px, 62, 77, py0 + 7, pad_l)
+        hline(px, 62, 77, py0 + 12, pad_d)
+        hline(px, 63, 76, py0 + 10, blue_m)
+        hline(px, 64, 75, py0 + 11, cyan)
+        # Shaft top/bottom (x=80..83, y=py0..py0+17)
+        fill_rect(px, 80, py0, 83, py0 + 17, pad_d)
+        vline(px, 81, py0, py0 + 17, pad_l)
+        vline(px, 82, py0, py0 + 17, pad_m)
+        # Shaft sides (x=62..101, y=py0+18..py0+19)
+        fill_rect(px, 62, py0 + 18, 101, py0 + 19, pad_d)
+        hline(px, 62, 101, py0 + 18, pad_m)
+
+    # --- 7) CHEST (exact ChestBoatModel UV in bottom half y=59..95) ---
+    w_rim = rgba("#472C0E")
+    w_dk = rgba("#7D5218")
+    w_md = rgba("#A8752C")
+    w_lt = rgba("#C99543")
+    w_hi = rgba("#DEAE5E")
+    st_bd = rgba("#26303D")
+    st_md = rgba("#6D7F94")
+    st_hi = rgba("#CBD8E6")
+
+    def paint_chest_face(x0, y0, x1, y1, steel_corners=True):
+        fill_rect(px, x0, y0, x1, y1, w_rim)
+        fill_rect(px, x0 + 1, y0 + 1, x1 - 1, y1 - 1, w_md)
+        hline(px, x0 + 1, x1 - 1, y0 + 1, w_hi)
+        hline(px, x0 + 1, x1 - 1, y1 - 1, w_dk)
+        # Wood plank lines
+        for y in range(y0 + 2, y1 - 1):
+            if (y - y0) % 2 == 0:
+                hline(px, x0 + 1, x1 - 1, y, w_lt)
+            for x in range(x0 + 2, x1 - 1):
+                if (x * 7 + y * 11) % 13 == 0:
+                    px[x, y] = w_dk
+        if steel_corners:
+            for cx, cy in ((x0, y0), (x1, y0), (x0, y1), (x1, y1)):
+                px[cx, cy] = st_bd
+            for cx, cy in ((x0 + 1, y0), (x0, y0 + 1), (x1 - 1, y0), (x1, y0 + 1),
+                           (x0 + 1, y1), (x0, y1 - 1), (x1 - 1, y1), (x1, y1 - 1)):
+                px[cx, cy] = st_md
+
+    # chest_lock (2x4x1 @ 0,59 -> y=59 x=1..4; y=60..63 x=0..5)
+    fill_rect(px, 1, 59, 4, 59, st_hi)
+    fill_rect(px, 0, 60, 5, 63, st_md)
+    hline(px, 0, 5, 60, st_hi)
+    hline(px, 0, 5, 63, st_bd)
+    px[2, 61] = cyan  # tiny smart-lock LED!
+    px[3, 61] = st_hi
+    px[2, 62] = st_bd
+
+    # chest_lid (12x5x12 @ 0,59 -> top: 12..23,59..70; bottom: 24..35,59..70; 4 sides: 0..47,71..75)
+    paint_chest_face(12, 59, 23, 70, steel_corners=True)
+    # Industrial steel tie-down strap across chest lid top
+    vline(px, 14, 60, 69, st_md)
+    vline(px, 21, 60, 69, st_md)
+    px[14, 61] = st_hi
+    px[21, 61] = st_hi
+    paint_chest_face(24, 59, 35, 70, steel_corners=False)
+    for face in range(4):
+        fx0 = face * 12
+        paint_chest_face(fx0, 71, fx0 + 11, 75, steel_corners=True)
+        vline(px, fx0 + 2, 71, 75, st_md)
+        vline(px, fx0 + 9, 71, 75, st_md)
+
+    # chest_bottom (12x8x12 @ 0,76 -> top: 12..23,76..87; bottom: 24..35,76..87; 4 sides: 0..47,88..95)
+    paint_chest_face(12, 76, 23, 87, steel_corners=False)
+    paint_chest_face(24, 76, 35, 87, steel_corners=False)
+    for face in range(4):
+        fx0 = face * 12
+        paint_chest_face(fx0, 88, fx0 + 11, 95, steel_corners=True)
+        vline(px, fx0 + 2, 88, 95, st_md)
+        vline(px, fx0 + 9, 88, 95, st_md)
+        px[fx0 + 2, 89] = st_hi
+        px[fx0 + 9, 89] = st_hi
+
+    return im
+
+
+def _paint_mc_box_uv(px, u: int, v: int, w: int, h: int, d: int,
+                     top_col, bot_col, side_col, front_col, border_col,
+                     accent_col=None, highlight_col=None):
+    """Paint a standard Minecraft CubeListBuilder UV net at (u, v) of size (w, h, d)."""
+    # Top face:    [u+d .. u+d+w-1,     v .. v+d-1]
+    # Bottom face: [u+d+w .. u+d+2w-1,  v .. v+d-1]
+    # Right face:  [u .. u+d-1,         v+d .. v+d+h-1]
+    # Front face:  [u+d .. u+d+w-1,     v+d .. v+d+h-1]
+    # Left face:   [u+d+w .. u+2d+w-1,  v+d .. v+d+h-1]
+    # Back face:   [u+2d+w .. u+2d+2w-1,v+d .. v+d+h-1]
+    def face(x0, y0, fw, fh, col):
+        if fw <= 0 or fh <= 0:
+            return
+        x1, y1 = x0 + fw - 1, y0 + fh - 1
+        fill_rect(px, x0, y0, x1, y1, col)
+        if fw >= 3 and fh >= 3:
+            hline(px, x0, x1, y0, border_col)
+            hline(px, x0, x1, y1, border_col)
+            vline(px, x0, y0, y1, border_col)
+            vline(px, x1, y0, y1, border_col)
+            if highlight_col is not None and fw >= 4 and fh >= 4:
+                hline(px, x0 + 1, x1 - 1, y0 + 1, highlight_col)
+
+    face(u + d, v, w, d, top_col)
+    face(u + d + w, v, w, d, bot_col)
+    face(u, v + d, d, h, side_col)
+    face(u + d, v + d, w, h, front_col)
+    face(u + d + w, v + d, d, h, side_col)
+    face(u + 2 * d + w, v + d, w, h, side_col)
+    if accent_col is not None and w >= 4 and h >= 2:
+        # Subtle accent stripe on front face
+        hline(px, u + d + 1, u + d + w - 2, v + d + h // 2, accent_col)
+
+
+def make_entity_drone(heavy: bool) -> Image.Image:
+    """64x64 RGBA UV texture matching docs/DRONE_MODEL_UV.md exactly."""
+    im = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    px = im.load()
+
+    # Assert exact non-overlapping UV footprints matching docs/DRONE_MODEL_UV.md
+    uv_rects = [
+        ("body", 0, 0, 40, 14),
+        ("nose_sensor", 40, 0, 12, 4),
+        ("antenna", 58, 0, 4, 5),
+        ("arm", 40, 4, 16, 7),
+        ("cargo_bay", 0, 14, 32, 13),
+        ("motor_hub", 32, 14, 8, 5),
+        ("blade_x", 40, 14, 18, 2),
+        ("blade_z", 40, 16, 18, 9),
+        ("skid", 0, 27, 22, 11),
+        ("side_pod", 22, 27, 22, 12),
+    ]
+    used = {}
+    for name, rx, ry, rw, rh in uv_rects:
+        assert rx + rw <= 64 and ry + rh <= 64, f"UV out of bounds: {name}"
+        for y in range(ry, ry + rh):
+            for x in range(rx, rx + rw):
+                assert (x, y) not in used, f"UV overlap at {(x,y)}: {name} vs {used[(x,y)]}"
+                used[(x, y)] = name
+
+    if not heavy:
+        c_bd = rgba("#19212B")
+        c_top = rgba("#BAC9D8")
+        c_hi = rgba("#DCE6F0")
+        c_side = rgba("#7E91A6")
+        c_bot = rgba("#4A596B")
+        c_acc = rgba("#33EAFF")
+        c_acc_hi = rgba("#CCF9FF")
+        c_arm = rgba("#2C3745")
+        c_arm_hi = rgba("#586A7F")
+        c_blade = rgba("#222A35")
+        c_tip = rgba("#3CEEFF")
+        c_crate = rgba("#BC8637")
+        c_crate_hi = rgba("#D9A552")
+        c_crate_bd = rgba("#54340F")
+        c_pod = rgba("#5A6C80")
+        c_pod_hi = rgba("#889BB0")
+    else:
+        c_bd = rgba("#131820")
+        c_top = rgba("#4E5D6E")
+        c_hi = rgba("#8093A8")
+        c_side = rgba("#3A4757")
+        c_bot = rgba("#252E3A")
+        c_acc = rgba("#FFB52E")
+        c_acc_hi = rgba("#FFE699")
+        c_arm = rgba("#212832")
+        c_arm_hi = rgba("#485769")
+        c_blade = rgba("#1A2029")
+        c_tip = rgba("#F2B824")
+        c_crate = rgba("#9E5B1A")
+        c_crate_hi = rgba("#D98229")
+        c_crate_bd = rgba("#3D220A")
+        c_pod = rgba("#E07E1B")
+        c_pod_hi = rgba("#FFA93B")
+
+    # 1. body (10, 4, 10) @ (0, 0)
+    _paint_mc_box_uv(px, 0, 0, 10, 4, 10, c_top, c_bot, c_side, c_side, c_bd, c_acc, c_hi)
+    # Top fuselage detail (x=10..19, y=0..9): crisp forward chevron pointing -Z (upward on top UV)
+    for x, y in ((14, 2), (15, 2), (13, 3), (14, 3), (15, 3), (16, 3), (12, 4), (17, 4)):
+        px[x, y] = c_acc
+    px[14, 3] = c_acc_hi
+    px[15, 3] = c_acc_hi
+    if heavy:
+        # Yellow/black hazard stripes along top rear edge of heavy drone
+        for x in range(11, 19):
+            px[x, 7] = rgba("#F2BC24") if (x % 2 == 0) else c_bd
+            px[x, 8] = rgba("#F2BC24") if (x % 2 == 1) else c_bd
+
+    # 2. nose_sensor (4, 2, 2) @ (40, 0)
+    _paint_mc_box_uv(px, 40, 0, 4, 2, 2, c_arm_hi, c_arm, c_arm, c_bd, c_bd)
+    # Glowing optical camera lens on front face (x=42..45, y=2..3)
+    px[43, 2] = c_acc_hi
+    px[44, 2] = c_acc
+    px[43, 3] = c_acc
+    px[44, 3] = rgba("#127A94") if not heavy else rgba("#B86214")
+
+    # 3. antenna (1, 4, 1) @ (58, 0)
+    fill_rect(px, 58, 0, 61, 4, c_hi)
+    hline(px, 58, 61, 0, c_acc)
+    hline(px, 58, 61, 1, c_acc_hi)
+    hline(px, 58, 61, 4, c_bd)
+
+    # 4. arm (2, 1, 6) @ (40, 4)
+    _paint_mc_box_uv(px, 40, 4, 2, 1, 6, c_arm_hi, c_arm, c_arm, c_arm, c_bd)
+    px[46, 5] = c_acc
+    px[47, 5] = c_acc
+
+    # 5. cargo_bay (8, 5, 8) @ (0, 14)
+    _paint_mc_box_uv(px, 0, 14, 8, 5, 8, c_crate_hi, c_crate_bd, c_crate, c_crate, c_crate_bd, highlight_col=c_crate_hi)
+    # Steel straps & latch across cargo_bay faces (y=22..26)
+    for fx in (8, 24):
+        vline(px, fx + 1, 22, 26, c_side)
+        vline(px, fx + 6, 22, 26, c_side)
+        px[fx + 3, 23] = c_hi
+        px[fx + 4, 23] = c_hi
+
+    # 6. motor_hub (2, 3, 2) @ (32, 14)
+    _paint_mc_box_uv(px, 32, 14, 2, 3, 2, c_hi, c_bd, c_arm, c_arm_hi, c_bd)
+    hline(px, 32, 39, 17, c_acc)
+
+    # 7. blade_x (8, 1, 1) @ (40, 14) and blade_z (1, 1, 8) @ (40, 16)
+    fill_rect(px, 40, 14, 57, 15, c_blade)
+    for tx in (40, 41, 48, 49, 56, 57):
+        px[tx, 14] = c_tip
+        px[tx, 15] = c_tip
+    # blade_z: top/bot at x=48..49, y=16..23; sides at x=40..57, y=24
+    fill_rect(px, 48, 16, 49, 23, c_blade)
+    fill_rect(px, 40, 24, 57, 24, c_blade)
+    for tx in (48, 49):
+        px[tx, 16] = c_tip
+        px[tx, 23] = c_tip
+    for tx in (40, 47, 48, 49, 56, 57):
+        px[tx, 24] = c_tip
+
+    # 8. landing_skid (1, 1, 10) @ (0, 27)
+    fill_rect(px, 0, 27, 21, 37, c_arm)
+    hline(px, 0, 21, 37, c_bd)
+    hline(px, 10, 11, 27, c_arm_hi)
+
+    # 9. side_pod (3, 4, 8) @ (22, 27) — visible on HEAVY variant!
+    _paint_mc_box_uv(px, 22, 27, 3, 4, 8, c_pod_hi, c_crate_bd, c_pod, c_pod, c_bd, c_acc_hi, c_pod_hi)
+    # Caution stripe on heavy pod sides (x=22..29 and x=33..40, y=35..38)
+    for sx in range(23, 29):
+        px[sx, 36] = rgba("#F2BC24") if (sx % 2 == 0) else c_bd
+    for sx in range(34, 40):
+        px[sx, 36] = rgba("#F2BC24") if (sx % 2 == 0) else c_bd
+
+    return im
+
+
+# =============================================================================
+# 4. GUI TEXTURES (256x256, 212x222 panel matching docs/GUI_LAYOUT.md)
+# =============================================================================
+
+def _draw_slot(px, item_x: int, item_y: int, accent=None):
+    """Draw an authentic IC2 18x18 recessed inventory slot around (item_x, item_y)."""
+    x0, y0, x1, y1 = item_x - 1, item_y - 1, item_x + 16, item_y + 16
+    c_bg = rgba("#8B9098")
+    c_dk = rgba("#373B42")
+    c_lt = rgba("#EEF1F5")
+    c_mid = rgba("#B8BDC6")
+    fill_rect(px, x0, y0, x1, y1, c_bg)
+    hline(px, x0, x1 - 1, y0, c_dk)
+    vline(px, x0, y0, y1 - 1, c_dk)
+    hline(px, x0 + 1, x1, y1, c_lt)
+    vline(px, x1, y0 + 1, y1, c_lt)
+    px[x1, y0] = c_mid
+    px[x0, y1] = c_mid
+    if accent is not None:
+        # Subtle colored inner top highlight for special slots (e.g. RF chip)
+        hline(px, x0 + 1, x1 - 1, y0 + 1, accent)
+
+
+def _draw_lcd(px, x0: int, y0: int, w: int, h: int):
+    x1, y1 = x0 + w - 1, y0 + h - 1
+    fill_rect(px, x0, y0, x1, y1, rgba("#151C24"))
+    hline(px, x0, x1 - 1, y0, rgba("#0B0F14"))
+    vline(px, x0, y0, y1 - 1, rgba("#0B0F14"))
+    hline(px, x0 + 1, x1, y1, rgba("#DCE2EA"))
+    vline(px, x1, y0 + 1, y1, rgba("#DCE2EA"))
+    # Subtle scanline
+    for y in range(y0 + 2, y1 - 1, 2):
+        hline(px, x0 + 1, x1 - 1, y, rgba("#1B242F"))
+
+
+def _draw_watermark(px, item_x: int, item_y: int, pattern: list[str], col_hi, col_lo):
+    for dy, row in enumerate(pattern):
+        for dx, ch in enumerate(row):
+            if ch == "#":
+                px[item_x + dx, item_y + dy] = col_lo
+            elif ch == "+":
+                px[item_x + dx, item_y + dy] = col_hi
+
+
+def _draw_eu_bolt(px, x0: int, y0: int, lit: bool):
+    # 10x14 crisp IC2 lightning bolt
+    bolt = [
+        "....oo....",
+        "...oBBoo..",
+        "..oBHHBo..",
+        "..oBHBo...",
+        ".oBBHHBoo.",
+        ".oBHHHBBoo",
+        "..oooBHBo.",
+        "....oBBBo.",
+        "...oBHHBo.",
+        "...oBHBo..",
+        "..oBBBo...",
+        "..oBBo....",
+        "...oo.....",
+        "..........",
+    ]
+    if lit:
+        pal = {"o": rgba("#591808"), "B": rgba("#FF7B1C"), "H": rgba("#FFE854")}
+    else:
+        pal = {"o": rgba("#2B313B"), "B": rgba("#555D6B"), "H": rgba("#6E7787")}
+    for dy, row in enumerate(bolt):
+        for dx, ch in enumerate(row):
+            if ch != ".":
+                px[x0 + dx, y0 + dy] = pal[ch]
+
+
+def _draw_base_gui(is_cargo_station: bool) -> Image.Image:
+    im = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+    px = im.load()
+
+    # Authentic IC2 beveled grey panel (212x222 in top-left of 256x256)
+    c_out = rgba("#1E232B")
+    c_hi = rgba("#F2F4F7")
+    c_bg = rgba("#C6C6C6")
+    c_bg2 = rgba("#C0C2C6")  # ultra-subtle horizontal brush
+    c_sh = rgba("#555B66")
+    c_seam = rgba("#9BA0A8")
+
+    # Outer frame
+    fill_rect(px, 0, 0, 211, 221, c_out)
+    # Rounded pixel corners (cut 1px transparent outside border)
+    for cx, cy in ((0, 0), (211, 0), (0, 221), (211, 221)):
+        px[cx, cy] = (0, 0, 0, 0)
+    # Bevel border (2px highlight top/left, 2px shadow bottom/right)
+    fill_rect(px, 1, 1, 210, 220, c_bg)
+    hline(px, 1, 209, 1, c_hi)
+    hline(px, 1, 208, 2, c_hi)
+    vline(px, 1, 1, 219, c_hi)
+    vline(px, 2, 1, 218, c_hi)
+    hline(px, 2, 210, 220, c_sh)
+    hline(px, 3, 210, 219, c_sh)
+    vline(px, 210, 2, 220, c_sh)
+    vline(px, 209, 3, 220, c_sh)
+    # Inner subtle industrial horizontal grain
+    for y in range(4, 218, 2):
+        hline(px, 3, 208, y, c_bg2)
+    # IC2 corner rivets
+    for rx, ry in ((4, 4), (206, 4), (4, 216), (206, 216)):
+        px[rx, ry] = rgba("#707680")
+        px[rx + 1, ry + 1] = c_hi
+
+    # Vertical divider seam separating main area (x=7..170) from right power/upgrade column (x=176..206)
+    vline(px, 175, 14, 215, c_seam)
+    vline(px, 176, 14, 215, rgba("#E4E7EC"))
+
+    # Top recessed LCD displays (exact coords from docs/GUI_LAYOUT.md)
+    # Target readout LCD: (23, 28, 132, 12)
+    _draw_lcd(px, 23, 28, 132, 12)
+    # Status readout LCD: (7, 67, 164, 10)
+    _draw_lcd(px, 7, 67, 164, 10)
+
+    # Subtle inset framing behind control rows (y=14..66)
+    hline(px, 7, 170, 13, c_seam)
+
+    # Player Inventory (3x9: x=8+col*18, y=142+row*18) + Hotbar (1x9: y=199)
+    for row in range(3):
+        for col in range(9):
+            _draw_slot(px, 8 + col * 18, 142 + row * 18)
+    for col in range(9):
+        _draw_slot(px, 8 + col * 18, 199)
+
+    # Right column: EU Gauge Frame (185, 16, 18, 42) -> inner (186, 17, 16, 40)
+    _draw_lcd(px, 185, 16, 18, 42)
+    # Subtle EU scale tick marks inside dark gauge
+    for ty in range(21, 56, 4):
+        hline(px, 187, 190, ty, rgba("#2C3B4D"))
+        hline(px, 197, 200, ty, rgba("#2C3B4D"))
+    # Unlit EU bolt at (189, 60, 10, 14)
+    _draw_eu_bolt(px, 189, 60, lit=False)
+
+    # Single-use battery slot at (186, 79) with subtle battery watermark
+    _draw_slot(px, 186, 79)
+    bat_wm = [
+        "................",
+        "......####......",
+        ".....######.....",
+        "....########....",
+        "....#++++++#....",
+        "....#+####+#....",
+        "....#++##++#....",
+        "....#++++++#....",
+        "....#+####+#....",
+        "....#++++++#....",
+        "....#+####+#....",
+        "....#++++++#....",
+        "....########....",
+        "................",
+        "................",
+        "................",
+    ]
+    _draw_watermark(px, 186, 79, bat_wm, rgba("#7B8088"), rgba("#636870"))
+
+    # 4 Machine Upgrade slots at (186, 106/124/142/160) with IC2 upgrade card watermark
+    upg_wm = [
+        "................",
+        "...##########...",
+        "..##++++++++##..",
+        "..#+########+#..",
+        "..#+#......#+#..",
+        "..#+#..++..#+#..",
+        "..#+#.++++.#+#..",
+        "..#+#..++..#+#..",
+        "..#+#......#+#..",
+        "..#+########+#..",
+        "..############..",
+        "...##..##..##...",
+        "...##..##..##...",
+        "................",
+        "................",
+        "................",
+    ]
+    for uy in (106, 124, 142, 160):
+        _draw_slot(px, 186, uy)
+        _draw_watermark(px, 186, uy, upg_wm, rgba("#7D828A"), rgba("#676C74"))
+
+    # Bottom-right recessed status badge wells at (185, 179, 18, 18) & (185, 198, 18, 18)
+    _draw_lcd(px, 185, 179, 18, 18)
+    _draw_lcd(px, 185, 198, 18, 18)
+    # Subtle dim chunk-grid watermark in (186, 180)
+    for gx in (189, 193, 197):
+        for gy in (183, 187, 191):
+            fill_rect(px, gx, gy, gx + 1, gy + 1, rgba("#24333C"))
+
+    # Machine-specific slots
+    if not is_cargo_station:
+        # Smart Port: 27 Cargo Buffer slots (3x9 @ x=8+col*18, y=79+row*18)
+        for row in range(3):
+            for col in range(9):
+                _draw_slot(px, 8 + col * 18, 79 + row * 18)
+        # Subtle dim anchor watermark in bottom-right badge (186, 199)
+        anchor_wm = [
+            "................",
+            ".......##.......",
+            "......#..#......",
+            ".......##.......",
+            "....########....",
+            ".......##.......",
+            ".......##.......",
+            ".......##.......",
+            "...#...##...#...",
+            "...##..##..##...",
+            "....###++###....",
+            "......####......",
+            "................",
+            "................",
+            "................",
+            "................",
+        ]
+        _draw_watermark(px, 186, 199, anchor_wm, rgba("#2E485C"), rgba("#213240"))
+    else:
+        # Cargo Station:
+        # RF Chip slot at (8, 79) with antenna watermark + subtle cyan rim
+        _draw_slot(px, 8, 79, accent=rgba("#4A7E94"))
+        rf_wm = [
+            "................",
+            "....#......#....",
+            "...#..####..#...",
+            "..#..#....#..#..",
+            "..#.#..##..#.#..",
+            "..#..#.++.#..#..",
+            "...#...++...#...",
+            ".......##.......",
+            ".......##.......",
+            "......####......",
+            ".....######.....",
+            "....########....",
+            "................",
+            "................",
+            "................",
+            "................",
+        ]
+        _draw_watermark(px, 8, 79, rf_wm, rgba("#7B8894"), rgba("#5F6973"))
+
+        # RF Range Mini-LCD at (26, 78, 34, 18) — flush with RF & Drone Bay slot frames
+        _draw_lcd(px, 26, 78, 34, 18)
+
+        # 6 Drone Bay slots at (62 + bay*18, 79) with subtle drone-pad watermark
+        drone_wm = [
+            "................",
+            "..###......###..",
+            "..#+#......#+#..",
+            "..###..##..###..",
+            "....#.####.#....",
+            ".....######.....",
+            ".....##++##.....",
+            ".....######.....",
+            "....#.####.#....",
+            "..###..##..###..",
+            "..#+#......#+#..",
+            "..###......###..",
+            "................",
+            "................",
+            "................",
+            "................",
+        ]
+        for bay in range(6):
+            bx = 62 + bay * 18
+            _draw_slot(px, bx, 79)
+            _draw_watermark(px, bx, 79, drone_wm, rgba("#7C838C"), rgba("#636A73"))
+
+        # 18 Cargo Buffer slots (2x9 @ x=8+col*18, y=97+row*18)
+        for row in range(2):
+            for col in range(9):
+                _draw_slot(px, 8 + col * 18, 97 + row * 18)
+
+        # Subtle dim drone watermark in bottom-right badge (186, 199)
+        _draw_watermark(px, 186, 199, drone_wm, rgba("#2E485C"), rgba("#213240"))
+
+    # =========================================================================
+    # DYNAMIC OVERLAY SPRITES in unused right margin (u = 216..255)
+    # =========================================================================
+
+    # 1) Lit EU Energy Column Fill: (u=216, v=0, w=16, h=40)
+    # Vibrant IC2 segmented red->orange->gold energy column
+    for dy in range(40):
+        # dy=0 is top (fullest/gold-yellow), dy=39 is bottom (red-orange)
+        frac = 1.0 - (dy / 39.0)
+        if frac > 0.72:
+            c_l, c_m, c_r = rgba("#FFF066"), rgba("#FFCC29"), rgba("#D98C14")
+        elif frac > 0.38:
+            c_l, c_m, c_r = rgba("#FFBA38"), rgba("#FF841A"), rgba("#C94A0E")
+        else:
+            c_l, c_m, c_r = rgba("#FF7838"), rgba("#E83B17"), rgba("#9E1E0B")
+        if dy % 4 == 3:
+            # Crisp dark segment groove
+            hline(px, 216, 231, dy, rgba("#5E1C0A"))
+        else:
+            hline(px, 216, 231, dy, c_m)
+            vline(px, 216, dy, dy, c_r)
+            vline(px, 217, dy, dy, c_l)
+            vline(px, 218, dy, dy, c_l)
+            vline(px, 231, dy, dy, c_r)
+
+    # 2) Lit EU Lightning Bolt: (u=234, v=0, w=10, h=14)
+    _draw_eu_bolt(px, 234, 0, lit=True)
+
+    # 3) Active Vehicle Badge: (u=216, v=44, w=16, h=16)
+    fill_rect(px, 216, 44, 231, 59, rgba("#132633"))
+    if not is_cargo_station:
+        # Lit cyan anchor icon
+        _draw_watermark(px, 216, 44, [
+            "................",
+            ".......++.......",
+            "......+..+......",
+            ".......++.......",
+            "....++++++++....",
+            ".......++.......",
+            ".......++.......",
+            ".......++.......",
+            "...+...++...+...",
+            "...++..++..++...",
+            "....+++##+++....",
+            "......####......",
+            "................",
+            "................",
+            "................",
+            "................",
+        ], rgba("#3CEEFF"), rgba("#BDFBFF"))
+    else:
+        # Lit cyan drone icon
+        _draw_watermark(px, 216, 44, [
+            "................",
+            "..###......###..",
+            "..#+#......#+#..",
+            "..###..##..###..",
+            "....#.####.#....",
+            ".....######.....",
+            ".....##++##.....",
+            ".....######.....",
+            "....#.####.#....",
+            "..###..##..###..",
+            "..#+#......#+#..",
+            "..###......###..",
+            "................",
+            "................",
+            "................",
+            "................",
+        ], rgba("#C2FDFF"), rgba("#30E4FF"))
+
+    # 4) Warning / Idle Badge: (u=234, v=44, w=16, h=16)
+    fill_rect(px, 234, 44, 249, 59, rgba("#2B1F10"))
+    _draw_watermark(px, 234, 44, [
+        "................",
+        ".......##.......",
+        "......####......",
+        "......#++#......",
+        ".....##++##.....",
+        ".....##++##.....",
+        "....###++###....",
+        "....###++###....",
+        "...####++####...",
+        "...##########...",
+        "..#####++#####..",
+        "..#####++#####..",
+        ".##############.",
+        "................",
+        "................",
+        "................",
+    ], rgba("#FFF4B8"), rgba("#F0A422"))
+
+    # 5) Chunk-Loader Active Badge: (u=216, v=64, w=16, h=16)
+    fill_rect(px, 216, 64, 231, 79, rgba("#0F2420"))
+    for gx in (219, 223, 227):
+        for gy in (67, 71, 75):
+            col = rgba("#A8FFEB") if (gx == 223 and gy == 71) else rgba("#24D9AC")
+            fill_rect(px, gx, gy, gx + 1, gy + 1, col)
+
+    return im
+
+
+# =============================================================================
+# 5. VISUAL PREVIEW CONTACT SHEET (4x nearest-neighbor)
+# =============================================================================
+
+def generate_preview(out_path: Path, generated: dict[str, Image.Image]):
+    scale = 4
+    bg = rgba("#1A1F28")
+    card_bg = rgba("#262D3B")
+    border = rgba("#4A576C")
+    text_col = rgba("#E4ECF5")
+    hdr_col = rgba("#5CE8FF")
+
+    blocks = [
+        "block/smart_port_front", "block/smart_port_front_active",
+        "block/smart_port_side", "block/smart_port_top", "block/smart_port_bottom",
+        "block/cargo_station_top", "block/cargo_station_top_active",
+        "block/cargo_station_side", "block/cargo_station_side_active", "block/cargo_station_bottom",
+    ]
+    items = [
+        "item/electric_cargo_boat", "item/transport_drone", "item/heavy_transport_drone",
+        "item/rf_chip_1", "item/rf_chip_2", "item/rf_chip_3", "item/chunk_loading_upgrade",
+    ]
+    entities = [
+        "entity/boat/electric_cargo_boat",
+        "entity/drone/transport_drone",
+        "entity/drone/heavy_transport_drone",
+    ]
+    guis = ["gui/smart_port", "gui/cargo_station"]
+
+    # Layout canvas width = 1180 px, tight vertical framing
+    W = 1180
+    H = 1412
+    sheet = Image.new("RGBA", (W, H), bg)
+    draw = ImageDraw.Draw(sheet)
+
+    draw.text((20, 14), "LogisticsCraft2 (lc2) - Complete Original Asset Preview (4x Nearest-Neighbor)", fill=hdr_col)
+
+    # Section 1: Blocks (2 rows of 5)
+    y = 42
+    draw.text((20, y), "BLOCKS (16x16 @ 4x = 64x64)", fill=hdr_col)
+    y += 18
+    for idx, key in enumerate(blocks):
+        col = idx % 5
+        row = idx // 5
+        cx = 20 + col * 228
+        cy = y + row * 104
+        draw.rectangle([cx, cy, cx + 216, cy + 94], fill=card_bg, outline=border)
+        tile = generated[key].resize((16 * scale, 16 * scale), Image.NEAREST)
+        sheet.alpha_composite(tile, (cx + 12, cy + 15))
+        label = key.split("/", 1)[1]
+        parts = label.split("_")
+        line1 = "_".join(parts[:2])
+        line2 = "_".join(parts[2:])
+        draw.text((cx + 86, cy + 28), line1, fill=text_col)
+        draw.text((cx + 86, cy + 44), line2, fill=rgba("#9FB2C8"))
+
+    # Section 2: Items (1 row of 7)
+    y += 220
+    draw.text((20, y), "ITEMS (16x16 @ 4x = 64x64)", fill=hdr_col)
+    y += 18
+    for idx, key in enumerate(items):
+        cx = 20 + idx * 163
+        cy = y
+        draw.rectangle([cx, cy, cx + 153, cy + 106], fill=card_bg, outline=border)
+        tile = generated[key].resize((16 * scale, 16 * scale), Image.NEAREST)
+        sheet.alpha_composite(tile, (cx + 44, cy + 10))
+        label = key.split("/", 1)[1]
+        draw.text((cx + 8, cy + 82), label[:22], fill=text_col)
+
+    # Section 3: Entity UV Maps (Boat 128x128 @ 3x = 384x384; Drones 64x64 @ 4x = 256x256)
+    y += 124
+    draw.text((20, y), "ENTITY UV MAPS (Boat: 128x128 ChestBoatModel @ 3x | Drones: 64x64 CargoDroneModel @ 4x)", fill=hdr_col)
+    y += 18
+    # Boat
+    bx, by = 20, y
+    draw.rectangle([bx, by, bx + 408, by + 420], fill=card_bg, outline=border)
+    boat_img = generated[entities[0]].resize((128 * 3, 128 * 3), Image.NEAREST)
+    sheet.alpha_composite(boat_img, (bx + 12, by + 26))
+    draw.text((bx + 12, by + 8), "entity/boat/electric_cargo_boat.png (128x128)", fill=text_col)
+    # Standard Drone
+    dx1 = bx + 424
+    draw.rectangle([dx1, by, dx1 + 348, by + 420], fill=card_bg, outline=border)
+    d1_img = generated[entities[1]].resize((64 * 4, 64 * 4), Image.NEAREST)
+    sheet.alpha_composite(d1_img, (dx1 + 46, by + 82))
+    draw.text((dx1 + 12, by + 8), "entity/drone/transport_drone.png (64x64 @ 4x)", fill=text_col)
+    # Heavy Drone
+    dx2 = dx1 + 364
+    draw.rectangle([dx2, by, dx2 + 348, by + 420], fill=card_bg, outline=border)
+    d2_img = generated[entities[2]].resize((64 * 4, 64 * 4), Image.NEAREST)
+    sheet.alpha_composite(d2_img, (dx2 + 46, by + 82))
+    draw.text((dx2 + 12, by + 8), "entity/drone/heavy_transport_drone.png (64x64 @ 4x)", fill=text_col)
+
+    # Section 4: GUIs (256x256 @ 2x = 512x512 side-by-side so full 256x256 including sprite margin is crystal clear!)
+    y += 438
+    draw.text((20, y), "MACHINE GUIs (256x256 atlas with 212x222 panel + u=216..255 sprite strip @ 2x nearest-neighbor)", fill=hdr_col)
+    y += 18
+    for idx, key in enumerate(guis):
+        gx = 20 + idx * 576
+        gy = y
+        draw.rectangle([gx, gy, gx + 556, gy + 552], fill=card_bg, outline=border)
+        g_img = generated[key].resize((256 * 2, 256 * 2), Image.NEAREST)
+        sheet.alpha_composite(g_img, (gx + 22, gy + 28))
+        draw.text((gx + 16, gy + 8), f"{key}.png (256x256 -> 212x222 panel)", fill=text_col)
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(out_path)
+    print(f"Saved preview contact sheet: {out_path} ({sheet.size[0]}x{sheet.size[1]})")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Generate all LC2 pixel-art textures.")
+    parser.add_argument("--output", type=Path, default=TEX_ROOT, help="Output textures directory")
+    parser.add_argument("--preview", type=Path, default=None, help="Optional zoomed preview contact sheet PNG")
+    args = parser.parse_args()
+
+    out_root = args.output.resolve()
+    generators = {
+        "block/smart_port_front": lambda: make_smart_port_front(False),
+        "block/smart_port_front_active": lambda: make_smart_port_front(True),
+        "block/smart_port_side": make_smart_port_side,
+        "block/smart_port_top": make_smart_port_top,
+        "block/smart_port_bottom": make_smart_port_bottom,
+        "block/cargo_station_top": lambda: make_cargo_station_top(False),
+        "block/cargo_station_top_active": lambda: make_cargo_station_top(True),
+        "block/cargo_station_side": lambda: make_cargo_station_side(False),
+        "block/cargo_station_side_active": lambda: make_cargo_station_side(True),
+        "block/cargo_station_bottom": make_cargo_station_bottom,
+        "item/electric_cargo_boat": make_item_electric_cargo_boat,
+        "item/transport_drone": make_item_transport_drone,
+        "item/heavy_transport_drone": make_item_heavy_transport_drone,
+        "item/rf_chip_1": lambda: make_item_rf_chip(1),
+        "item/rf_chip_2": lambda: make_item_rf_chip(2),
+        "item/rf_chip_3": lambda: make_item_rf_chip(3),
+        "item/chunk_loading_upgrade": make_item_chunk_loading_upgrade,
+        "entity/boat/electric_cargo_boat": make_entity_electric_cargo_boat,
+        "entity/drone/transport_drone": lambda: make_entity_drone(False),
+        "entity/drone/heavy_transport_drone": lambda: make_entity_drone(True),
+        "gui/smart_port": lambda: _draw_base_gui(False),
+        "gui/cargo_station": lambda: _draw_base_gui(True),
+    }
+
+    generated = {}
+    for rel, fn in generators.items():
+        im = fn()
+        dest = out_root / (rel + ".png")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        im.save(dest)
+        generated[rel] = im
+        print(f"Wrote {dest.relative_to(REPO_ROOT) if REPO_ROOT in dest.parents else dest} ({im.size[0]}x{im.size[1]})")
+
+    if args.preview is not None:
+        generate_preview(args.preview.resolve(), generated)
+
+
+if __name__ == "__main__":
+    main()

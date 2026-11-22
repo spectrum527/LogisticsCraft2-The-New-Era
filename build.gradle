@@ -1,0 +1,38 @@
+plugins {
+    id 'base'
+    id 'net.neoforged.moddev' apply false
+}
+
+allprojects {
+    group = 'com.logisticscraft.lc2'
+    version = rootProject.property('mod_version')
+    repositories { mavenCentral() }
+}
+
+subprojects {
+    plugins.withId('java') {
+        java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+        tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+        tasks.withType(AbstractArchiveTask).configureEach {
+            preserveFileTimestamps = false
+            reproducibleFileOrder = true
+        }
+    }
+}
+
+tasks.register('checkCommonImports') {
+    def commonJava = fileTree('src/common/src') { include '**/*.java' }
+    inputs.files(commonJava)
+    doLast {
+        commonJava.each {
+            if (it.text =~ /(?m)^\s*import\s+(static\s+)?(?:net\.minecraft|net\.neoforged|net\.minecraftforge|net\.fabricmc)\./) {
+                throw new GradleException("Platform/Minecraft import forbidden in common: $it")
+            }
+        }
+    }
+}
+
+tasks.named('build') {
+    dependsOn 'checkCommonImports'
+    dependsOn subprojects.collect { it.tasks.matching { it.name == 'build' } }
+}
