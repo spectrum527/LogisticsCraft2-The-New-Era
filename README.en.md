@@ -4,13 +4,13 @@
 
 ![LogisticsCraft²: The New Era project cover](assets/brand/cover.jpg)
 
-**LogisticsCraft²: The New Era (`lc2`)** is a maritime and aerial logistics addon for [IndustrialCraft²: The New Era](https://github.com/spectrum527/IndustrialCraft2-The-New-Era), featuring autonomous electric cargo boats, standard & heavy transport drones, Create-train-style unloaded-chunk transit, collision avoidance, and deep IC2 EU & machine-upgrade integration.
+LogisticsCraft²: The New Era (`lc2`) is a logistics addon for [IndustrialCraft²: The New Era](https://github.com/spectrum527/IndustrialCraft2-The-New-Era). It adds autonomous electric cargo boats and transport drones that keep moving through unloaded chunks.
 
-## Downloads & Installation
+## Download and install
 
-Requires **IndustrialCraft²: The New Era (`ic2` v1.0.5+)** for the matching Minecraft version. Place the matching `lc2` JAR into `mods/` on both client and server.
+Install [IndustrialCraft²: The New Era](https://github.com/spectrum527/IndustrialCraft2-The-New-Era) (`ic2` v1.0.5 or newer) for your Minecraft version first, then put the matching `lc2` JAR into `mods/`. In multiplayer, install the mod on both the client and the server.
 
-[v1.1.0 Release Notes](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/tag/v1.1.0) · [SHA-256 Checksums](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.0/SHA256SUMS.txt)
+[v1.1.0 release notes](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/tag/v1.1.0) · [SHA-256 checksums](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.0/SHA256SUMS.txt)
 
 | Minecraft | Loader | Java | Download |
 | --- | --- | ---: | --- |
@@ -19,24 +19,106 @@ Requires **IndustrialCraft²: The New Era (`ic2` v1.0.5+)** for the matching Min
 | 26.1.2 | NeoForge 26.1.2.128 | 25 | [NeoForge 26.1.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.0/lc2-neoforge-26.1.2-1.1.0.jar) |
 | 26.2 | NeoForge 26.2.0.95 | 25 | [NeoForge 26.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.0/lc2-neoforge-26.2-1.1.0.jar) |
 
-## Features
+## Getting started
 
-- **Strict 2-Zone Cargo Isolation & Swap (`Smart Port` & `Cargo Station`)**: Each station provides a dedicated **27-slot Outbound Zone** (fed by external pipes/hoppers & IC2 Pulling Upgrades; exclusively loaded onto departing boats/drones; measured by Redstone Comparators) and a **27-slot Storage Zone** (receives unloaded deliveries; exclusively extracted by external pipes/hoppers & IC2 Ejector Upgrades), plus an instant **Swap (`⇄`)** button between both zones.
-- **Waterway Logistics**: **Smart Port (`lc2:smart_port`)** + **Electric Smart Cargo Boat (`lc2:electric_cargo_boat`)** with 54-slot Double Chest capacity, verified A* navigable water routing & collision avoidance, Chest/Shulker/IC2 Storage Box automation, 14,400 EU buffer + dedicated single-use battery slot (`3,000 EU` / `2` batteries one-way, doubled for round-trip), and boarding lock during active transit (players who board before dispatch ride along!).
-- **Airway Logistics**: **Cargo Station (`lc2:cargo_station`)** with 6 visual drone pads, **Transport Drone** (12 slots, fast) & **Heavy Transport Drone** (36 slots, 2× cost), **RF Chips I/II/III** (256 / 512 / 1024 Manhattan distance), tiered distance pricing (`800 / 2,000 / 7,000 EU` or `1 / 2 / 5` single-use batteries; 2× heavy), atomic target bay reservation, target-paid auto-return, and 3D altitude-stratified VTOL collision avoidance.
-- **Unloaded-Chunk Transit & Upgrades**: All boats and drones operate seamlessly across unloaded chunks and survive restarts; **Chunk Loading Upgrade (`lc2:chunk_loading_upgrade`)** keeps a 3×3 chunk area loaded around powered ports/stations at 2 EU/t; full compatibility with IC2 EU cables, LV base input, Transformer, Energy Storage, Overclocker, Ejector/Advanced Ejector, Pulling/Advanced Pulling, and Redstone Inverter upgrades.
+The mod has two transport systems: water routes using the Smart Port and Electric Smart Cargo Boat, and air routes using the Cargo Station and transport drones. Both stations share the same cargo layout, power rules, and upgrade slots. You can check crafting recipes in a recipe viewer or in [docs/DESIGN.md](docs/DESIGN.md).
 
-## Building from Source
+### Station inventory and power
 
-Place the four IC2 v1.0.5 JARs inside `.ic2-deps/`, then run:
+Each Smart Port and Cargo Station has 54 internal cargo slots split into two 27-slot zones so incoming cargo does not get loaded right back onto outgoing vehicles.
+
+The left half is Outbound (27 slots). Hoppers, pipes, and IC2 Pulling Upgrades insert items here, and departing boats or drones load from here before pulling extra cargo from adjacent containers. A vanilla redstone comparator reads only the Outbound slots, so you can wire a simple circuit to launch when stock arrives or when the buffer fills up.
+
+The right half is Storage (27 slots). Arriving vehicles unload into adjacent containers first and leave any overflow here. Hoppers, pipes, and IC2 Ejector Upgrades extract only from Storage. To relay or send back received items, click the Swap button (`<->`) between the two grids to trade all 27 Outbound slots with all 27 Storage slots at once.
+
+Stations accept power in two ways, and a toggle in the top bar switches between EU First and Bat First. If the preferred source does not cover the full trip cost, the station falls back to the other source without splitting the cost between them.
+
+- EU power connects on all six faces via IC2 cables. Each station stores up to 14,400 EU and accepts LV input (32 EU/t) by default.
+- The battery slot on the right accepts only IC2 Single-Use Batteries (`ic2:single_use_battery`).
+
+### Waterway routes: Smart Port and cargo boat
+
+Boats work well for bulk hauling across open water or dug canals. Each Electric Smart Cargo Boat (`lc2:electric_cargo_boat`) has a 54-slot hold, the same size as a double chest.
+
+1. Place a Smart Port (`lc2:smart_port`) at each water edge with its front facing the water (rotate it with an IC2 wrench if needed). Make sure a continuous path of water connects the two ports; even a 1-block canal works.
+2. Right-click the starting Smart Port with an Electric Smart Cargo Boat item, or place the boat on the water right next to the port to dock it. While the boat is docked, sneak-right-click to open its cargo hold or right-click to sit inside.
+3. Open the port GUI to name the station, pick a target port in the same dimension with `<` and `>` (or enter X, Y, Z coordinates manually and click Set), toggle auto-return if needed, and supply EU or single-use batteries.
+4. Put cargo into Outbound (or place chests next to the port), then click Launch in the GUI or power the port with redstone.
+
+A one-way trip costs 3,000 EU or 2 single-use batteries. Turning on auto-return doubles the departure cost to 6,000 EU or 4 batteries, and the boat returns on its own after unloading. To ride along, sit in the boat before redstone launches it. You cannot board a boat once it is underway. On waterways 3 blocks wide or more, boats keep to the right, and in narrow canals they yield to avoid deadlocks.
+
+### Airway routes: Cargo Station and drones
+
+Drones fly straight over terrain and can run several routes at once. Each Cargo Station (`lc2:cargo_station`) has 6 landing bays on top.
+
+1. Place a Cargo Station at each end with open air above it for vertical takeoff and landing. Open the GUI and install an RF Chip in the chip slot; the station will not launch without one.
+2. Put one or more Transport Drones (`lc2:transport_drone`) or Heavy Transport Drones (`lc2:heavy_transport_drone`) into the 6 bay slots in the GUI. Parked drones render on top of the block.
+3. Select a target Cargo Station within RF range in the same dimension, supply EU or single-use batteries, load items into Outbound, and click Launch or apply a redstone signal. The station checks for a free bay at the destination and reserves it on takeoff. If all 6 target bays are full, the drone will not take off.
+
+One-way energy cost depends on the Manhattan distance (`|dx| + |dy| + |dz|`) between stations. Heavy drones carry three times as much cargo at twice the energy cost.
+
+| RF Chip | Max range | Transport Drone (12 slots, 16 blocks/s) | Heavy Transport Drone (36 slots, 10 blocks/s) |
+| --- | ---: | --- | --- |
+| RF Chip I (`rf_chip_1`) | 256 blocks | 800 EU or 1 battery | 1,600 EU or 2 batteries |
+| RF Chip II (`rf_chip_2`) | 512 blocks | 2,000 EU or 2 batteries | 4,000 EU or 4 batteries |
+| RF Chip III (`rf_chip_3`) | 1,024 blocks | 7,000 EU or 5 batteries | 14,000 EU or 10 batteries |
+
+With auto-return turned on for a drone route, the origin station pays for the outbound flight and the destination station pays for the return trip after unloading. If the destination lacks energy or the origin has no free bay, the drone stays parked at the destination and retries once power and a bay open up. Opposing flights and overlapping routes cruise at separate altitudes, and drones change height if two paths come close.
+
+### Unloaded chunks and IC2 integration
+
+Once a boat or drone leaves loaded chunks, the server continues moving it in the background without loading intermediate chunks. Vehicles reappear as normal entities when they enter loaded chunks, and active trips survive world restarts.
+
+To keep stations dispatching and unloading while no player is nearby, place a Chunk Loading Upgrade (`lc2:chunk_loading_upgrade`) in the upgrade slots at the start and end stations. It drains 2 EU/t to keep a 3x3 chunk area around the station loaded, and releases the chunks right away if power runs out or you remove the upgrade.
+
+Both stations connect directly to IC2 EU cables, work with The One Probe and the IC2 wrench, and transfer items with adjacent vanilla chests, double chests, barrels, shulker boxes, and IC2 storage boxes. The 4 upgrade slots on the right accept IC2 Transformer, Energy Storage, Overclocker, Ejector, Advanced Ejector, Pulling, Advanced Pulling, and Redstone Inverter upgrades.
+
+## Build from source
+
+### Requirements
+
+- JDK matching your target version: Java 17 for Forge 1.19.2, Java 21 for core tests and NeoForge 1.21.1, and Java 25 for NeoForge 26.1.2 and 26.2.
+- Python 3, which the build invokes via `src/datagen/generate_resources.py` to generate block models, recipes, and loot tables.
+
+### Add the IC2 dependency JARs
+
+Download the `ic2` v1.0.5 JARs from the [IndustrialCraft²: The New Era releases](https://github.com/spectrum527/IndustrialCraft2-The-New-Era/releases) page and place them in `.ic2-deps/` at the repository root with their original filenames.
+
+```text
+.ic2-deps/
+├── ic2-forge-1.19.2-1.0.5.jar
+├── ic2-neoforge-1.21.1-1.0.5.jar
+├── ic2-neoforge-26.1.2-1.0.5.jar
+└── ic2-neoforge-26.2-1.0.5.jar
+```
+
+The root Gradle build checks all three NeoForge targets during configuration, so keep all three NeoForge IC2 JARs in `.ic2-deps/` when running the root wrapper. Building only Forge 1.19.2 requires just `ic2-forge-1.19.2-1.0.5.jar`.
+
+### Run the build
+
+Run Gradle from the repository root (on Windows, replace `./gradlew` with `gradlew.bat`).
 
 ```sh
-# Core unit tests + NeoForge 1.21.1 / 26.1.2 / 26.2 JARs
+# Core unit tests + all three NeoForge JARs
 ./gradlew :checkCommonImports :test:test :neoforge:1.21.1:jar :neoforge:26.1.2:jar :neoforge:26.2:jar
 
-# Forge 1.19.2 reobfuscated JAR (Java 17)
+# Single NeoForge target (for example, 1.21.1)
+./gradlew :neoforge:1.21.1:jar
+
+# Forge 1.19.2 reobfuscated JAR (separate Gradle project, Java 17)
 ./forge-1.19.2/gradlew -p forge-1.19.2 build reobfJar
 ```
+
+### Find the built JARs
+
+Copy the finished JAR for your version from its `build/libs/` folder into `mods/`.
+
+- `src/neoforge/1.21.1/build/libs/lc2-neoforge-1.21.1-1.1.0.jar`
+- `src/neoforge/26.1.2/build/libs/lc2-neoforge-26.1.2-1.1.0.jar`
+- `src/neoforge/26.2/build/libs/lc2-neoforge-26.2-1.1.0.jar`
+- `forge-1.19.2/build/libs/lc2-forge-1.19.2-1.1.0.jar`
+
+For technical details, see [docs/DESIGN.md](docs/DESIGN.md), [docs/GUI_LAYOUT.md](docs/GUI_LAYOUT.md), and [docs/DRONE_MODEL_UV.md](docs/DRONE_MODEL_UV.md).
 
 ## License
 
