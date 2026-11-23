@@ -1,6 +1,8 @@
-# 物流时代2：新纪元 (LogisticsCraft²: The New Era)
+<h1><img src="assets/brand/icon.jpg" width="56" height="56" align="absmiddle" alt=""> 物流时代2：新纪元 (LogisticsCraft²: The New Era)</h1>
 
 **简体中文** · [English](README.en.md)
+
+![物流时代2：新纪元 (LogisticsCraft²: The New Era) 项目封面](assets/brand/cover.jpg)
 
 **物流时代2：新纪元（`lc2`）** 是 [工业时代2：新纪元 (IndustrialCraft²: The New Era)](https://github.com/spectrum527/IndustrialCraft2-The-New-Era) 的独立物流附属模组，为主模组带来跨未加载区块运行的水路电动智能运输船与空路货运无人机系统。
 

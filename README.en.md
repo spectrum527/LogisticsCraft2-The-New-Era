@@ -1,6 +1,8 @@
-# LogisticsCraft²: The New Era (`lc2`)
+<h1><img src="assets/brand/icon.jpg" width="56" height="56" align="absmiddle" alt=""> LogisticsCraft²: The New Era (<code>lc2</code>)</h1>
 
 [简体中文](README.md) · **English**
+
+![LogisticsCraft²: The New Era project cover](assets/brand/cover.jpg)
 
 **LogisticsCraft²: The New Era (`lc2`)** is a maritime and aerial logistics addon for [IndustrialCraft²: The New Era](https://github.com/spectrum527/IndustrialCraft2-The-New-Era), featuring autonomous electric cargo boats, standard & heavy transport drones, Create-train-style unloaded-chunk transit, collision avoidance, and deep IC2 EU & machine-upgrade integration.
 

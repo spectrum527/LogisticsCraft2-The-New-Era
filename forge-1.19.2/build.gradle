@@ -84,7 +84,7 @@ tasks.named('processResources') {
     }
     from(file('../assets')) {
         into 'assets'
-        exclude '**/*.md', '**/*.csv', '**/.git*', '**/.DS_Store', 'preview/**'
+        exclude '**/*.md', '**/*.csv', '**/.git*', '**/.DS_Store', 'preview/**', 'brand/**'
     }
     from(generatedLc2Resources) { exclude '.lc2-generated-output' }
 }
