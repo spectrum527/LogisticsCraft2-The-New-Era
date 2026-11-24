@@ -638,18 +638,32 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
     }
 
     public void setTargetPos(@Nullable BlockPos target) {
-        this.targetPos = target == null ? null : target.immutable();
+        BlockPos next = target == null ? null : target.immutable();
+        boolean changed = (this.targetPos == null) != (next == null)
+                || (this.targetPos != null && !this.targetPos.equals(next));
+        this.targetPos = next;
+        if (changed) {
+            onTargetChanged();
+        }
         this.statusKey = this.targetPos == null
                 ? DispatchFailure.NO_TARGET.translationKey()
                 : "status.lc2.target_updated";
         setChanged();
     }
 
+    /** Subclass hook invoked whenever the configured target position changes. */
+    protected void onTargetChanged() {
+    }
+
     public void cycleTarget(ServerLevel level, int delta) {
         List<StationEntry> targets = LogisticsLevelManager.stations(level)
                 .listCompatibleTargets(Lc2Coords.toCore(this.worldPosition), stationType());
         if (targets.isEmpty()) {
+            boolean hadTarget = this.targetPos != null;
             this.targetPos = null;
+            if (hadTarget) {
+                onTargetChanged();
+            }
             this.statusKey = DispatchFailure.TARGET_NOT_FOUND.translationKey();
             setChanged();
             return;
@@ -670,7 +684,12 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
         } else {
             nextIndex = Math.floorMod(currentIndex + delta, targets.size());
         }
-        this.targetPos = Lc2Coords.toMc(targets.get(nextIndex).pos());
+        BlockPos nextTarget = Lc2Coords.toMc(targets.get(nextIndex).pos());
+        boolean changed = this.targetPos == null || !this.targetPos.equals(nextTarget);
+        this.targetPos = nextTarget;
+        if (changed) {
+            onTargetChanged();
+        }
         this.statusKey = "status.lc2.target_updated";
         setChanged();
     }

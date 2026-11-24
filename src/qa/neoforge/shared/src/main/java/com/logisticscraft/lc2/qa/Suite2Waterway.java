@@ -8,6 +8,7 @@ import com.logisticscraft.lc2.core.EnergyPriority;
 import com.logisticscraft.lc2.core.LogisticsConstants;
 import com.logisticscraft.lc2.core.VirtualTransitEngine;
 import com.logisticscraft.lc2.entity.ElectricCargoBoatEntity;
+import com.logisticscraft.lc2.network.StationSyncPayload;
 import com.logisticscraft.lc2.platform.Lc2Native;
 import com.logisticscraft.lc2.world.LogisticsLevelManager;
 import java.util.Map;
@@ -152,11 +153,41 @@ public final class Suite2Waterway {
         checks.check("s2.setup.boat_docked", docked && portA.findDockedBoat(level).isPresent());
         portA.setTargetPos(PORT_B);
 
-        // 1. Stone dam blocking canal -> MUST fail with WATER_DISCONNECTED
+        // 0. GUI water connectivity MUST report connected BEFORE any dispatch ever runs (regression check!)
+        StationSyncPayload initialSync = portA.buildSyncPayload(level);
+        StationSyncPayload.TargetInfo initialInfo = initialSync.selectedTargetInfo();
+        checks.check("s2.gui.water_connected_before_first_dispatch",
+                initialInfo != null && initialInfo.reachableFlag(),
+                "info=" + initialInfo);
+
+        // Switching to an isolated dry Smart Port MUST immediately report disconnected (never inherit cached true)
+        BlockPos dryPortPos = PORT_A.offset(0, 0, -6);
+        level.setBlockAndUpdate(dryPortPos,
+                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.NORTH));
+        SmartPortBlockEntity dryPort = (SmartPortBlockEntity) level.getBlockEntity(dryPortPos);
+        if (dryPort != null) {
+            dryPort.setStationName("Dry Port");
+            dryPort.refreshWaterBerth(level);
+        }
+        portA.setTargetPos(dryPortPos);
+        StationSyncPayload drySync = portA.buildSyncPayload(level);
+        checks.check("s2.gui.target_switch_dry_port_disconnected",
+                drySync.selectedTargetInfo() != null && !drySync.selectedTargetInfo().reachableFlag(),
+                "dryInfo=" + drySync.selectedTargetInfo());
+        level.setBlockAndUpdate(dryPortPos, Blocks.AIR.defaultBlockState());
+        portA.setTargetPos(PORT_B);
+
+        // 1. Stone dam blocking canal -> GUI sync MUST detect blockage immediately on reopen AND dispatch MUST fail
         for (int z = 21; z <= 23; z++) {
             level.setBlockAndUpdate(new BlockPos(20, WATER_Y, z), Blocks.STONE.defaultBlockState());
             level.setBlockAndUpdate(new BlockPos(20, WATER_Y + 1, z), Blocks.STONE.defaultBlockState());
         }
+        portA.requestImmediateWaterCheck();
+        StationSyncPayload damGuiSync = portA.buildSyncPayload(level);
+        checks.check("s2.gui.dam_flips_sync_disconnected_without_dispatch",
+                damGuiSync.selectedTargetInfo() != null && !damGuiSync.selectedTargetInfo().reachableFlag(),
+                "damInfo=" + damGuiSync.selectedTargetInfo());
+
         portA.addEnergy(3000.0);
         portA.setAutoReturn(false);
         portA.setEnergyPriority(EnergyPriority.EU_FIRST);
@@ -165,11 +196,18 @@ public final class Suite2Waterway {
                 !damRes.isSuccess() && damRes.failure() == DispatchFailure.WATER_DISCONNECTED,
                 "failure=" + damRes.failure());
 
-        // Clear stone dam
+        // Clear stone dam -> GUI reopen MUST immediately flip back to connected AND clear stale WATER_DISCONNECTED status
         for (int z = 21; z <= 23; z++) {
             level.setBlockAndUpdate(new BlockPos(20, WATER_Y, z), Blocks.WATER.defaultBlockState());
             level.setBlockAndUpdate(new BlockPos(20, WATER_Y + 1, z), Blocks.AIR.defaultBlockState());
         }
+        portA.requestImmediateWaterCheck();
+        StationSyncPayload reopenedGuiSync = portA.buildSyncPayload(level);
+        checks.check("s2.gui.reopened_canal_sync_connected_before_dispatch",
+                reopenedGuiSync.selectedTargetInfo() != null
+                        && reopenedGuiSync.selectedTargetInfo().reachableFlag()
+                        && "status.lc2.ready".equals(reopenedGuiSync.statusKey()),
+                "reopenedInfo=" + reopenedGuiSync.selectedTargetInfo() + ", status=" + reopenedGuiSync.statusKey());
 
         // 2. EU_FIRST with autoReturn=true at 3000 EU -> MUST fail (requires 6000 EU round-trip!)
         portA.setAutoReturn(true);

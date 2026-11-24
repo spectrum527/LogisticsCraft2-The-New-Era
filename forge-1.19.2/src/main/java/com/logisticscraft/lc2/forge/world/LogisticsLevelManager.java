@@ -593,7 +593,11 @@ public final class LogisticsLevelManager {
         }
     }
 
-    private static boolean isCachedRouteStillClearInLoadedChunks(
+    /**
+     * Checks whether a cached water route between {@code originBerth} and {@code targetBerth}
+     * remains unobstructed across all currently loaded chunks (never forces unloaded chunks).
+     */
+    public static boolean isCachedRouteStillClearInLoadedChunks(
             ServerLevel level,
             BlockPos3i originBerth,
             BlockPos3i targetBerth,

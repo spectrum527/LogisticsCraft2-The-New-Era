@@ -827,9 +827,19 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
     }
 
     public void setTargetPos(BlockPos pos) {
-        this.targetPos = pos == null ? null : pos.immutable();
+        BlockPos next = pos == null ? null : pos.immutable();
+        boolean changed = (this.targetPos == null) != (next == null)
+                || (this.targetPos != null && !this.targetPos.equals(next));
+        this.targetPos = next;
+        if (changed) {
+            onTargetChanged();
+        }
         setStatusKey("status.lc2.target_updated");
         setChanged();
+    }
+
+    /** Subclass hook invoked whenever the configured target position changes. */
+    protected void onTargetChanged() {
     }
 
     public boolean isAutoReturn() {

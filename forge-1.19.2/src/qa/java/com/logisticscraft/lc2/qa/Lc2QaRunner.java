@@ -707,15 +707,45 @@ final class Lc2QaRunner {
         portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:pulling_upgrade", 1));
         portB.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("ic2:ejector_upgrade", 1));
 
-        // 1) Build stone dam -> MUST fail with WATER_DISCONNECTED
+        // 0) GUI sync MUST report water connected BEFORE any dispatch ever runs (regression check!)
+        var initialSync = portA.buildSyncPacket(level);
+        qa.check("s2.gui.water_connected_before_first_dispatch",
+                initialSync.hasWaterBerth() && initialSync.targetWaterConnected(),
+                "hasBerth=" + initialSync.hasWaterBerth() + ", waterConnected=" + initialSync.targetWaterConnected());
+
+        // Switching to a dry/disconnected Smart Port MUST immediately report disconnected (never inherit true!)
+        BlockPos dryPortPos = s2PortAPos.offset(0, 0, -6);
+        Lc2QaHelpers.placeSmartPort(level, dryPortPos, Direction.NORTH, "S2-DryPort");
+        portA.setTargetPos(dryPortPos);
+        var drySync = portA.buildSyncPacket(level);
+        qa.check("s2.gui.target_switch_dry_port_disconnected",
+                !drySync.targetWaterConnected(),
+                "dryWaterConnected=" + drySync.targetWaterConnected());
+        level.setBlock(dryPortPos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        portA.setTargetPos(s2PortBPos);
+
+        // 1) Build stone dam -> GUI sync MUST detect blockage on reopen AND dispatch MUST fail with WATER_DISCONNECTED
         Lc2QaHelpers.setEastWestDam(level, 19, WATER_Y, 30, true);
+        portA.requestImmediateWaterCheck();
+        var damSync = portA.buildSyncPacket(level);
+        qa.check("s2.gui.dam_flips_sync_disconnected_without_dispatch",
+                !damSync.targetWaterConnected(),
+                "damWaterConnected=" + damSync.targetWaterConnected());
+
         boolean damDispatched = portA.tryDispatch(level, true);
         qa.check("s2.stone_dam_blocks_dispatch", !damDispatched, "damDispatched=" + damDispatched);
         qa.checkEquals("s2.stone_dam_failure_reason",
                 DispatchFailure.WATER_DISCONNECTED.translationKey(), portA.getStatusKey());
 
-        // 2) Open canal -> BATTERY_FIRST dispatch consumes 2 single-use batteries, EU untouched!
+        // 2) Open canal -> GUI reopen MUST immediately flip back to connected AND clear stale WATER_DISCONNECTED status
         Lc2QaHelpers.setEastWestDam(level, 19, WATER_Y, 30, false);
+        portA.requestImmediateWaterCheck();
+        var reopenedSync = portA.buildSyncPacket(level);
+        qa.check("s2.gui.reopened_canal_sync_connected_before_dispatch",
+                reopenedSync.targetWaterConnected() && "status.lc2.ready".equals(reopenedSync.statusKey()),
+                "reopenedWaterConnected=" + reopenedSync.targetWaterConnected() + ", status=" + reopenedSync.statusKey());
+
+        // BATTERY_FIRST dispatch consumes 2 single-use batteries, EU untouched!
         boolean dispatched = portA.tryDispatch(level, true);
         qa.check("s2.battery_first_dispatch_ok", dispatched, "status=" + portA.getStatusKey());
         qa.checkEquals("s2.battery_first_consumed_2", 2, portA.getBatteryCount());

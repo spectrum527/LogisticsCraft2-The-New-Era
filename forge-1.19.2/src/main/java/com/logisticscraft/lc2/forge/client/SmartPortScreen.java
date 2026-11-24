@@ -58,7 +58,8 @@ public class SmartPortScreen extends AbstractStationScreen<SmartPortMenu> {
         if (summary == null) {
             return "(" + this.sync.targetPos().getX() + "," + this.sync.targetPos().getY() + "," + this.sync.targetPos().getZ() + ")";
         }
-        String waterTag = summary.hasWaterBerth() ? "OK" : "!";
+        boolean waterOk = this.sync.hasWaterBerth() && this.sync.targetWaterConnected();
+        String waterTag = waterOk ? "OK" : "?";
         return summary.displayName() + " [" + summary.manhattanDistance() + "m " + waterTag + "]";
     }
 
@@ -71,7 +72,7 @@ public class SmartPortScreen extends AbstractStationScreen<SmartPortMenu> {
         if (summary == null) {
             return colorAmber();
         }
-        return (this.sync.hasWaterBerth() && summary.hasWaterBerth()) ? colorCyan() : colorAmber();
+        return (this.sync.hasWaterBerth() && this.sync.targetWaterConnected()) ? colorCyan() : colorAmber();
     }
 
     @Override

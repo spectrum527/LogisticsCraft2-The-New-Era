@@ -105,7 +105,9 @@ public record C2SStationActionPacket(
                     }
                 }
                 case REQUEST_SYNC -> {
-                    // Just send updated sync packet below
+                    if (station instanceof com.logisticscraft.lc2.forge.block.SmartPortBlockEntity port) {
+                        port.requestWaterCheckIfStale(level);
+                    }
                 }
             }
             station.sendSyncTo(player);

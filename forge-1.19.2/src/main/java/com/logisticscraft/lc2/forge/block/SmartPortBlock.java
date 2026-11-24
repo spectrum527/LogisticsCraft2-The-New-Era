@@ -116,6 +116,7 @@ public class SmartPortBlock extends Block implements EntityBlock, WrenchTarget, 
                 && level.getBlockEntity(pos) instanceof SmartPortBlockEntity port) {
             port.refreshWaterBerth(serverLevel);
             port.syncRegistry(serverLevel);
+            port.requestImmediateWaterCheck();
             NetworkHooks.openScreen(serverPlayer, port, pos);
             port.sendSyncTo(serverPlayer);
         }

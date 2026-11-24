@@ -64,10 +64,19 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
     private static final int LEGACY_SLOT_UPGRADE_START = 28;
 
     private static final double BOAT_DOCK_RADIUS = 3.5;
+    private static final int GUI_POSITIVE_REVALIDATE_TICKS = 20;
+    private static final int GUI_NEGATIVE_PROBE_COOLDOWN_TICKS = 60;
+    private static final int REQUEST_SYNC_RECHECK_TICKS = 5;
 
     @Nullable
     private BlockPos3i waterBerthPos = null;
+    @Nullable
+    private BlockPos3i lastCheckedOriginBerth = null;
+    @Nullable
+    private BlockPos3i lastCheckedTargetBerth = null;
     private boolean lastWaterConnected = false;
+    private long lastWaterCheckTick = Long.MIN_VALUE;
+    private boolean forceNextWaterProbe = true;
     private boolean hadDockedBoat = false;
 
     public SmartPortBlockEntity(BlockPos pos, BlockState state) {
@@ -125,6 +134,29 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
         return this.waterBerthPos;
     }
 
+    /** Marks the next GUI sync packet to perform an immediate live waterway verification. */
+    public void requestImmediateWaterCheck() {
+        this.forceNextWaterProbe = true;
+    }
+
+    /**
+     * Requests a fresh waterway verification on the next GUI sync unless one was already performed
+     * within the last few ticks (avoids redundant double-probing when opening the screen).
+     */
+    public void requestWaterCheckIfStale(ServerLevel level) {
+        long now = level.getGameTime();
+        if (this.lastWaterCheckTick == Long.MIN_VALUE
+                || Math.abs(now - this.lastWaterCheckTick) >= REQUEST_SYNC_RECHECK_TICKS) {
+            this.forceNextWaterProbe = true;
+        }
+    }
+
+    @Override
+    protected void onTargetChanged() {
+        this.lastWaterConnected = false;
+        this.forceNextWaterProbe = true;
+    }
+
     /**
      * Re-scans adjacent horizontal water blocks (front face first, then other horizontal sides,
      * checking Y and Y-1) via {@link WaterPathfinder#findWaterBerth}.
@@ -144,7 +176,18 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
         BlockPos3i next = detected.orElse(null);
         if ((this.waterBerthPos == null && next != null)
                 || (this.waterBerthPos != null && !this.waterBerthPos.equals(next))) {
+            if (this.waterBerthPos != null) {
+                LogisticsLevelManager.data(level).invalidateWaterRoutesForBerth(this.waterBerthPos);
+            }
             this.waterBerthPos = next;
+            this.forceNextWaterProbe = true;
+            LogisticsLevelManager.stations(level).register(
+                    Lc2Coords.toCore(this.worldPosition),
+                    StationType.SMART_PORT,
+                    this.stationName,
+                    this.waterBerthPos
+            );
+            LogisticsLevelManager.data(level).setDirty();
             setChanged();
         }
         return this.waterBerthPos;
@@ -305,20 +348,15 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
             return false;
         }
 
-        BlockPos3i targetBerth = targetEntryOpt.get().waterBerthPos();
-        if (targetBerth == null && level.isLoaded(this.targetPos)
-                && level.getBlockEntity(this.targetPos) instanceof SmartPortBlockEntity targetPort) {
-            targetBerth = targetPort.refreshWaterBerth(level);
-            targetPort.syncRegistry(level);
-        }
+        BlockPos3i targetBerth = resolveTargetBerth(level, this.targetPos, targetEntryOpt.get());
         if (originBerth == null || targetBerth == null) {
-            this.lastWaterConnected = false;
+            recordWaterCheckResult(originBerth, targetBerth, false, level.getGameTime());
             setStatusKey(DispatchFailure.NO_WATER_BERTH.translationKey());
             return false;
         }
 
         WaterPathResult route = LogisticsLevelManager.resolveWaterRoute(level, originBerth, targetBerth);
-        this.lastWaterConnected = route.connected();
+        recordWaterCheckResult(originBerth, targetBerth, route.connected(), level.getGameTime());
         if (!route.connected()) {
             setStatusKey(route.failure() != null
                     ? route.failure().translationKey()
@@ -373,21 +411,100 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
         return false;
     }
 
+    @Nullable
+    private static BlockPos3i resolveTargetBerth(
+            ServerLevel level,
+            @Nullable BlockPos targetBlockPos,
+            StationEntry entry
+    ) {
+        if (targetBlockPos != null
+                && level.isLoaded(targetBlockPos)
+                && level.getBlockEntity(targetBlockPos) instanceof SmartPortBlockEntity targetPort) {
+            return targetPort.refreshWaterBerth(level);
+        }
+        return entry.waterBerthPos();
+    }
+
+    private boolean verifyWaterConnectivityForGui(
+            ServerLevel level,
+            @Nullable BlockPos3i originBerth,
+            @Nullable BlockPos3i targetBerth
+    ) {
+        long now = level.getGameTime();
+        if (originBerth == null || targetBerth == null) {
+            recordWaterCheckResult(originBerth, targetBerth, false, now);
+            return false;
+        }
+
+        boolean pairChanged = !originBerth.equals(this.lastCheckedOriginBerth)
+                || !targetBerth.equals(this.lastCheckedTargetBerth);
+        boolean force = this.forceNextWaterProbe || pairChanged;
+        long elapsed = this.lastWaterCheckTick == Long.MIN_VALUE
+                ? Long.MAX_VALUE
+                : Math.max(0L, now - this.lastWaterCheckTick);
+
+        List<Vec3d> cached = LogisticsLevelManager.data(level).getCachedWaterRoute(originBerth, targetBerth);
+        if (cached != null && !cached.isEmpty()) {
+            boolean shouldRevalidate = force || !this.lastWaterConnected || elapsed >= GUI_POSITIVE_REVALIDATE_TICKS;
+            if (!shouldRevalidate
+                    || LogisticsLevelManager.isCachedRouteStillClearInLoadedChunks(level, originBerth, targetBerth, cached)) {
+                recordWaterCheckResult(originBerth, targetBerth, true, now);
+                clearStaleWaterFailureStatus();
+                return true;
+            }
+            LogisticsLevelManager.data(level).invalidateWaterRoute(originBerth, targetBerth);
+        }
+
+        if (!force && !this.lastWaterConnected && elapsed < GUI_NEGATIVE_PROBE_COOLDOWN_TICKS) {
+            return false;
+        }
+
+        WaterPathResult route = LogisticsLevelManager.resolveWaterRoute(level, originBerth, targetBerth);
+        boolean connected = route.connected();
+        recordWaterCheckResult(originBerth, targetBerth, connected, now);
+        if (connected) {
+            clearStaleWaterFailureStatus();
+        }
+        return connected;
+    }
+
+    private void recordWaterCheckResult(
+            @Nullable BlockPos3i originBerth,
+            @Nullable BlockPos3i targetBerth,
+            boolean connected,
+            long gameTime
+    ) {
+        this.lastCheckedOriginBerth = originBerth;
+        this.lastCheckedTargetBerth = targetBerth;
+        this.lastWaterConnected = connected;
+        this.lastWaterCheckTick = gameTime;
+        this.forceNextWaterProbe = false;
+    }
+
+    private void clearStaleWaterFailureStatus() {
+        if (DispatchFailure.WATER_DISCONNECTED.translationKey().equals(this.statusKey)
+                || DispatchFailure.NO_WATER_BERTH.translationKey().equals(this.statusKey)) {
+            setStatusKey("status.lc2.ready");
+        }
+    }
+
     @Override
     public S2CStationSyncPacket buildSyncPacket(ServerLevel level) {
         refreshUpgradesIfNeeded();
         BlockPos3i berth = refreshWaterBerth(level);
         boolean boatReady = findDockedBoat(level) != null;
 
-        boolean waterConnected = this.lastWaterConnected;
+        boolean waterConnected = false;
         if (berth != null && this.targetPos != null) {
             Optional<StationEntry> target = LogisticsLevelManager.stations(level).get(Lc2Coords.toCore(this.targetPos));
-            if (target.isPresent() && target.get().waterBerthPos() != null) {
-                waterConnected = LogisticsLevelManager.data(level)
-                        .getCachedWaterRoute(berth, target.get().waterBerthPos()) != null || this.lastWaterConnected;
+            if (target.isPresent() && target.get().type() == StationType.SMART_PORT) {
+                BlockPos3i targetBerth = resolveTargetBerth(level, this.targetPos, target.get());
+                waterConnected = verifyWaterConnectivityForGui(level, berth, targetBerth);
             } else {
-                waterConnected = false;
+                recordWaterCheckResult(berth, null, false, level.getGameTime());
             }
+        } else {
+            recordWaterCheckResult(berth, null, false, level.getGameTime());
         }
 
         return new S2CStationSyncPacket(

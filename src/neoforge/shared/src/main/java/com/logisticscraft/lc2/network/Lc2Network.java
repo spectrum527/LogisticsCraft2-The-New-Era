@@ -69,7 +69,9 @@ public final class Lc2Network {
                 }
             }
             case REQUEST_SYNC -> {
-                // Only refresh and send sync below
+                if (station instanceof com.logisticscraft.lc2.blockentity.SmartPortBlockEntity port) {
+                    port.requestWaterCheckIfStale(level);
+                }
             }
         }
         Lc2Native.sendToPlayer(player, station.buildSyncPayload(level));
