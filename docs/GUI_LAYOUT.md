@@ -1,8 +1,8 @@
-# LogisticsCraft² (`lc2` v1.1.0) — 2-Zone GUI Pixel Layout Specification
+# LogisticsCraft² (`lc2` v1.2.0) — 2-Zone & Operation Terminal GUI Pixel Layout Specification
 
-Both machine screens (`lc2:smart_port` and `lc2:cargo_station`) use an identical **`512 × 256`** RGBA PNG atlas with the main beveled IC2-style panel occupying `(0, 0)` to `(391, 233)` (**`imageWidth = 392`**, **`imageHeight = 234`** — fits cleanly inside `1280 × 720` at GUI Scale 3: `1176 × 702`). Dynamic overlay sprites live in the right margin (`u = 396..444`).
+Both machine screens (`lc2:smart_port` and `lc2:cargo_station`) use an identical **`512 × 256`** RGBA PNG atlas with the main beveled IC2-style panel occupying `(0, 0)` to `(391, 233)` (**`imageWidth = 392`**, **`imageHeight = 234`** — fits cleanly inside `1280 × 720` at GUI Scale 3: `1176 × 702`). Dynamic overlay sprites live in the right margin (`u = 396..444`). The **Operation Terminal Selection Screen** (`assets/lc2/textures/gui/operation_terminal.png`, Section 6) also uses a **`512 × 256`** RGBA PNG atlas with a **`320 × 224`** main panel and right-margin sprites (`u = 328..452`).
 
-> **IMPORTANT (Atlas Dimensions):** Because the GUI texture atlas is **`512 × 256`** (not `256 × 256`), every `GuiGraphics.blit(...)` / `GuiComponent.blit(...)` call MUST explicitly pass **`textureWidth = 512, textureHeight = 256`** across all four targets (NeoForge 1.21.1, 26.1.2, 26.2, and Forge 1.19.2).
+> **IMPORTANT (Atlas Dimensions):** Because all custom GUI texture atlases are **`512 × 256`** (not `256 × 256`), every `GuiGraphics.blit(...)` / `GuiComponent.blit(...)` call MUST explicitly pass **`textureWidth = 512, textureHeight = 256`** across all four targets (NeoForge 1.21.1, 26.1.2, 26.2, and Forge 1.19.2).
 
 All slot `(x, y)` coordinates below are **Minecraft `Slot(container, index, x, y)` item top-left coordinates** (the 18×18 recessed slot frame baked into the PNG sits at `(x - 1, y - 1)` through `(x + 16, y + 16)`).
 
@@ -47,6 +47,15 @@ Both stations provide **54 internal cargo slots** (`LogisticsConstants.STATION_T
 | Row 3: Manual `Z` `EditBox` | `(92, 41, 44, 12)` | Target Z coordinate |
 | Row 3: Set Coords `Button` | `(138, 41, 36, 12)` | `gui.lc2.set_target` |
 | Row 3: Status Readout LCD | `(176, 41, 171, 12)` | Baked dark LCD; draw live status / `DispatchFailure` text at `(179, 43)`, `maxWidth = 165` |
+
+### Remote Mode Header Additions (only when opened via Operation Terminal)
+
+When a Smart Port or Cargo Station is opened remotely (`menu.isRemoteMode() == true`), all machine-side slots (`0..58` on Smart Port; `0..65` on Cargo Station) are strictly read-only on both server and client, while all Top Control Bar controls and the Center Swap Button (`⇄`) remain active. Two header elements appear in `y = 1..12`:
+
+| Element | Coordinates `(x, y, w, h)` | Notes |
+|---|---|---|
+| Remote Read-Only Indicator Pill | Dynamic right of title, strictly `x + w <= 275`, `y = 1, h = 11` (NeoForge) / `y = 2, h = 10` (Forge 1.19.2) | Displays `gui.lc2.remote_readonly` in cyan on a dark pill (`0xFF142D3E` fill / `0xFF38A8CC` outline + `10×10` eye icon from `operation_terminal.png` UV `(370, 44, 10, 10)` on NeoForge; `0xFF1A2D40` fill / `0xFF38D9FF` outline on Forge 1.19.2). Hover displays `gui.lc2.remote_readonly.tooltip`. |
+| `"Back"` / `"返回列表"` `Button` | `(279, 1, 68, 11)` | `gui.lc2.back_to_terminal`; aligned directly above Energy Priority `(279, 13, 68, 12)` and added as Button 8 (preserving local button indices `0..7`). Clicking sends `RETURN_TO_LIST` to reopen the Operation Terminal Selection Screen. |
 
 ### 2-Zone Cargo Section (`y = 77..141`, IDENTICAL on both machines)
 
@@ -131,3 +140,58 @@ Both stations provide **54 internal cargo slots** (`LogisticsConstants.STATION_T
 ## 5. Electric Smart Cargo Boat Menu (`lc2:electric_cargo_boat`)
 
 The Electric Smart Cargo Boat has a **54-slot** cargo hold (`6 rows × 9 cols`), matching vanilla Minecraft's standard `ChestMenu.sixRows` (`minecraft:textures/gui/container/generic_54.png`, `176×222`). No custom GUI PNG is required for the boat hold.
+
+---
+
+## 6. Operation Terminal Selection Screen (`assets/lc2/textures/gui/operation_terminal.png`)
+
+The Operation Terminal Selection Screen is a client-only `Screen` (no container slots; synced via `TerminalSyncPayload` / `S2CTerminalSyncPacket`) using a **`512 × 256`** RGBA PNG atlas with the main beveled IC2-style panel occupying `(0, 0)` to `(319, 223)` (**`imageWidth = 320`**, **`imageHeight = 224`**). Dynamic sprites live in the right margin (`u = 328..452`). Every `blit` call MUST explicitly pass **`textureWidth = 512, textureHeight = 256`**.
+
+### Panel Regions (`320 × 224`)
+
+| Region / Element | Coordinates `(x, y, w, h)` | Notes |
+|---|---|---|
+| Main Panel | `(0, 0, 320, 224)` | `imageWidth = 320`, `imageHeight = 224` |
+| Header Title (`y = 0..16`) | `(8, 5)`, `maxWidth = 174` | `gui.lc2.terminal.title` in dark charcoal `#2C3440` (or `#404040`) |
+| Header Terminal EU/FE Mini-Bar Frame | `(186, 4, 126, 11)` | Baked dark recessed LCD frame; hover tooltip `gui.lc2.terminal.energy` (`EU` + `FE`) |
+| Header Terminal EU/FE Gauge Fill | `(187, 5, 124, 9)` | Left-to-right fill `fillW = round(124 * eu / maxEu)` blitted from UV `(328, 30, fillW, 9)`; centered `gui.lc2.terminal.energy_short` text at `y = 6`, `maxWidth = 120`, `0xFFEAFBFF` |
+| Toolbar Search `EditBox` (`y = 19..36`) | `(8, 20, 236, 14)` | Dark recessed well; placeholder `gui.lc2.terminal.search_placeholder`; live-filters by name, type, or coordinates |
+| Toolbar Refresh `Button` | `(248, 20, 64, 14)` | `gui.lc2.terminal.refresh`; sends `REFRESH` to re-probe bound stations |
+| Scrollable Station List Viewport | `(8, 38, 296, 166)` | Interior `(9..302, 39..202)`; displays `gui.lc2.terminal.empty` or `gui.lc2.terminal.no_matches` centered (`maxLineW = 280`, `0xFF8EA4BA`) when no rows match |
+| Visible Row Cards (`6` rows, `i = 0..5`) | `(10, 40 + i * 27, 292, 25)` | `ROW_X = 10`, `ROW_Y_START = 40`, `ROW_STEP = 27`, `ROW_W = 292`, `ROW_H = 25` (2px vertical gap) |
+| Vertical Scrollbar Track | `(306, 38, 6, 166)` | Supports mouse-wheel scrolling over `(8..314, 38..204)` and click/drag on track |
+| Vertical Scrollbar Thumb | `(306, thumbY, 6, 24)` | `thumbY` travels `38..180` (`142px` travel); blitted from UV `(344, 44, 6, 24)` |
+| Footer Status LCD | `(8, 207, 304, 12)` | Baked dark LCD; draw `gui.lc2.terminal.footer` at `(12, 209)`, `maxWidth = 296`, cyan `0xFF4CE8FF` |
+
+### Row Card Styling & Sub-Layout (Relative to Row Top-Left `(rx, ry)`)
+
+- **Row Card Fill & Border ARGB**:
+  - **Online (`status.isConnectable()`)**: normal `0xFF1A2532`, hover `0xFF233648`, 1px outline `0xFF2E4960`
+  - **Offline / Disabled**: normal `0xFF171D26`, hover `0xFF1F2733`, 1px outline `0xFF2B3442`
+
+| Sub-Element | Relative Rect `(x, y, w, h)` | Notes |
+|---|---|---|
+| Station Type Badge (`14 × 14`) | `(rx + 4, ry + 5, 14, 14)` | Smart Port `(328, 0)`, Cargo Station `(344, 0)`, or Comm Base Station `(360, 0)` |
+| Status LED (`8 × 8`) | `(rx + 22, ry + 8, 8, 8)` | Online green `(328, 18)`, Unpowered amber `(338, 18)`, Offline/Unloaded/No-Station/Other-Dim gray-blue `(348, 18)`, Missing/Error red `(358, 18)` |
+| Line 1 (Title + Distance) | `(rx + 34, ry + 3)`, `maxWidth = 184` | Station name (or fallback unnamed title) + `[<dist>m]`; `0xFFEAF6FF` online / `0xFFAAB8C8` offline |
+| Line 2 (Coordinates `·` Status) | `(rx + 34, ry + 14)`, `maxWidth = 184` | `(x, y, z) · <status>`; green `0xFF66FF99` online, amber `0xFFFFC845` unpowered, red `0xFFFF6E6E` missing, muted `0xFF8EA4BA` otherwise |
+| Connect `Button` | `(rx + 222, ry + 5, 48, 15)` | `gui.lc2.terminal.connect`; active only when `status.isConnectable()`, sends `CONNECT` |
+| Unbind `Button` | `(rx + 274, ry + 5, 14, 15)` | `gui.lc2.terminal.unbind`; hover tooltip `gui.lc2.terminal.unbind_tooltip`, sends `UNBIND`; `10 × 10` X icon centered at `(rx + 276, ry + 7)` from UV `(328, 44)` / hover `(328, 56)` |
+
+### Right-Margin Dynamic Sprite Atlas Summary (`u = 328..452`, `512 × 256`)
+
+| Sprite | UV `(u, v, w, h)` | Usage |
+|---|---|---|
+| Smart Port Badge | `(328, 0, 14, 14)` | Row type icon at `(rx + 4, ry + 5)` for Smart Ports |
+| Cargo Station Badge | `(344, 0, 14, 14)` | Row type icon at `(rx + 4, ry + 5)` for Cargo Stations |
+| Comm Base Station Badge | `(360, 0, 14, 14)` | Row type icon at `(rx + 4, ry + 5)` for unattached / status-only base stations |
+| Status LED — Online (Green) | `(328, 18, 8, 8)` | Row LED at `(rx + 22, ry + 8)` when `CommStationStatus.ONLINE` |
+| Status LED — Unpowered (Amber) | `(338, 18, 8, 8)` | Row LED at `(rx + 22, ry + 8)` when `CommStationStatus.UNPOWERED` |
+| Status LED — Offline / Unloaded (Gray-Blue) | `(348, 18, 8, 8)` | Row LED at `(rx + 22, ry + 8)` for `NO_ADJACENT_STATION`, `CHUNK_UNLOADED`, `WRONG_DIMENSION` |
+| Status LED — Missing / Error (Red) | `(358, 18, 8, 8)` | Row LED at `(rx + 22, ry + 8)` when `CommStationStatus.COMM_MISSING` |
+| Terminal EU/FE Gauge Fill | `(328, 30, 124, 9)` | Left-to-right header energy fill at `(187, 5)` |
+| Unbind `×` Icon (Normal) | `(328, 44, 10, 10)` | Centered on Unbind button at `(rx + 276, ry + 7)` |
+| Unbind `×` Icon (Hover) | `(328, 56, 10, 10)` | Centered on Unbind button when hovered |
+| Scrollbar Thumb | `(344, 44, 6, 24)` | Vertical scrollbar thumb at `(306, thumbY)` (`thumbY ∈ 38..180`) |
+| Connect Arrow Icon (Optional Bonus) | `(358, 44, 10, 10)` | Optional 10×10 connect arrow glyph |
+| Remote Read-Only Eye Icon | `(370, 44, 10, 10)` | Optional/shared 10×10 read-only eye icon used in the Remote Mode header pill |

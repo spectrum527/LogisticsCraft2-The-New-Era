@@ -1,22 +1,27 @@
 package com.logisticscraft.lc2.forge.gui;
 
+import com.logisticscraft.lc2.core.RemoteDisconnectReason;
 import com.logisticscraft.lc2.forge.block.AbstractLogisticsStationBlockEntity;
 import com.logisticscraft.lc2.forge.network.S2CStationSyncPacket;
+import com.logisticscraft.lc2.forge.util.TerminalSessionService;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
  * Shared container menu base for Smart Port and Cargo Station screens, handling periodic
- * server-to-client {@link S2CStationSyncPacket} updates and centered player inventory slots
- * positioned at {@code x = 99..243, y = 153..211} per {@code docs/GUI_LAYOUT.md}.
+ * server-to-client {@link S2CStationSyncPacket} updates, centered player inventory slots
+ * positioned at {@code x = 99..243, y = 153..211} per {@code docs/GUI_LAYOUT.md}, and strict
+ * server+client read-only enforcement when opened remotely via an Operation Terminal.
  */
 public abstract class AbstractStationMenu extends AbstractContainerMenu {
 
@@ -25,6 +30,12 @@ public abstract class AbstractStationMenu extends AbstractContainerMenu {
     protected final AbstractLogisticsStationBlockEntity serverBlockEntity;
     protected final Container container;
     private final Player viewer;
+
+    protected final boolean remoteMode;
+    protected final BlockPos remoteCommPos;
+    protected final String remoteTerminalId;
+    private final String remoteDimensionId;
+    private boolean disconnectNotified = false;
     private int syncTicker = 0;
 
     @Nullable
@@ -36,18 +47,45 @@ public abstract class AbstractStationMenu extends AbstractContainerMenu {
             Inventory playerInventory,
             BlockPos stationPos,
             Container container,
-            @Nullable AbstractLogisticsStationBlockEntity serverBlockEntity
+            @Nullable AbstractLogisticsStationBlockEntity serverBlockEntity,
+            boolean remoteMode,
+            @Nullable BlockPos remoteCommPos,
+            @Nullable String remoteTerminalId
     ) {
         super(menuType, containerId);
         this.stationPos = stationPos;
         this.container = container;
         this.serverBlockEntity = serverBlockEntity;
         this.viewer = playerInventory.player;
+        this.remoteMode = remoteMode;
+        this.remoteCommPos = remoteCommPos == null ? BlockPos.ZERO : remoteCommPos.immutable();
+        this.remoteTerminalId = remoteTerminalId == null ? "" : remoteTerminalId;
+        this.remoteDimensionId = (serverBlockEntity != null && serverBlockEntity.getLevel() != null)
+                ? serverBlockEntity.getLevel().dimension().location().toString()
+                : playerInventory.player.getLevel().dimension().location().toString();
     }
+
+    /** Returns the number of machine slots at the front of {@link #slots} ({@code 0..machineSlotCount-1}). */
+    protected abstract int machineSlotCount();
 
     /** Returns the world position of the station opened by this menu. */
     public BlockPos getStationPos() {
         return this.stationPos;
+    }
+
+    /** Returns {@code true} if this station menu was opened remotely via an Operation Terminal. */
+    public boolean isRemoteMode() {
+        return this.remoteMode;
+    }
+
+    /** Returns the Communication Base Station position serving this remote session, or {@link BlockPos#ZERO}. */
+    public BlockPos getRemoteCommPos() {
+        return this.remoteCommPos;
+    }
+
+    /** Returns the persistent UUID of the Operation Terminal that opened this remote session. */
+    public String getRemoteTerminalId() {
+        return this.remoteTerminalId;
     }
 
     /** Returns the latest client-side sync payload received from the server, or {@code null}. */
@@ -77,6 +115,37 @@ public abstract class AbstractStationMenu extends AbstractContainerMenu {
     }
 
     @Override
+    public boolean canDragTo(Slot slot) {
+        if (this.remoteMode && slot.index < machineSlotCount()) {
+            return false;
+        }
+        return super.canDragTo(slot);
+    }
+
+    @Override
+    public boolean canTakeItemForPickAll(ItemStack stack, Slot slot) {
+        if (this.remoteMode && slot.index < machineSlotCount()) {
+            return false;
+        }
+        return super.canTakeItemForPickAll(stack, slot);
+    }
+
+    @Override
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        if (this.remoteMode) {
+            if (clickType == ClickType.QUICK_MOVE
+                    || clickType == ClickType.PICKUP_ALL
+                    || (slotId >= 0 && slotId < machineSlotCount())) {
+                if (!player.getLevel().isClientSide) {
+                    sendAllDataToRemote();
+                }
+                return;
+            }
+        }
+        super.clicked(slotId, button, clickType, player);
+    }
+
+    @Override
     public void broadcastChanges() {
         super.broadcastChanges();
         if (this.serverBlockEntity != null && this.viewer instanceof ServerPlayer serverPlayer) {
@@ -89,6 +158,30 @@ public abstract class AbstractStationMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
+        if (this.remoteMode) {
+            if (player.getLevel().isClientSide) {
+                return true;
+            }
+            if (!(player instanceof ServerPlayer serverPlayer)) {
+                return false;
+            }
+            RemoteDisconnectReason reason = TerminalSessionService.validateRemoteSession(
+                    serverPlayer,
+                    this.remoteDimensionId,
+                    this.remoteCommPos,
+                    this.stationPos,
+                    this.remoteTerminalId,
+                    true
+            );
+            if (reason.isDisconnected()) {
+                if (!this.disconnectNotified) {
+                    this.disconnectNotified = true;
+                    serverPlayer.displayClientMessage(Component.translatable(reason.translationKey()), true);
+                }
+                return false;
+            }
+            return true;
+        }
         if (this.serverBlockEntity != null) {
             return this.serverBlockEntity.stillValid(player);
         }
@@ -100,7 +193,8 @@ public abstract class AbstractStationMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Slot wrapper honoring container validation and optional max stack override.
+     * Slot wrapper honoring container validation, optional max stack override, and strict
+     * read-only lock when opened remotely via an Operation Terminal.
      */
     protected class StationSlot extends Slot {
         private final int maxStackOverride;
@@ -112,7 +206,26 @@ public abstract class AbstractStationMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPlace(ItemStack stack) {
+            if (remoteMode) {
+                return false;
+            }
             return container.canPlaceItem(getSlotIndex(), stack);
+        }
+
+        @Override
+        public boolean mayPickup(Player player) {
+            if (remoteMode) {
+                return false;
+            }
+            return super.mayPickup(player);
+        }
+
+        @Override
+        public boolean allowModification(Player player) {
+            if (remoteMode) {
+                return false;
+            }
+            return super.allowModification(player);
         }
 
         @Override

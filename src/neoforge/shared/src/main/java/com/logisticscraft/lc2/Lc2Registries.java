@@ -1,13 +1,16 @@
 package com.logisticscraft.lc2;
 
 import com.logisticscraft.lc2.block.CargoStationBlock;
+import com.logisticscraft.lc2.block.CommBaseStationBlock;
 import com.logisticscraft.lc2.block.SmartPortBlock;
 import com.logisticscraft.lc2.blockentity.CargoStationBlockEntity;
+import com.logisticscraft.lc2.blockentity.CommBaseStationBlockEntity;
 import com.logisticscraft.lc2.blockentity.SmartPortBlockEntity;
 import com.logisticscraft.lc2.core.LogisticsConstants;
 import com.logisticscraft.lc2.entity.CargoDroneEntity;
 import com.logisticscraft.lc2.entity.ElectricCargoBoatEntity;
 import com.logisticscraft.lc2.item.ElectricCargoBoatItem;
+import com.logisticscraft.lc2.item.OperationTerminalItem;
 import com.logisticscraft.lc2.menu.CargoStationMenu;
 import com.logisticscraft.lc2.menu.ElectricCargoBoatMenu;
 import com.logisticscraft.lc2.menu.SmartPortMenu;
@@ -73,7 +76,18 @@ public final class Lc2Registries {
                     .requiresCorrectToolForDrops()
     );
 
-    // --- Items (9) ---
+    public static final DeferredBlock<CommBaseStationBlock> COMM_BASE_STATION_BLOCK = Lc2Native.registerBlock(
+            BLOCKS,
+            "comm_base_station",
+            CommBaseStationBlock::new,
+            () -> Block.Properties.of()
+                    .strength(3.5F, 8.0F)
+                    .sound(SoundType.METAL)
+                    .requiresCorrectToolForDrops()
+                    .noOcclusion()
+    );
+
+    // --- Items (11) ---
 
     public static final DeferredItem<Lc2TooltipBlockItem> SMART_PORT_ITEM = Lc2Native.registerBlockItem(
             ITEMS,
@@ -95,6 +109,31 @@ public final class Lc2Registries {
                     "tooltip.lc2.cargo_station.line2",
                     "tooltip.lc2.cargo_station.line3"
             )
+    );
+
+    public static final DeferredItem<Lc2TooltipBlockItem> COMM_BASE_STATION_ITEM = Lc2Native.registerBlockItem(
+            ITEMS,
+            "comm_base_station",
+            COMM_BASE_STATION_BLOCK,
+            List.of(
+                    "tooltip.lc2.comm_base_station.line1",
+                    "tooltip.lc2.comm_base_station.line2",
+                    "tooltip.lc2.comm_base_station.line3"
+            )
+    );
+
+    public static final DeferredItem<OperationTerminalItem> OPERATION_TERMINAL_ITEM = Lc2Native.registerItem(
+            ITEMS,
+            "operation_terminal",
+            props -> new OperationTerminalItem(
+                    props.stacksTo(1),
+                    List.of(
+                            "tooltip.lc2.operation_terminal.line1",
+                            "tooltip.lc2.operation_terminal.line2",
+                            "tooltip.lc2.operation_terminal.line3"
+                    )
+            ),
+            Item.Properties::new
     );
 
     public static final DeferredItem<ElectricCargoBoatItem> ELECTRIC_CARGO_BOAT_ITEM = Lc2Native.registerItem(
@@ -203,6 +242,15 @@ public final class Lc2Registries {
                     () -> Lc2Native.createBlockEntityType(CargoStationBlockEntity::new, CARGO_STATION_BLOCK.get())
             );
 
+    public static final Supplier<BlockEntityType<CommBaseStationBlockEntity>> COMM_BASE_STATION_BE =
+            BLOCK_ENTITIES.register(
+                    "comm_base_station",
+                    () -> Lc2Native.createBlockEntityType(
+                            CommBaseStationBlockEntity::new,
+                            COMM_BASE_STATION_BLOCK.get()
+                    )
+            );
+
     // --- Entities (2) ---
 
     public static final Supplier<EntityType<ElectricCargoBoatEntity>> ELECTRIC_CARGO_BOAT_ENTITY =
@@ -252,6 +300,9 @@ public final class Lc2Registries {
                     .displayItems((params, output) -> {
                         output.accept(SMART_PORT_ITEM.get());
                         output.accept(CARGO_STATION_ITEM.get());
+                        output.accept(COMM_BASE_STATION_ITEM.get());
+                        output.accept(OPERATION_TERMINAL_ITEM.get());
+                        output.accept(OperationTerminalItem.createChargedStack(OPERATION_TERMINAL_ITEM.get()));
                         output.accept(ELECTRIC_CARGO_BOAT_ITEM.get());
                         output.accept(TRANSPORT_DRONE_ITEM.get());
                         output.accept(HEAVY_TRANSPORT_DRONE_ITEM.get());
@@ -276,8 +327,14 @@ public final class Lc2Registries {
         TABS.register(modBus);
     }
 
-    /** Registers sided block entity item capabilities on the mod event bus. */
+    /** Registers sided block entity item and EU/FE energy capabilities on the mod event bus. */
     public static void registerCapabilities(IEventBus modBus) {
-        Lc2Native.registerItemCapabilities(modBus, SMART_PORT_BE, CARGO_STATION_BE);
+        Lc2Native.registerCapabilities(
+                modBus,
+                SMART_PORT_BE,
+                CARGO_STATION_BE,
+                COMM_BASE_STATION_BE,
+                OPERATION_TERMINAL_ITEM::get
+        );
     }
 }

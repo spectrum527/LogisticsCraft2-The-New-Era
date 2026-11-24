@@ -20,6 +20,7 @@ MIXIN_OR_LC2_ERROR_PATTERNS = [
     re.compile(r"\[lc2[^\]]*\]/\w*ERROR", re.IGNORECASE),
     re.compile(r"ERROR.*com\.logisticscraft\.lc2", re.IGNORECASE),
     re.compile(r"ERROR.*CableBlockMixin", re.IGNORECASE),
+    re.compile(r"ERROR.*ForgeGearMixin", re.IGNORECASE),
     re.compile(r"ERROR.*lc2\.mixins\.json", re.IGNORECASE),
     re.compile(r"\[LC2-QA\] FAIL", re.IGNORECASE),
     re.compile(r"Encountered an unexpected exception", re.IGNORECASE),
@@ -163,8 +164,8 @@ def prepare_run_directory(manifest: dict, run_dir: Path) -> None:
     mods_dir = run_dir / "mods"
     mods_dir.mkdir(parents=True, exist_ok=True)
 
-    shutil.copyfile(manifest["ic2ModJar"], mods_dir / "ic2-forge-1.19.2-1.0.5.jar")
-    shutil.copyfile(manifest["lc2ModJar"], mods_dir / "lc2-forge-1.19.2-1.0.0.jar")
+    shutil.copyfile(manifest["ic2ModJar"], mods_dir / Path(manifest["packagedIc2Jar"]).name)
+    shutil.copyfile(manifest["lc2ModJar"], mods_dir / Path(manifest["packagedLc2Jar"]).name)
 
     (run_dir / "eula.txt").write_text("eula=true\n", encoding="utf-8")
     (run_dir / "server.properties").write_text(

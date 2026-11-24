@@ -1,15 +1,20 @@
 package com.logisticscraft.lc2.platform;
 
 import com.logisticscraft.lc2.blockentity.CargoStationBlockEntity;
+import com.logisticscraft.lc2.blockentity.CommBaseStationBlockEntity;
 import com.logisticscraft.lc2.blockentity.SmartPortBlockEntity;
 import com.logisticscraft.lc2.core.LogisticsConstants;
+import com.logisticscraft.lc2.item.OperationTerminalItem;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
@@ -23,6 +28,7 @@ import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -35,6 +41,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.items.wrapper.SidedInvWrapper;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -90,6 +97,17 @@ public final class Lc2Native {
     /** Sends an actionbar (overlay) message to a player. */
     public static void sendActionBar(Player player, Component message) {
         player.displayClientMessage(message, true);
+    }
+
+    /** Returns a mutable copy of the stack's {@code DataComponents.CUSTOM_DATA} tag (empty if absent). */
+    public static CompoundTag copyCustomData(ItemStack stack) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        return data == null ? new CompoundTag() : data.copyTag();
+    }
+
+    /** Updates the stack's {@code DataComponents.CUSTOM_DATA} tag in place. */
+    public static void updateCustomData(ItemStack stack, Consumer<CompoundTag> updater) {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, updater);
     }
 
     /** Registers a block on NeoForge 1.21.1. */
@@ -157,22 +175,34 @@ public final class Lc2Native {
         );
     }
 
-    /** Registers one C2S and one S2C payload on NeoForge 1.21.1. */
-    public static <C extends CustomPacketPayload, S extends CustomPacketPayload> void registerPayloads(
+    /** Registers all C2S and S2C payloads on NeoForge 1.21.1. */
+    public static void registerPayloads(
             IEventBus modBus,
             Dist side,
             String protocolVersion,
-            CustomPacketPayload.Type<C> c2sType,
-            StreamCodec<RegistryFriendlyByteBuf, C> c2sCodec,
-            IPayloadHandler<C> c2sHandler,
-            CustomPacketPayload.Type<S> s2cType,
-            StreamCodec<RegistryFriendlyByteBuf, S> s2cCodec,
-            IPayloadHandler<S> s2cHandler
+            Consumer<PayloadBinder> registrarCallback
     ) {
         modBus.addListener(RegisterPayloadHandlersEvent.class, event -> {
             var registrar = event.registrar(protocolVersion).executesOn(HandlerThread.MAIN);
-            registrar.playToServer(c2sType, c2sCodec, c2sHandler);
-            registrar.playToClient(s2cType, s2cCodec, s2cHandler);
+            registrarCallback.accept(new PayloadBinder() {
+                @Override
+                public <T extends CustomPacketPayload> void playToServer(
+                        CustomPacketPayload.Type<T> type,
+                        StreamCodec<RegistryFriendlyByteBuf, T> codec,
+                        IPayloadHandler<T> handler
+                ) {
+                    registrar.playToServer(type, codec, handler);
+                }
+
+                @Override
+                public <T extends CustomPacketPayload> void playToClient(
+                        CustomPacketPayload.Type<T> type,
+                        StreamCodec<RegistryFriendlyByteBuf, T> codec,
+                        IPayloadHandler<T> handler
+                ) {
+                    registrar.playToClient(type, codec, handler);
+                }
+            });
         });
     }
 
@@ -186,11 +216,13 @@ public final class Lc2Native {
         PacketDistributor.sendToPlayer(player, payload);
     }
 
-    /** Registers sided item handler capabilities for Smart Port and Cargo Station. */
-    public static void registerItemCapabilities(
+    /** Registers sided item handler and FE energy capabilities on NeoForge 1.21.1. */
+    public static void registerCapabilities(
             IEventBus modBus,
             Supplier<BlockEntityType<SmartPortBlockEntity>> smartPortType,
-            Supplier<BlockEntityType<CargoStationBlockEntity>> cargoStationType
+            Supplier<BlockEntityType<CargoStationBlockEntity>> cargoStationType,
+            Supplier<BlockEntityType<CommBaseStationBlockEntity>> commBaseStationType,
+            Supplier<OperationTerminalItem> operationTerminalItem
     ) {
         modBus.addListener(RegisterCapabilitiesEvent.class, event -> {
             event.registerBlockEntity(
@@ -202,6 +234,76 @@ public final class Lc2Native {
                     Capabilities.ItemHandler.BLOCK,
                     cargoStationType.get(),
                     (be, side) -> new SidedInvWrapper(be, side == null ? Direction.UP : side)
+            );
+            event.registerBlockEntity(
+                    Capabilities.EnergyStorage.BLOCK,
+                    commBaseStationType.get(),
+                    (be, side) -> new IEnergyStorage() {
+                        @Override
+                        public int receiveEnergy(int toReceive, boolean simulate) {
+                            return be.receiveFe(toReceive, simulate);
+                        }
+
+                        @Override
+                        public int extractEnergy(int toExtract, boolean simulate) {
+                            return 0;
+                        }
+
+                        @Override
+                        public int getEnergyStored() {
+                            return be.getStoredFe();
+                        }
+
+                        @Override
+                        public int getMaxEnergyStored() {
+                            return be.getMaxFe();
+                        }
+
+                        @Override
+                        public boolean canExtract() {
+                            return false;
+                        }
+
+                        @Override
+                        public boolean canReceive() {
+                            return true;
+                        }
+                    }
+            );
+            event.registerItem(
+                    Capabilities.EnergyStorage.ITEM,
+                    (stack, ctx) -> new IEnergyStorage() {
+                        @Override
+                        public int receiveEnergy(int toReceive, boolean simulate) {
+                            return OperationTerminalItem.receiveFe(stack, toReceive, simulate);
+                        }
+
+                        @Override
+                        public int extractEnergy(int toExtract, boolean simulate) {
+                            return 0;
+                        }
+
+                        @Override
+                        public int getEnergyStored() {
+                            return OperationTerminalItem.getStoredFe(stack);
+                        }
+
+                        @Override
+                        public int getMaxEnergyStored() {
+                            return OperationTerminalItem.getMaxFe();
+                        }
+
+                        @Override
+                        public boolean canExtract() {
+                            return false;
+                        }
+
+                        @Override
+                        public boolean canReceive() {
+                            return true;
+                        }
+                    },
+                    operationTerminalItem.get()
             );
         });
     }

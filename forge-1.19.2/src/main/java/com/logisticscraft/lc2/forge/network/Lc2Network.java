@@ -12,7 +12,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
  */
 public final class Lc2Network {
 
-    private static final String PROTOCOL_VERSION = "1";
+    private static final String PROTOCOL_VERSION = "2";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             Lc2Coords.id("main"),
@@ -42,6 +42,16 @@ public final class Lc2Network {
                 .encoder(S2CStationSyncPacket::encode)
                 .decoder(S2CStationSyncPacket::decode)
                 .consumerMainThread(S2CStationSyncPacket::handle)
+                .add();
+        CHANNEL.messageBuilder(C2STerminalActionPacket.class, id++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(C2STerminalActionPacket::encode)
+                .decoder(C2STerminalActionPacket::decode)
+                .consumerMainThread(C2STerminalActionPacket::handle)
+                .add();
+        CHANNEL.messageBuilder(S2CTerminalSyncPacket.class, id++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(S2CTerminalSyncPacket::encode)
+                .decoder(S2CTerminalSyncPacket::decode)
+                .consumerMainThread(S2CTerminalSyncPacket::handle)
                 .add();
     }
 

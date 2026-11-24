@@ -1,0 +1,12 @@
+{
+  "lc2:comm_base_station": {
+    "entrypoints": {
+      "common": "com.logisticscraft.lc2.forge.compat.Lc2WthitPlugin",
+      "client": "com.logisticscraft.lc2.forge.compat.Lc2WthitPlugin"
+    },
+    "side": "*",
+    "required": [
+      "lc2"
+    ]
+  }
+}

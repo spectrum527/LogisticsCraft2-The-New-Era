@@ -1,6 +1,7 @@
 package com.logisticscraft.lc2.platform;
 
 import java.util.List;
+import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
@@ -19,6 +20,10 @@ public class Lc2TooltipItem extends Item {
         this.tooltipKeys = List.copyOf(tooltipKeys);
     }
 
+    /** Subclass hook for appending dynamic per-stack tooltip lines after static localized lines. */
+    protected void appendExtraHoverText(ItemStack stack, Consumer<Component> tooltipAdder) {
+    }
+
     @Override
     public void appendHoverText(
             ItemStack stack,
@@ -31,5 +36,6 @@ public class Lc2TooltipItem extends Item {
             ChatFormatting color = i == 0 ? ChatFormatting.AQUA : ChatFormatting.GRAY;
             tooltipComponents.add(Component.translatable(tooltipKeys.get(i)).withStyle(color));
         }
+        appendExtraHoverText(stack, tooltipComponents::add);
     }
 }

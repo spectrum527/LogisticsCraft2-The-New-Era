@@ -20,11 +20,14 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.items.IItemHandler;
 
 /**
@@ -137,5 +140,112 @@ public final class QaPlatform {
         ContainerHelper.saveAllItems(root, list, level.registryAccess());
         root.put("lc2", legacyLc2Tag.copy());
         be.loadCustomOnly(root, level.registryAccess());
+    }
+
+    /** Returns {@code true} if the block at {@code pos} exposes an FE block capability on {@code side}. */
+    public static boolean hasBlockFeCapability(ServerLevel level, BlockPos pos, Direction side) {
+        return level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, side) != null;
+    }
+
+    /** Reads the FE energy stored in the block capability at {@code pos} on {@code side}. */
+    public static int blockFeStored(ServerLevel level, BlockPos pos, Direction side) {
+        IEnergyStorage storage = level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, side);
+        if (storage == null) {
+            throw new AssertionError("Missing FE block capability at " + pos + " side=" + side);
+        }
+        return storage.getEnergyStored();
+    }
+
+    /** Reads the FE capacity of the block capability at {@code pos} on {@code side}. */
+    public static int blockFeCapacity(ServerLevel level, BlockPos pos, Direction side) {
+        IEnergyStorage storage = level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, side);
+        if (storage == null) {
+            throw new AssertionError("Missing FE block capability at " + pos + " side=" + side);
+        }
+        return storage.getMaxEnergyStored();
+    }
+
+    /** Inserts FE into the block capability at {@code pos} on {@code side}. */
+    public static int blockFeReceive(ServerLevel level, BlockPos pos, Direction side, int offeredFe, boolean simulate) {
+        IEnergyStorage storage = level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, side);
+        if (storage == null) {
+            throw new AssertionError("Missing FE block capability at " + pos + " side=" + side);
+        }
+        return storage.receiveEnergy(offeredFe, simulate);
+    }
+
+    /** Attempts to extract FE from the block capability at {@code pos} on {@code side}. */
+    public static int blockFeExtract(ServerLevel level, BlockPos pos, Direction side, int maxExtract, boolean simulate) {
+        IEnergyStorage storage = level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, side);
+        if (storage == null) {
+            throw new AssertionError("Missing FE block capability at " + pos + " side=" + side);
+        }
+        return storage.extractEnergy(maxExtract, simulate);
+    }
+
+    /** Returns {@code true} if the item in {@code player}'s inventory slot {@code invSlot} exposes FE capability. */
+    public static boolean hasItemFeCapability(Player player, int invSlot) {
+        return player.getInventory().getItem(invSlot).getCapability(Capabilities.EnergyStorage.ITEM) != null;
+    }
+
+    /** Reads the FE energy stored in the item capability in {@code player}'s inventory slot {@code invSlot}. */
+    public static int itemFeStored(Player player, int invSlot) {
+        IEnergyStorage storage = player.getInventory().getItem(invSlot).getCapability(Capabilities.EnergyStorage.ITEM);
+        if (storage == null) {
+            throw new AssertionError("Missing FE item capability in player slot " + invSlot);
+        }
+        return storage.getEnergyStored();
+    }
+
+    /** Reads the FE capacity of the item capability in {@code player}'s inventory slot {@code invSlot}. */
+    public static int itemFeCapacity(Player player, int invSlot) {
+        IEnergyStorage storage = player.getInventory().getItem(invSlot).getCapability(Capabilities.EnergyStorage.ITEM);
+        if (storage == null) {
+            throw new AssertionError("Missing FE item capability in player slot " + invSlot);
+        }
+        return storage.getMaxEnergyStored();
+    }
+
+    /** Inserts FE into the item capability in {@code player}'s inventory slot {@code invSlot}. */
+    public static int itemFeReceive(Player player, int invSlot, int offeredFe, boolean simulate) {
+        IEnergyStorage storage = player.getInventory().getItem(invSlot).getCapability(Capabilities.EnergyStorage.ITEM);
+        if (storage == null) {
+            throw new AssertionError("Missing FE item capability in player slot " + invSlot);
+        }
+        return storage.receiveEnergy(offeredFe, simulate);
+    }
+
+    /** Attempts to extract FE from the item capability in {@code player}'s inventory slot {@code invSlot}. */
+    public static int itemFeExtract(Player player, int invSlot, int maxExtract, boolean simulate) {
+        IEnergyStorage storage = player.getInventory().getItem(invSlot).getCapability(Capabilities.EnergyStorage.ITEM);
+        if (storage == null) {
+            throw new AssertionError("Missing FE item capability in player slot " + invSlot);
+        }
+        return storage.extractEnergy(maxExtract, simulate);
+    }
+
+    /** Invokes {@code menu.clicked(..., ClickType.PICKUP, player)} on 1.21.1. */
+    public static void clickMenuPickup(AbstractContainerMenu menu, int slotId, int button, Player player) {
+        menu.clicked(slotId, button, ClickType.PICKUP, player);
+    }
+
+    /** Invokes {@code menu.clicked(..., ClickType.QUICK_MOVE, player)} on 1.21.1. */
+    public static void clickMenuQuickMove(AbstractContainerMenu menu, int slotId, int button, Player player) {
+        menu.clicked(slotId, button, ClickType.QUICK_MOVE, player);
+    }
+
+    /** Invokes {@code menu.clicked(..., ClickType.PICKUP_ALL, player)} on 1.21.1. */
+    public static void clickMenuPickupAll(AbstractContainerMenu menu, int slotId, int button, Player player) {
+        menu.clicked(slotId, button, ClickType.PICKUP_ALL, player);
+    }
+
+    /** Invokes {@code menu.clicked(..., ClickType.SWAP, player)} on 1.21.1. */
+    public static void clickMenuSwap(AbstractContainerMenu menu, int slotId, int hotbarButton, Player player) {
+        menu.clicked(slotId, hotbarButton, ClickType.SWAP, player);
+    }
+
+    /** Invokes {@code menu.clicked(..., ClickType.THROW, player)} on 1.21.1. */
+    public static void clickMenuThrow(AbstractContainerMenu menu, int slotId, int button, Player player) {
+        menu.clicked(slotId, button, ClickType.THROW, player);
     }
 }

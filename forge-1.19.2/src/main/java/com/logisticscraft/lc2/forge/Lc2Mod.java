@@ -2,6 +2,7 @@ package com.logisticscraft.lc2.forge;
 
 import com.logisticscraft.lc2.core.LogisticsConstants;
 import com.logisticscraft.lc2.forge.client.Lc2Client;
+import com.logisticscraft.lc2.forge.compat.Lc2TopCompat;
 import com.logisticscraft.lc2.forge.network.Lc2Network;
 import com.logisticscraft.lc2.forge.world.LogisticsLevelManager;
 import net.minecraftforge.api.distmarker.Dist;
@@ -26,6 +27,7 @@ public final class Lc2Mod {
         IEventBus modBus = context.getModEventBus();
         Lc2Registries.register(modBus);
         modBus.addListener(this::onCommonSetup);
+        modBus.addListener(Lc2TopCompat::onInterModEnqueue);
 
         MinecraftForge.EVENT_BUS.register(LogisticsLevelManager.class);
 

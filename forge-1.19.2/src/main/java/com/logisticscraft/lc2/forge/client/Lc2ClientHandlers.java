@@ -2,6 +2,7 @@ package com.logisticscraft.lc2.forge.client;
 
 import com.logisticscraft.lc2.forge.gui.AbstractStationMenu;
 import com.logisticscraft.lc2.forge.network.S2CStationSyncPacket;
+import com.logisticscraft.lc2.forge.network.S2CTerminalSyncPacket;
 import net.minecraft.client.Minecraft;
 
 /**
@@ -21,6 +22,16 @@ public final class Lc2ClientHandlers {
         }
         if (mc.screen instanceof AbstractStationScreen<?> screen) {
             screen.onStationSync(packet);
+        }
+    }
+
+    /** Opens or refreshes {@link OperationTerminalScreen} from an incoming {@link S2CTerminalSyncPacket}. */
+    public static void handleTerminalSync(S2CTerminalSyncPacket packet) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen instanceof OperationTerminalScreen screen) {
+            screen.applySync(packet);
+        } else if (packet.openScreen()) {
+            mc.setScreen(new OperationTerminalScreen(packet));
         }
     }
 }

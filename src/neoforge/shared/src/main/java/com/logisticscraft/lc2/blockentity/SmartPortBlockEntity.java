@@ -290,9 +290,10 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
     }
 
     @Override
-    public void handleManualDispatch(ServerLevel level) {
+    public boolean handleManualDispatchWithResult(ServerLevel level) {
         VirtualTransitEngine.DispatchResult res = tryDispatch(level, true);
         setDispatchCooldown(res.isSuccess() ? 10 : 20);
+        return res.isSuccess();
     }
 
     /**

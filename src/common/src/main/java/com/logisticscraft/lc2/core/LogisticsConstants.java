@@ -47,6 +47,12 @@ public final class LogisticsConstants {
     /** Chunk Loading Upgrade item registry ID. */
     public static final String CHUNK_LOADING_UPGRADE_ID = "lc2:chunk_loading_upgrade";
 
+    /** Communication Base Station block and block entity registry ID. */
+    public static final String COMM_BASE_STATION_ID = "lc2:comm_base_station";
+
+    /** Operation Terminal handheld item registry ID. */
+    public static final String OPERATION_TERMINAL_ID = "lc2:operation_terminal";
+
     /** IC2 Single-Use Battery item registry ID accepted by both stations. */
     public static final String SINGLE_USE_BATTERY_ID = "ic2:single_use_battery";
 
@@ -258,4 +264,36 @@ public final class LogisticsConstants {
 
     /** Consecutive waiting ticks before deadlock escape logic activates. */
     public static final int DEADLOCK_ESCAPE_TICKS = 40;
+
+    // --- Remote Communications & Operation Terminal Parameters ---
+
+    /** Universal energy conversion ratio: 1 EU equals 4 FE. */
+    public static final int FE_PER_EU = 4;
+
+    /** Internal EU buffer capacity of a Communication Base Station (16,000 FE). */
+    public static final double COMM_BASE_CAPACITY_EU = 4_000.0;
+
+    /** Electrical input tier of a Communication Base Station (1 = LV, 32 EU/t = 128 FE/t). */
+    public static final int COMM_BASE_INPUT_TIER = 1;
+
+    /** Maximum EU/t input packet limit of a Communication Base Station. */
+    public static final int COMM_BASE_PACKET_LIMIT_EU = 32;
+
+    /** Standby EU/t consumed by a Communication Base Station to remain online. */
+    public static final double COMM_BASE_STANDBY_EU_PER_TICK = 2.0;
+
+    /** Internal EU storage capacity of an Operation Terminal (40,000 FE). */
+    public static final double TERMINAL_CAPACITY_EU = 10_000.0;
+
+    /** Electrical charging tier of an Operation Terminal (1 = LV, 32 EU/t = 128 FE/t). */
+    public static final int TERMINAL_INPUT_TIER = 1;
+
+    /** Maximum EU/t charging transfer limit of an Operation Terminal. */
+    public static final int TERMINAL_PACKET_LIMIT_EU = 32;
+
+    /** EU deducted from the Operation Terminal ONLY upon a successful remote dispatch (400 FE). */
+    public static final double TERMINAL_DISPATCH_COST_EU = 100.0;
+
+    /** Defensive cap on the number of Communication Base Station bindings stored on one terminal. */
+    public static final int TERMINAL_MAX_BINDINGS = 256;
 }

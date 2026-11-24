@@ -4,6 +4,7 @@ import com.logisticscraft.lc2.core.EnergyPriority;
 import com.logisticscraft.lc2.menu.AbstractLogisticsStationMenu;
 import com.logisticscraft.lc2.network.StationActionPayload;
 import com.logisticscraft.lc2.network.StationSyncPayload;
+import com.logisticscraft.lc2.network.TerminalActionPayload;
 import com.logisticscraft.lc2.platform.Lc2Native;
 import java.util.List;
 import net.minecraft.client.gui.components.Button;
@@ -44,9 +45,14 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
     protected Button priorityBtn;
     protected Button dispatchBtn;
     protected Button swapBtn;
+    protected Button backToTerminalBtn;
 
     private boolean fieldsInitializedFromSync = false;
     private BlockPos lastSyncedTarget = null;
+    private int remoteBadgeX = -1;
+    private int remoteBadgeY = -1;
+    private int remoteBadgeW = 0;
+    private int remoteBadgeH = 0;
 
     protected AbstractLogisticsScreen(M menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title, PANEL_WIDTH, PANEL_HEIGHT);
@@ -179,6 +185,16 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
                         menu.stationPos(), StationActionPayload.Action.SWAP_CARGO_ZONES))
         ));
 
+        // Button 8 (remote mode only): Return to Operation Terminal list (279, 1, 68, 11)
+        if (menu.isRemoteMode()) {
+            backToTerminalBtn = addRenderableWidget(Button.builder(
+                    Component.translatable("gui.lc2.back_to_terminal"),
+                    b -> Lc2Native.sendToServer(TerminalActionPayload.returnToList(menu.remoteTerminalId()))
+            ).bounds(leftPos + 279, topPos + 1, 68, 11).build());
+        } else {
+            backToTerminalBtn = null;
+        }
+
         menu.setSyncListener(this::onSyncUpdated);
         onSyncUpdated();
         Lc2Native.sendToServer(StationActionPayload.simple(menu.stationPos(), StationActionPayload.Action.REQUEST_SYNC));
@@ -259,6 +275,32 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
         canvas.drawString(Component.translatable("gui.lc2.zone.outbound"), 8, 77, COLOR_ZONE_OUTBOUND);
         canvas.drawString(Component.translatable("gui.lc2.zone.storage"), 190, 77, COLOR_ZONE_STORAGE);
 
+        // 2b. Remote read-only pill next to header title (never overlaps Back button at x = 279)
+        if (menu.isRemoteMode()) {
+            String badgeLabel = Component.translatable("gui.lc2.remote_readonly").getString();
+            int titleWidth = canvas.fontWidth(headerTitle().getString());
+            int desiredX = Math.max(8 + titleWidth + 6, 92);
+            int maxRight = 275;
+            int badgeW = Math.min(maxRight - 64, 16 + canvas.fontWidth(badgeLabel) + 4);
+            int badgeX = Math.min(desiredX, maxRight - badgeW);
+            int badgeY = 1;
+            int badgeH = 11;
+            if (badgeX >= 64 && badgeW >= 24) {
+                canvas.fill(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH, 0xFF142D3E);
+                canvas.fillOutline(badgeX, badgeY, badgeW, badgeH, 0xFF38A8CC);
+                canvas.blit("operation_terminal", badgeX + 2, badgeY + 1, 370, 44, 10, 10);
+                canvas.drawClippedString(badgeLabel, badgeX + 14, badgeY + 2, badgeW - 16, COLOR_LCD_CYAN);
+                remoteBadgeX = badgeX;
+                remoteBadgeY = badgeY;
+                remoteBadgeW = badgeW;
+                remoteBadgeH = badgeH;
+            } else {
+                remoteBadgeW = 0;
+            }
+        } else {
+            remoteBadgeW = 0;
+        }
+
         StationSyncPayload state = menu.syncedState();
         if (state == null) {
             return;
@@ -308,6 +350,17 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
     protected final void paintOverlayTooltips(ScreenCanvas canvas, int mouseX, int mouseY) {
         int relX = mouseX - leftPos;
         int relY = mouseY - topPos;
+
+        // Remote read-only badge hover tooltip
+        if (menu.isRemoteMode()
+                && remoteBadgeW > 0
+                && relX >= remoteBadgeX
+                && relX < remoteBadgeX + remoteBadgeW
+                && relY >= remoteBadgeY
+                && relY < remoteBadgeY + remoteBadgeH) {
+            canvas.drawTooltip(List.of(Component.translatable("gui.lc2.remote_readonly.tooltip")), mouseX, mouseY);
+            return;
+        }
 
         // Swap button hover tooltip: (172, 104, 16, 20)
         if (relX >= 172 && relX < 188 && relY >= 104 && relY < 124) {

@@ -83,8 +83,8 @@ def auditPackagedLc2Jar = tasks.register('auditPackagedLc2Jar') {
             throw new GradleException("Missing packaged production JAR: ${jarFile}")
         }
         def expectedRecipes = [
-                'smart_port', 'cargo_station', 'electric_cargo_boat',
-                'transport_drone', 'heavy_transport_drone',
+                'smart_port', 'cargo_station', 'comm_base_station', 'operation_terminal',
+                'electric_cargo_boat', 'transport_drone', 'heavy_transport_drone',
                 'rf_chip_1', 'rf_chip_2', 'rf_chip_3', 'chunk_loading_upgrade'
         ]
         new JarFile(jarFile).withCloseable { jf ->
@@ -101,9 +101,12 @@ def auditPackagedLc2Jar = tasks.register('auditPackagedLc2Jar') {
             if (!qaLeaks.isEmpty()) {
                 throw new GradleException("Production JAR leaked QA entries: ${qaLeaks}")
             }
-            for (String required : ['lc2.mixins.json', 'META-INF/mods.toml',
+            for (String required : ['lc2.mixins.json', 'wthit_plugins.json', 'META-INF/mods.toml',
                                     'data/lc2/loot_tables/blocks/smart_port.json',
-                                    'data/lc2/loot_tables/blocks/cargo_station.json']) {
+                                    'data/lc2/loot_tables/blocks/cargo_station.json',
+                                    'data/lc2/loot_tables/blocks/comm_base_station.json',
+                                    'data/curios/tags/items/charm.json',
+                                    'data/curios/tags/items/belt.json']) {
                 if (!entries.contains(required)) {
                     throw new GradleException("Production JAR missing required entry: ${required}")
                 }
@@ -114,7 +117,7 @@ def auditPackagedLc2Jar = tasks.register('auditPackagedLc2Jar') {
                     throw new GradleException("Production JAR missing recipe: ${path}")
                 }
             }
-            // Confirm CableBlockMixin.class was SRG-reobfuscated (references m_60734_ for BlockState.getBlock)
+            // Confirm CableBlockMixin.class and ForgeGearMixin.class were SRG-reobfuscated
             def mixinEntry = jf.getEntry('com/logisticscraft/lc2/forge/mixin/CableBlockMixin.class')
             if (mixinEntry == null) {
                 throw new GradleException("Production JAR missing CableBlockMixin.class")
@@ -123,6 +126,15 @@ def auditPackagedLc2Jar = tasks.register('auditPackagedLc2Jar') {
             String mixinAscii = new String(mixinBytes, 'ISO-8859-1')
             if (!mixinAscii.contains('m_60734_')) {
                 throw new GradleException("CableBlockMixin.class does not appear SRG-reobfuscated (missing m_60734_)")
+            }
+            def gearMixinEntry = jf.getEntry('com/logisticscraft/lc2/forge/mixin/ForgeGearMixin.class')
+            if (gearMixinEntry == null) {
+                throw new GradleException("Production JAR missing ForgeGearMixin.class")
+            }
+            byte[] gearMixinBytes = jf.getInputStream(gearMixinEntry).bytes
+            String gearMixinAscii = new String(gearMixinBytes, 'ISO-8859-1')
+            if (!gearMixinAscii.contains('m_41720_')) {
+                throw new GradleException("ForgeGearMixin.class does not appear SRG-reobfuscated (missing m_41720_ for ItemStack.getItem)")
             }
             logger.lifecycle("[LC2-QA] Packaged production JAR audit PASSED: ${jarFile.name} (${jarFile.length()} bytes, ${entries.size()} entries, 0 QA leaks)")
         }
