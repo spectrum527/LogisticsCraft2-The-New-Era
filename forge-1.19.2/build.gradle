@@ -11,6 +11,13 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 repositories {
     mavenCentral()
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+        content {
+            includeGroup 'maven.modrinth'
+        }
+    }
     flatDir {
         dirs '../.ic2-deps'
     }
@@ -42,6 +49,12 @@ minecraft {
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     compileOnly fg.deobf("com.industrialage.ia2:ic2-forge-1.19.2:${ic2_version}")
+    compileOnly(fg.deobf("maven.modrinth:the-one-probe:KCnKC3d7")) { transitive = false }
+    compileOnly(fg.deobf("maven.modrinth:curios:uUAY30IE")) { transitive = false }
+    compileOnly(fg.deobf("maven.modrinth:jade:kp0HjPre")) { transitive = false }
+    compileOnly(fg.deobf("maven.modrinth:wthit:FuMynGus")) { transitive = false }
+    compileOnly(fg.deobf("maven.modrinth:jei:yr59GtS6")) { transitive = false }
+    compileOnly(fg.deobf("maven.modrinth:emi:lvh62wOB")) { transitive = false }
 }
 
 tasks.withType(JavaCompile).configureEach {

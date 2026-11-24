@@ -29,14 +29,57 @@ public final class SmartPortMenu extends AbstractLogisticsStationMenu {
 
     public static final int MACHINE_SLOTS = SmartPortBlockEntity.TOTAL_SLOTS; // 59
 
-    /** Server-side constructor bound to the live {@link SmartPortBlockEntity}. */
+    /** Server-side constructor for local interaction bound to the live {@link SmartPortBlockEntity}. */
     public SmartPortMenu(int containerId, Inventory playerInventory, SmartPortBlockEntity station) {
-        this(containerId, playerInventory, station.getBlockPos(), station, station);
+        this(containerId, playerInventory, station.getBlockPos(), station, station, false, null, "");
     }
 
-    /** Client-side factory constructor decoding the station BlockPos from the open buffer. */
+    /** Server-side constructor for remote read-only access via an Operation Terminal. */
+    public SmartPortMenu(
+            int containerId,
+            Inventory playerInventory,
+            SmartPortBlockEntity station,
+            BlockPos remoteCommPos,
+            String remoteTerminalId
+    ) {
+        this(
+                containerId,
+                playerInventory,
+                station.getBlockPos(),
+                station,
+                station,
+                true,
+                remoteCommPos,
+                remoteTerminalId
+        );
+    }
+
+    /** Client-side factory constructor decoding station pos and remote flags from the open buffer. */
     public SmartPortMenu(int containerId, Inventory playerInventory, RegistryFriendlyByteBuf buf) {
-        this(containerId, playerInventory, buf.readBlockPos(), new SimpleContainer(MACHINE_SLOTS), null);
+        this(containerId, playerInventory, decodeOpenData(buf));
+    }
+
+    private record OpenData(BlockPos pos, boolean remoteMode, String remoteTerminalId) {
+    }
+
+    private static OpenData decodeOpenData(RegistryFriendlyByteBuf buf) {
+        BlockPos pos = buf.readBlockPos();
+        boolean remote = buf.isReadable() && buf.readBoolean();
+        String terminalId = buf.isReadable() ? buf.readUtf(64) : "";
+        return new OpenData(pos, remote, terminalId);
+    }
+
+    private SmartPortMenu(int containerId, Inventory playerInventory, OpenData data) {
+        this(
+                containerId,
+                playerInventory,
+                data.pos(),
+                new SimpleContainer(MACHINE_SLOTS),
+                null,
+                data.remoteMode(),
+                null,
+                data.remoteTerminalId()
+        );
     }
 
     private SmartPortMenu(
@@ -44,15 +87,28 @@ public final class SmartPortMenu extends AbstractLogisticsStationMenu {
             Inventory playerInventory,
             BlockPos pos,
             Container container,
-            SmartPortBlockEntity serverStation
+            SmartPortBlockEntity serverStation,
+            boolean remoteMode,
+            BlockPos remoteCommPos,
+            String remoteTerminalId
     ) {
-        super(Lc2Registries.SMART_PORT_MENU.get(), containerId, playerInventory, pos, container, serverStation);
+        super(
+                Lc2Registries.SMART_PORT_MENU.get(),
+                containerId,
+                playerInventory,
+                pos,
+                container,
+                serverStation,
+                remoteMode,
+                remoteCommPos,
+                remoteTerminalId
+        );
 
         // 0..26: Outbound Area (3x9) at (8 + col*18, 87 + row*18)
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 int idx = SmartPortBlockEntity.OUTBOUND_START + row * 9 + col;
-                addSlot(new Slot(container, idx, 8 + col * 18, 87 + row * 18));
+                addSlot(createMachineSlot(container, idx, 8 + col * 18, 87 + row * 18, null, -1));
             }
         }
 
@@ -60,27 +116,31 @@ public final class SmartPortMenu extends AbstractLogisticsStationMenu {
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 int idx = SmartPortBlockEntity.STORAGE_START + row * 9 + col;
-                addSlot(new Slot(container, idx, 190 + col * 18, 87 + row * 18));
+                addSlot(createMachineSlot(container, idx, 190 + col * 18, 87 + row * 18, null, -1));
             }
         }
 
         // 54: Single-Use Battery Slot (363, 76)
-        addSlot(new Slot(container, SmartPortBlockEntity.BATTERY_SLOT, 363, 76) {
-            @Override
-            public boolean mayPlace(ItemStack stack) {
-                return LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(Lc2Native.itemId(stack));
-            }
-        });
+        addSlot(createMachineSlot(
+                container,
+                SmartPortBlockEntity.BATTERY_SLOT,
+                363,
+                76,
+                stack -> LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(Lc2Native.itemId(stack)),
+                -1
+        ));
 
         // 55..58: Machine Upgrade Slots (363, 102..156)
         for (int i = 0; i < LogisticsConstants.MACHINE_UPGRADE_SLOTS; i++) {
             int slotIdx = SmartPortBlockEntity.UPGRADE_START + i;
-            addSlot(new Slot(container, slotIdx, 363, 102 + i * 18) {
-                @Override
-                public boolean mayPlace(ItemStack stack) {
-                    return UpgradeSummary.isSupportedUpgrade(Lc2Native.itemId(stack));
-                }
-            });
+            addSlot(createMachineSlot(
+                    container,
+                    slotIdx,
+                    363,
+                    102 + i * 18,
+                    stack -> UpgradeSummary.isSupportedUpgrade(Lc2Native.itemId(stack)),
+                    -1
+            ));
         }
 
         // 59..94: Player Inventory & Hotbar
@@ -88,7 +148,15 @@ public final class SmartPortMenu extends AbstractLogisticsStationMenu {
     }
 
     @Override
+    protected int machineSlotCount() {
+        return MACHINE_SLOTS;
+    }
+
+    @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        if (isRemoteMode()) {
+            return ItemStack.EMPTY;
+        }
         Slot slot = slots.get(index);
         if (slot == null || !slot.hasItem()) {
             return ItemStack.EMPTY;

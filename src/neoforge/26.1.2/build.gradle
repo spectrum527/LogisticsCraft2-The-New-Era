@@ -7,3 +7,12 @@ apply from: '../platform.gradle'
 sourceSets.main.java.srcDir('../26.x/src/main/java')
 sourceSets.main.java.srcDir('../pre-26.2/src/main/java')
 apply from: rootProject.file('src/qa/neoforge-qa.gradle')
+
+dependencies {
+    compileOnly('maven.modrinth:the-one-probe:xD8Yvxod') { transitive = false }
+    compileOnly('maven.modrinth:curios:dRnRThvD') { transitive = false }
+    compileOnly('maven.modrinth:jade:Pr1h4azo') { transitive = false }
+    compileOnly('maven.modrinth:wthit:86roxNra') { transitive = false }
+    compileOnly('maven.modrinth:jei:dptdI3yM') { transitive = false }
+    compileOnly('maven.modrinth:TfSvU3a3:N2tHzL14') { transitive = false }
+}

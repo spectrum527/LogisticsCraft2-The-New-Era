@@ -126,6 +126,11 @@ public abstract class LogisticsScreenBase<M extends AbstractContainerMenu>
             }
 
             @Override
+            public void fill(int x1, int y1, int x2, int y2, int argbColor) {
+                g.fill(leftPos + x1, topPos + y1, leftPos + x2, topPos + y2, argbColor);
+            }
+
+            @Override
             public void drawString(Component text, int x, int y, int argbColor) {
                 g.text(font, text, leftPos + x, topPos + y, argbColor, false);
             }
@@ -137,6 +142,11 @@ public abstract class LogisticsScreenBase<M extends AbstractContainerMenu>
                 }
                 String rendered = font.plainSubstrByWidth(text, maxWidth);
                 g.text(font, rendered, leftPos + x, topPos + y, argbColor, false);
+            }
+
+            @Override
+            public int fontWidth(String text) {
+                return text == null ? 0 : font.width(text);
             }
 
             @Override

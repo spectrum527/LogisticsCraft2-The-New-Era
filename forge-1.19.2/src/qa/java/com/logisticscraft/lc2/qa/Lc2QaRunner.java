@@ -1,11 +1,18 @@
 package com.logisticscraft.lc2.qa;
 
+import com.industrialage.ia2.forge.equipment.ForgeGear;
+import com.industrialage.ia2.wrench.WrenchTarget;
 import com.logisticscraft.lc2.core.BlockPos3i;
+import com.logisticscraft.lc2.core.CommBinding;
+import com.logisticscraft.lc2.core.CommStationStatus;
 import com.logisticscraft.lc2.core.DispatchFailure;
 import com.logisticscraft.lc2.core.EnergyPriority;
 import com.logisticscraft.lc2.core.LogisticsConstants;
 import com.logisticscraft.lc2.core.RfChipTier;
 import com.logisticscraft.lc2.core.StationRegistry;
+import com.logisticscraft.lc2.core.StationType;
+import com.logisticscraft.lc2.core.TerminalTargetEntry;
+import com.logisticscraft.lc2.core.TerminalTargetResolver;
 import com.logisticscraft.lc2.core.TransitPhase;
 import com.logisticscraft.lc2.core.TransitRecord;
 import com.logisticscraft.lc2.core.Vec3d;
@@ -14,16 +21,24 @@ import com.logisticscraft.lc2.core.VirtualTransitEngine;
 import com.logisticscraft.lc2.forge.Lc2Registries;
 import com.logisticscraft.lc2.forge.block.AbstractLogisticsStationBlockEntity;
 import com.logisticscraft.lc2.forge.block.CargoStationBlockEntity;
+import com.logisticscraft.lc2.forge.block.CommBaseStationBlock;
+import com.logisticscraft.lc2.forge.block.CommBaseStationBlockEntity;
+import com.logisticscraft.lc2.forge.block.LogisticsPowerBlock;
 import com.logisticscraft.lc2.forge.block.SmartPortBlockEntity;
 import com.logisticscraft.lc2.forge.entity.CargoDroneEntity;
 import com.logisticscraft.lc2.forge.entity.ElectricCargoBoatEntity;
+import com.logisticscraft.lc2.forge.gui.AbstractStationMenu;
 import com.logisticscraft.lc2.forge.gui.CargoStationMenu;
 import com.logisticscraft.lc2.forge.gui.SmartPortMenu;
+import com.logisticscraft.lc2.forge.item.OperationTerminalItem;
+import com.logisticscraft.lc2.forge.network.C2SStationActionPacket;
 import com.logisticscraft.lc2.forge.util.Lc2Coords;
 import com.logisticscraft.lc2.forge.util.LogisticsChunkTickets;
+import com.logisticscraft.lc2.forge.util.TerminalSessionService;
 import com.logisticscraft.lc2.forge.world.LogisticsLevelManager;
 import com.logisticscraft.lc2.forge.world.LogisticsSavedData;
 import java.io.Reader;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -36,6 +51,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
@@ -43,10 +59,12 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -56,12 +74,14 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HopperBlock;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.common.util.FakePlayerFactory;
+import net.minecraftforge.energy.IEnergyStorage;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
@@ -120,6 +140,10 @@ final class Lc2QaRunner {
         S8_ITEMS_BEFORE_VEHICLE_PLACE,
         S8_ITEMS_BEFORE_VEHICLE_LAUNCH_CHECK,
         S8_ITEMS_BEFORE_VEHICLE_ARRIVAL,
+        // Scenario 9: v1.2.0 Comm Base Station, Operation Terminal, Dual EU+FE, ForgeGearMixin & Remote Menus
+        S9_SETUP,
+        S9_WAIT_DRAIN_AND_EU,
+        S9_WAIT_REMOTE_DRONE_ARRIVAL,
         // Scenario 7: Cold-Restart Persistence (write phase)
         S7_WRITE_DISPATCH,
         S7_WRITE_MIDFLIGHT_SAVE_AND_HALT,
@@ -227,10 +251,30 @@ final class Lc2QaRunner {
     private final BlockPos s7StationAPos = new BlockPos(-40, SURFACE_Y, -110);
     private final BlockPos s7StationBPos = new BlockPos(40, SURFACE_Y, -110);
     private final BlockPos s7StationBChestPos = new BlockPos(41, SURFACE_Y, -110);
+    private final BlockPos s7CommStationPos = new BlockPos(-36, SURFACE_Y, -110);
+    private final BlockPos s7TerminalChestPos = new BlockPos(-34, SURFACE_Y, -110);
+    private static final double S7_EXPECTED_COMM_EU = 3200.0;
+    private static final double S7_EXPECTED_TERMINAL_EU = 4321.5;
     private UUID s7BoatTransitId;
     private UUID s7DroneTransitId;
     private int s7ExpectedBoatItems = 320;
     private int s7ExpectedDroneItems = 256;
+
+    // Scenario 9 refs: v1.2.0 Communication Base Station & Operation Terminal
+    private final BlockPos s9GenPos = new BlockPos(24, SURFACE_Y, -6);
+    private final BlockPos s9CablePos = new BlockPos(25, SURFACE_Y, -6);
+    private final BlockPos s9CommEuPos = new BlockPos(26, SURFACE_Y, -6);
+    private final BlockPos s9CommDrainPos = new BlockPos(30, SURFACE_Y, -12);
+    private final BlockPos s9CommMainPos = new BlockPos(36, SURFACE_Y, -12);
+    private final BlockPos s9PortAdjPos = new BlockPos(37, SURFACE_Y, -12);
+    private final BlockPos s9CargoOriginAdjPos = new BlockPos(36, SURFACE_Y + 1, -12);
+    private final BlockPos s9NonStationChestPos = new BlockPos(35, SURFACE_Y, -12);
+    private final BlockPos s9CommSecondPos = new BlockPos(37, SURFACE_Y, -11);
+    private final BlockPos s9CargoTargetPos = new BlockPos(54, SURFACE_Y, -12);
+    private boolean s9DrainTick1Checked = false;
+    private boolean s9DrainTick3Checked = false;
+    private boolean s9DrainTick4Checked = false;
+    private UUID s9RemoteDroneTransitId;
 
     // Scenario 8 refs: 2-Zone Isolation, Swap, Legacy Migration & Items-Before-Vehicle Regression
     private final BlockPos s8HopperPortPos = new BlockPos(-20, SURFACE_Y + 1, 0);
@@ -501,6 +545,20 @@ final class Lc2QaRunner {
             }
 
             // =========================================================================
+            // SCENARIO 9: v1.2.0 Comm Base Station, Operation Terminal & Remote Menus
+            // =========================================================================
+            case S9_SETUP -> {
+                runScenario9Setup(server, level);
+                advance(Stage.S9_WAIT_DRAIN_AND_EU);
+            }
+            case S9_WAIT_DRAIN_AND_EU -> {
+                tickScenario9DrainAndEu(level);
+            }
+            case S9_WAIT_REMOTE_DRONE_ARRIVAL -> {
+                tickScenario9WaitRemoteDroneArrival(level);
+            }
+
+            // =========================================================================
             // SCENARIO 7: Cold-Restart / NBT Persistence (Write Phase)
             // =========================================================================
             case S7_WRITE_DISPATCH -> {
@@ -546,8 +604,8 @@ final class Lc2QaRunner {
                         && level.getBlockState(new BlockPos(0, SURFACE_Y, 0)).isAir(),
                 "bedrock@-64=" + level.getBlockState(new BlockPos(0, -64, 0)) + ", air@-58=" + level.getBlockState(new BlockPos(0, SURFACE_Y, 0)));
 
-        // 2 blocks
-        for (String id : List.of("smart_port", "cargo_station")) {
+        // 3 blocks
+        for (String id : List.of("smart_port", "cargo_station", "comm_base_station")) {
             ResourceLocation rl = Lc2Coords.id(id);
             qa.check("s1.block." + id, ForgeRegistries.BLOCKS.containsKey(rl), rl.toString());
             qa.check("s1.be." + id, ForgeRegistries.BLOCK_ENTITY_TYPES.containsKey(rl), rl.toString());
@@ -557,10 +615,10 @@ final class Lc2QaRunner {
             ResourceLocation rl = Lc2Coords.id(id);
             qa.check("s1.entity." + id, ForgeRegistries.ENTITY_TYPES.containsKey(rl), rl.toString());
         }
-        // 9 items + 9 live crafting recipes
+        // 11 items + 11 live crafting recipes
         List<String> allItems = List.of(
-                "smart_port", "cargo_station", "electric_cargo_boat",
-                "transport_drone", "heavy_transport_drone",
+                "smart_port", "cargo_station", "comm_base_station", "operation_terminal",
+                "electric_cargo_boat", "transport_drone", "heavy_transport_drone",
                 "rf_chip_1", "rf_chip_2", "rf_chip_3", "chunk_loading_upgrade"
         );
         for (String id : allItems) {
@@ -1953,7 +2011,526 @@ final class Lc2QaRunner {
         qa.checkEquals("s8.items_first_boat_dock_target_outbound_empty", 0,
                 Lc2QaHelpers.totalItemCount(Lc2QaHelpers.countStationOutbound(bDockTarget)));
 
+        advance(Stage.S9_SETUP);
+    }
+
+    // -------------------------------------------------------------------------
+    // SCENARIO 9 IMPLEMENTATION: v1.2.0 COMM BASE STATION & OPERATION TERMINAL
+    // -------------------------------------------------------------------------
+
+    private void runScenario9Setup(MinecraftServer server, ServerLevel level) {
+        Lc2QaMod.LOGGER.info("[LC2-QA] === Scenario 9: v1.2.0 Comm Base Station, Operation Terminal & Remote Menus ===");
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        qa.check("s9.fake_player_not_creative", !player.isCreative(), "creative=" + player.isCreative());
+
+        // 1. Block Interfaces, Item Max Stack & CableBlockMixin Visual Connection + Real IC2 EU
+        Block commBlock = Lc2QaHelpers.requireBlock(LogisticsConstants.COMM_BASE_STATION_ID);
+        Item termItem = Lc2QaHelpers.requireItem(LogisticsConstants.OPERATION_TERMINAL_ID);
+        qa.check("s9.comm_block_interfaces",
+                commBlock instanceof CommBaseStationBlock
+                        && commBlock instanceof LogisticsPowerBlock
+                        && commBlock instanceof WrenchTarget,
+                commBlock.getClass().getSimpleName());
+        qa.checkEquals("s9.terminal_max_stack_1", 1, new ItemStack(termItem).getMaxStackSize());
+
+        // Cable visual arm connection via CableBlockMixin (explicitly start with all 6 arms FALSE!)
+        Block cableBlock = Lc2QaHelpers.requireBlock("ic2:insulated_copper_cable");
+        Block genBlock = Lc2QaHelpers.requireBlock("ic2:generator");
+        for (int x = 23; x <= 27; x++) {
+            level.setBlock(new BlockPos(x, SURFACE_Y - 1, -6), Blocks.STONE.defaultBlockState(), Block.UPDATE_CLIENTS);
+        }
+        level.setBlock(s9CablePos, Lc2QaHelpers.withAllCableArmsFalse(cableBlock.defaultBlockState()), Block.UPDATE_ALL);
+        level.setBlock(s9GenPos, genBlock.defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(s9CommEuPos, commBlock.defaultBlockState(), Block.UPDATE_ALL);
+
+        BlockState cableState = level.getBlockState(s9CablePos);
+        Boolean commArm = Lc2QaHelpers.getCableDirectionProp(cableState, Direction.EAST);
+        Boolean airArm = Lc2QaHelpers.getCableDirectionProp(cableState, Direction.NORTH);
+        qa.check("s9.mixin_cable_connects_comm_base_station",
+                Boolean.TRUE.equals(commArm) && Boolean.FALSE.equals(airArm),
+                "east=" + commArm + ", north=" + airArm + ", state=" + cableState);
+        qa.check("s9.ic2_generator_fueled_for_comm",
+                Lc2QaHelpers.insertItemIntoBlock(level, s9GenPos, new ItemStack(Items.COAL, 12)),
+                "inserted 12 coal");
+
+        // 2. Comm Base Station Dual EU (WorldPowerPort) + FE (ForgeCapabilities.ENERGY) Verification
+        level.setBlock(s9CommMainPos, commBlock.defaultBlockState(), Block.UPDATE_ALL);
+        CommBaseStationBlockEntity commMain = (CommBaseStationBlockEntity) level.getBlockEntity(s9CommMainPos);
+        qa.check("s9.comm_be_present", commMain != null, "be=" + commMain);
+        qa.checkClose("s9.comm_packet_limit_32", 32.0, commMain.packetLimit(), 1e-6);
+        qa.checkClose("s9.comm_max_capacity_4000", 4000.0, commMain.maxCapacityEu(), 1e-6);
+        qa.checkEquals("s9.comm_sink_all_6_faces", 6, commMain.energyPorts().inputs().size());
+        qa.check("s9.comm_outputs_empty", commMain.energyPorts().outputs().isEmpty(), "outputs empty");
+
+        // Direct WorldPowerPort receive() + EuBuffer.bufferedEu()
+        commMain.setStoredEu(0.0);
+        double euAcc = commMain.receive(50.0);
+        qa.checkClose("s9.comm_world_power_port_receive", 50.0, euAcc, 1e-6);
+        qa.checkClose("s9.comm_buffered_eu_stored", 50.0, commMain.bufferedEu().stored(), 1e-6);
+        qa.checkClose("s9.comm_buffered_eu_capacity", 4000.0, commMain.bufferedEu().capacity(), 1e-6);
+        commMain.setStoredEu(3990.0);
+        qa.checkClose("s9.comm_eu_cap_partial_10", 10.0, commMain.receive(100.0), 1e-6);
+        qa.checkClose("s9.comm_eu_cap_full_0", 0.0, commMain.receive(32.0), 1e-6);
+        qa.checkClose("s9.comm_eu_capped_4000", 4000.0, commMain.getStoredEu(), 1e-6);
+
+        // FE capability across all 6 faces + null (LV 128 FE/t, 16,000 FE cap, 1 EU = 4 FE)
+        commMain.setStoredEu(0.0);
+        for (Direction side : new Direction[]{null, Direction.UP, Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+            IEnergyStorage feCap = commMain.getCapability(ForgeCapabilities.ENERGY, side).orElse(null);
+            qa.check("s9.comm_fe_cap_present_" + side,
+                    feCap != null && feCap.canReceive() && !feCap.canExtract() && feCap.getMaxEnergyStored() == 16000,
+                    "side=" + side + ", max=" + (feCap != null ? feCap.getMaxEnergyStored() : -1));
+        }
+        IEnergyStorage feBlock = commMain.getCapability(ForgeCapabilities.ENERGY, Direction.UP)
+                .orElseThrow(IllegalStateException::new);
+        qa.checkEquals("s9.comm_fe_simulate_clamped_128", 128, feBlock.receiveEnergy(500, true));
+        qa.checkClose("s9.comm_fe_simulate_leaves_eu_0", 0.0, commMain.getStoredEu(), 1e-6);
+        qa.checkEquals("s9.comm_fe_commit_clamped_128", 128, feBlock.receiveEnergy(500, false));
+        qa.checkClose("s9.comm_fe_128_equals_32eu", 32.0, commMain.getStoredEu(), 1e-6);
+        qa.checkEquals("s9.comm_fe_commit_100", 100, feBlock.receiveEnergy(100, false));
+        qa.checkClose("s9.comm_fe_total_57eu", 57.0, commMain.getStoredEu(), 1e-6);
+        qa.checkEquals("s9.comm_fe_extract_always_0", 0, feBlock.extractEnergy(128, false));
+        commMain.setStoredEu(3995.0);
+        qa.checkEquals("s9.comm_fe_cap_edge_20", 20, feBlock.receiveEnergy(128, false));
+        qa.checkEquals("s9.comm_fe_cap_full_0", 0, feBlock.receiveEnergy(128, false));
+        qa.checkEquals("s9.comm_fe_stored_16000", 16000, feBlock.getEnergyStored());
+
+        // 3. Standby Drain Station Setup (6.0 EU -> ticks 1..3 online/ACTIVE, tick 4 offline/!ACTIVE)
+        level.setBlock(s9CommDrainPos, commBlock.defaultBlockState(), Block.UPDATE_ALL);
+        CommBaseStationBlockEntity commDrain = (CommBaseStationBlockEntity) level.getBlockEntity(s9CommDrainPos);
+        commDrain.setStoredEu(6.0);
+
+        // 4. Operation Terminal Dual EU (ForgeGearMixin) + FE (ForgeCapabilities.ENERGY) + Binding
+        ItemStack termEu = new ItemStack(termItem);
+        qa.check("s9.terminal_forge_gear_reject_tier0", !ForgeGear.acceptsCharge(termEu, 0), "tier0");
+        qa.check("s9.terminal_forge_gear_accept_tier1_2_4",
+                ForgeGear.acceptsCharge(termEu, 1)
+                        && ForgeGear.acceptsCharge(termEu, 2)
+                        && ForgeGear.acceptsCharge(termEu, 4),
+                "tiers 1/2/4 accepted");
+        qa.checkClose("s9.terminal_forge_gear_capacity_10000", 10000.0, ForgeGear.capacity(termEu), 1e-6);
+        qa.checkClose("s9.terminal_forge_gear_initial_0", 0.0, ForgeGear.stored(termEu), 1e-6);
+        qa.checkClose("s9.terminal_forge_gear_charge_tier0_0", 0.0, ForgeGear.charge(termEu, 50.0, 0), 1e-6);
+        qa.checkClose("s9.terminal_forge_gear_charge_clamp_32", 32.0, ForgeGear.charge(termEu, 100.0, 1), 1e-6);
+        qa.checkClose("s9.terminal_forge_gear_stored_32", 32.0, ForgeGear.stored(termEu), 1e-6);
+        qa.checkClose("s9.terminal_forge_gear_charge_partial_20", 20.0, ForgeGear.charge(termEu, 20.0, 2), 1e-6);
+        qa.checkClose("s9.terminal_forge_gear_stored_52", 52.0, ForgeGear.stored(termEu), 1e-6);
+        OperationTerminalItem.setStoredEu(termEu, 9990.0);
+        qa.checkClose("s9.terminal_forge_gear_cap_edge_10", 10.0, ForgeGear.charge(termEu, 32.0, 1), 1e-6);
+        qa.checkClose("s9.terminal_forge_gear_cap_10000", 10000.0, ForgeGear.stored(termEu), 1e-6);
+        qa.checkClose("s9.terminal_forge_gear_full_0", 0.0, ForgeGear.charge(termEu, 32.0, 1), 1e-6);
+
+        ItemStack termFe = new ItemStack(termItem);
+        IEnergyStorage feItem = termFe.getCapability(ForgeCapabilities.ENERGY).orElse(null);
+        qa.check("s9.terminal_fe_cap_present",
+                feItem != null && feItem.canReceive() && !feItem.canExtract() && feItem.getMaxEnergyStored() == 40000,
+                "maxFe=" + (feItem != null ? feItem.getMaxEnergyStored() : -1));
+        qa.checkEquals("s9.terminal_fe_sim_128", 128, feItem.receiveEnergy(500, true));
+        qa.checkClose("s9.terminal_fe_sim_eu_0", 0.0, OperationTerminalItem.getStoredEu(termFe), 1e-6);
+        qa.checkEquals("s9.terminal_fe_commit_128", 128, feItem.receiveEnergy(500, false));
+        qa.checkClose("s9.terminal_fe_128_equals_32eu", 32.0, OperationTerminalItem.getStoredEu(termFe), 1e-6);
+        qa.checkEquals("s9.terminal_fe_commit_24", 24, feItem.receiveEnergy(24, false));
+        qa.checkClose("s9.terminal_fe_total_38eu", 38.0, OperationTerminalItem.getStoredEu(termFe), 1e-6);
+        qa.checkEquals("s9.terminal_fe_extract_0", 0, feItem.extractEnergy(128, false));
+        OperationTerminalItem.setStoredEu(termFe, 9995.0);
+        qa.checkEquals("s9.terminal_fe_cap_edge_20", 20, feItem.receiveEnergy(128, false));
+        qa.checkEquals("s9.terminal_fe_cap_full_0", 0, feItem.receiveEnergy(128, false));
+        qa.checkEquals("s9.terminal_fe_stored_40000", 40000, feItem.getEnergyStored());
+        qa.checkClose("s9.terminal_fe_eu_10000", 10000.0, OperationTerminalItem.getStoredEu(termFe), 1e-6);
+
+        // Binding, duplicate-bind rejection, unbinding & interactWithCommStation (normal=bind, sneak=unbind)
+        ItemStack termBind = new ItemStack(termItem);
+        String dim = level.dimension().location().toString();
+        qa.checkEquals("s9.terminal_bind_first",
+                OperationTerminalItem.BindResult.BOUND, OperationTerminalItem.bind(termBind, dim, s9CommMainPos));
+        qa.check("s9.terminal_id_created", !OperationTerminalItem.getTerminalId(termBind).isBlank(),
+                "id=" + OperationTerminalItem.getTerminalId(termBind));
+        qa.checkEquals("s9.terminal_bind_duplicate_rejected",
+                OperationTerminalItem.BindResult.ALREADY_BOUND, OperationTerminalItem.bind(termBind, dim, s9CommMainPos));
+        qa.checkEquals("s9.terminal_bind_second",
+                OperationTerminalItem.BindResult.BOUND, OperationTerminalItem.bind(termBind, dim, s9CommSecondPos));
+        qa.checkEquals("s9.terminal_bind_count_2", 2, OperationTerminalItem.getBindings(termBind).size());
+        qa.check("s9.terminal_unbind_first", OperationTerminalItem.unbind(termBind, dim, s9CommMainPos), "removed");
+        qa.check("s9.terminal_unbind_duplicate_false", !OperationTerminalItem.unbind(termBind, dim, s9CommMainPos), "already gone");
+        qa.checkEquals("s9.terminal_bind_count_1", 1, OperationTerminalItem.getBindings(termBind).size());
+
+        player.setShiftKeyDown(false);
+        OperationTerminalItem.interactWithCommStation(level, s9CommMainPos, player, termBind);
+        qa.check("s9.terminal_interact_normal_binds", OperationTerminalItem.isBoundTo(termBind, dim, s9CommMainPos), "bound");
+        player.setShiftKeyDown(true);
+        OperationTerminalItem.interactWithCommStation(level, s9CommMainPos, player, termBind);
+        qa.check("s9.terminal_interact_sneak_unbinds", !OperationTerminalItem.isBoundTo(termBind, dim, s9CommMainPos), "unbound");
+        player.setShiftKeyDown(false);
+    }
+
+    private void tickScenario9DrainAndEu(ServerLevel level) {
+        CommBaseStationBlockEntity commDrain = (CommBaseStationBlockEntity) level.getBlockEntity(s9CommDrainPos);
+        if (!s9DrainTick1Checked && stageTicks >= 1) {
+            BlockState st = level.getBlockState(s9CommDrainPos);
+            qa.check("s9.comm_drain_tick1_4eu_active",
+                    stageTicks == 1
+                            && commDrain != null
+                            && Math.abs(commDrain.getStoredEu() - 4.0) < 1e-6
+                            && commDrain.isOnline()
+                            && st.getValue(CommBaseStationBlock.ACTIVE),
+                    "tick=" + stageTicks + ", eu=" + (commDrain != null ? commDrain.getStoredEu() : -1)
+                            + ", active=" + st.getValue(CommBaseStationBlock.ACTIVE));
+            s9DrainTick1Checked = true;
+        }
+        if (!s9DrainTick3Checked && stageTicks >= 3) {
+            BlockState st = level.getBlockState(s9CommDrainPos);
+            qa.check("s9.comm_drain_tick3_0eu_still_active",
+                    stageTicks == 3
+                            && commDrain != null
+                            && Math.abs(commDrain.getStoredEu()) < 1e-6
+                            && commDrain.isOnline()
+                            && st.getValue(CommBaseStationBlock.ACTIVE),
+                    "tick=" + stageTicks + ", eu=" + (commDrain != null ? commDrain.getStoredEu() : -1)
+                            + ", active=" + st.getValue(CommBaseStationBlock.ACTIVE));
+            s9DrainTick3Checked = true;
+        }
+        if (!s9DrainTick4Checked && stageTicks >= 4) {
+            BlockState st = level.getBlockState(s9CommDrainPos);
+            qa.check("s9.comm_drain_tick4_offline_inactive",
+                    stageTicks == 4
+                            && commDrain != null
+                            && Math.abs(commDrain.getStoredEu()) < 1e-6
+                            && !commDrain.isOnline()
+                            && !st.getValue(CommBaseStationBlock.ACTIVE),
+                    "tick=" + stageTicks + ", online=" + (commDrain != null && commDrain.isOnline())
+                            + ", active=" + st.getValue(CommBaseStationBlock.ACTIVE));
+            s9DrainTick4Checked = true;
+        }
+
+        if (stageTicks < 50) {
+            return;
+        }
+
+        CommBaseStationBlockEntity commEu = (CommBaseStationBlockEntity) level.getBlockEntity(s9CommEuPos);
+        BlockState commEuState = level.getBlockState(s9CommEuPos);
+        qa.check("s9.comm_received_real_ic2_eu",
+                commEu != null
+                        && commEu.getStoredEu() > 50.0
+                        && commEu.isOnline()
+                        && commEuState.getValue(CommBaseStationBlock.ACTIVE),
+                "commEu=" + (commEu != null ? commEu.getStoredEu() : -1)
+                        + ", active=" + commEuState.getValue(CommBaseStationBlock.ACTIVE));
+        qa.metric("s9.comm_eu_after_50t", commEu.getStoredEu());
+
+        runScenario9AdjacencyRemoteAndDispatch(level);
+        advance(Stage.S9_WAIT_REMOTE_DRONE_ARRIVAL);
+    }
+
+    private void runScenario9AdjacencyRemoteAndDispatch(ServerLevel level) {
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        String dim = level.dimension().location().toString();
+        Block commBlock = Lc2QaHelpers.requireBlock(LogisticsConstants.COMM_BASE_STATION_ID);
+
+        // Place SmartPort (EAST = horizontal), CargoStation (UP = vertical), Chest (WEST = non-station),
+        // second CommBaseStation touching SmartPort (SOUTH), and CargoStation target 18 blocks east.
+        SmartPortBlockEntity smartPort = Lc2QaHelpers.placeSmartPort(level, s9PortAdjPos, Direction.NORTH, "S9-RemotePort");
+        CargoStationBlockEntity cargoOrigin = Lc2QaHelpers.placeCargoStation(level, s9CargoOriginAdjPos, "S9-RemoteCargo");
+        level.setBlock(s9NonStationChestPos, Blocks.CHEST.defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(s9CommSecondPos, commBlock.defaultBlockState(), Block.UPDATE_ALL);
+        CargoStationBlockEntity cargoTarget = Lc2QaHelpers.placeCargoStation(level, s9CargoTargetPos, "S9-RemoteTarget");
+
+        CommBaseStationBlockEntity commMain = (CommBaseStationBlockEntity) level.getBlockEntity(s9CommMainPos);
+        CommBaseStationBlockEntity commSecond = (CommBaseStationBlockEntity) level.getBlockEntity(s9CommSecondPos);
+
+        // 1. 6-face adjacency (horizontal EAST + vertical UP, ignoring WEST chest)
+        List<TerminalTargetResolver.AdjacentStationInfo> adjMain = commMain.findAdjacentStations(level);
+        boolean hasPort = adjMain.stream().anyMatch(i ->
+                i.type() == StationType.SMART_PORT
+                        && i.pos().equals(Lc2Coords.toCore(s9PortAdjPos))
+                        && "S9-RemotePort".equals(i.customName()));
+        boolean hasCargo = adjMain.stream().anyMatch(i ->
+                i.type() == StationType.CARGO_STATION
+                        && i.pos().equals(Lc2Coords.toCore(s9CargoOriginAdjPos))
+                        && "S9-RemoteCargo".equals(i.customName()));
+        qa.check("s9.comm_adjacency_horizontal_and_vertical",
+                adjMain.size() == 2 && hasPort && hasCargo,
+                "count=" + adjMain.size() + ", adj=" + adjMain);
+
+        // 2. Deduplication via TerminalTargetResolver & live TerminalSessionService.resolveTargets!
+        player.setPos(36.5, SURFACE_Y, 30.5); // > 40 blocks away from s9CommMainPos (outside local 8-block radius!)
+        player.getInventory().clearContent();
+        ItemStack terminal = Lc2QaHelpers.itemStack(LogisticsConstants.OPERATION_TERMINAL_ID, 1);
+        OperationTerminalItem.bind(terminal, dim, s9CommMainPos);
+        OperationTerminalItem.bind(terminal, dim, s9CommSecondPos);
+        String terminalId = OperationTerminalItem.getOrCreateTerminalId(terminal);
+
+        commMain.setStoredEu(0.0); // UNPOWERED
+        commSecond.setStoredEu(2000.0); // ONLINE
+        List<TerminalTargetEntry> resolvedPrefOnline = TerminalSessionService.resolveTargets(player, terminal);
+        long portRowsPref = resolvedPrefOnline.stream()
+                .filter(e -> e.hasStation() && e.stationPos().equals(Lc2Coords.toCore(s9PortAdjPos)))
+                .count();
+        TerminalTargetEntry portPref = resolvedPrefOnline.stream()
+                .filter(e -> e.hasStation() && e.stationPos().equals(Lc2Coords.toCore(s9PortAdjPos)))
+                .findFirst().orElse(null);
+
+        commMain.setStoredEu(2000.0); // Both ONLINE -> tie keeps earliest binding (s9CommMainPos)
+        List<TerminalTargetEntry> resolvedBothOnline = TerminalSessionService.resolveTargets(player, terminal);
+        TerminalTargetEntry portTie = resolvedBothOnline.stream()
+                .filter(e -> e.hasStation() && e.stationPos().equals(Lc2Coords.toCore(s9PortAdjPos)))
+                .findFirst().orElse(null);
+
+        AtomicInteger crossDimProbes = new AtomicInteger();
+        List<TerminalTargetEntry> crossDimRows = TerminalTargetResolver.resolve(
+                dim,
+                Lc2Coords.toCore(player.blockPosition()),
+                List.of(new CommBinding("minecraft:the_nether", new BlockPos3i(0, 64, 0))),
+                b -> {
+                    crossDimProbes.incrementAndGet();
+                    return TerminalTargetResolver.CommProbeResult.missing();
+                }
+        );
+
+        qa.check("s9.resolver_dedup_prefers_online_and_binding_order",
+                resolvedPrefOnline.size() == 2
+                        && portRowsPref == 1
+                        && portPref != null
+                        && portPref.status() == CommStationStatus.ONLINE
+                        && portPref.commPos().equals(Lc2Coords.toCore(s9CommSecondPos))
+                        && resolvedBothOnline.size() == 2
+                        && portTie != null
+                        && portTie.status() == CommStationStatus.ONLINE
+                        && portTie.commPos().equals(Lc2Coords.toCore(s9CommMainPos))
+                        && crossDimProbes.get() == 0
+                        && crossDimRows.size() == 1
+                        && crossDimRows.get(0).status() == CommStationStatus.WRONG_DIMENSION
+                        && crossDimRows.get(0).distance() == -1,
+                "pref=" + resolvedPrefOnline + ", tie=" + portTie);
+
+        // 3. Remote Read-Only Station Menus (SmartPortMenu & CargoStationMenu)
+        player.getInventory().setItem(0, terminal);
+        player.getInventory().setItem(9, new ItemStack(Items.COBBLESTONE, 16));
+        player.getInventory().setItem(10, new ItemStack(Items.DIAMOND, 4));
+
+        smartPort.setItem(0, new ItemStack(Items.DIAMOND, 16));
+        smartPort.setItem(SmartPortBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.EMERALD, 12));
+        smartPort.setItem(SmartPortBlockEntity.SLOT_BATTERY, Lc2QaHelpers.itemStack("ic2:single_use_battery", 2));
+        cargoOrigin.setItem(0, new ItemStack(Items.GOLD_INGOT, 8));
+        cargoOrigin.setItem(CargoStationBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.LAPIS_LAZULI, 10));
+        cargoOrigin.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
+        cargoOrigin.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+
+        SmartPortMenu remotePortMenu = new SmartPortMenu(401, player.getInventory(), smartPort, s9CommMainPos, terminalId);
+        CargoStationMenu remoteCargoMenu =
+                new CargoStationMenu(402, player.getInventory(), cargoOrigin, s9CommMainPos, terminalId);
+
+        qa.check("s9.remote_menus_valid_beyond_local_range",
+                remotePortMenu.isRemoteMode()
+                        && remoteCargoMenu.isRemoteMode()
+                        && remotePortMenu.stillValid(player)
+                        && remoteCargoMenu.stillValid(player)
+                        && !smartPort.stillValid(player),
+                "portValid=" + remotePortMenu.stillValid(player)
+                        + ", cargoValid=" + remoteCargoMenu.stillValid(player)
+                        + ", localValid=" + smartPort.stillValid(player));
+
+        verifyScenario9ReadOnlyMenu("smart_port", remotePortMenu, SmartPortMenu.MACHINE_SLOTS,
+                smartPort, Items.DIAMOND, 16, Items.EMERALD, 12, player);
+        verifyScenario9ReadOnlyMenu("cargo_station", remoteCargoMenu, CargoStationMenu.MACHINE_SLOTS,
+                cargoOrigin, Items.GOLD_INGOT, 8, Items.LAPIS_LAZULI, 10, player);
+
+        // 4. Remote Config at 0 EU + 100 EU Dispatch Energy Deduction via C2SStationActionPacket.handleDispatch
+        OperationTerminalItem.setStoredEu(player.getInventory().getItem(0), 0.0);
+        cargoOrigin.setStationName("S9-RemoteRenamed");
+        cargoOrigin.toggleAutoReturn();
+        cargoOrigin.toggleAutoReturn();
+        cargoOrigin.toggleEnergyPriority();
+        cargoOrigin.toggleEnergyPriority();
+        qa.check("s9.remote_config_allowed_at_0eu",
+                remoteCargoMenu.stillValid(player)
+                        && "S9-RemoteRenamed".equals(cargoOrigin.getStationName())
+                        && Math.abs(OperationTerminalItem.getStoredEu(player.getInventory().getItem(0))) < 1e-6,
+                "name=" + cargoOrigin.getStationName());
+
+        cargoOrigin.setStoredEu(5000.0);
+        cargoOrigin.setAutoReturn(false);
+        cargoOrigin.setEnergyPriority(EnergyPriority.EU_FIRST);
+        cargoOrigin.setTargetPos(s9CargoTargetPos);
+
+        // Case A: 50 EU (< 100 EU) -> rejected with TERMINAL_INSUFFICIENT_ENERGY, 0 deducted, no launch!
+        OperationTerminalItem.setStoredEu(player.getInventory().getItem(0), 50.0);
+        invokeRemoteDispatch1192(level, player, cargoOrigin, remoteCargoMenu);
+        qa.check("s9.remote_dispatch_blocked_under_100eu",
+                findLatestTransitFrom(level, s9CargoOriginAdjPos, VehicleKind.STANDARD_DRONE) == null
+                        && cargoOrigin.findReadyDroneBay() >= 0
+                        && DispatchFailure.TERMINAL_INSUFFICIENT_ENERGY.translationKey().equals(cargoOrigin.getStatusKey())
+                        && Math.abs(OperationTerminalItem.getStoredEu(player.getInventory().getItem(0)) - 50.0) < 1e-6,
+                "status=" + cargoOrigin.getStatusKey()
+                        + ", termEu=" + OperationTerminalItem.getStoredEu(player.getInventory().getItem(0)));
+
+        // Case B: 1,000 EU + failing dispatch (no target) -> 0 EU deducted!
+        OperationTerminalItem.setStoredEu(player.getInventory().getItem(0), 1000.0);
+        cargoOrigin.setTargetPos(null);
+        invokeRemoteDispatch1192(level, player, cargoOrigin, remoteCargoMenu);
+        qa.check("s9.remote_dispatch_failure_deducts_0eu",
+                findLatestTransitFrom(level, s9CargoOriginAdjPos, VehicleKind.STANDARD_DRONE) == null
+                        && cargoOrigin.findReadyDroneBay() >= 0
+                        && DispatchFailure.NO_TARGET.translationKey().equals(cargoOrigin.getStatusKey())
+                        && Math.abs(OperationTerminalItem.getStoredEu(player.getInventory().getItem(0)) - 1000.0) < 1e-6,
+                "status=" + cargoOrigin.getStatusKey()
+                        + ", termEu=" + OperationTerminalItem.getStoredEu(player.getInventory().getItem(0)));
+
+        // Case C: 1,000 EU + valid dispatch -> SUCCEEDS and drops terminal EU to EXACTLY 900 EU!
+        cargoOrigin.setTargetPos(s9CargoTargetPos);
+        invokeRemoteDispatch1192(level, player, cargoOrigin, remoteCargoMenu);
+        TransitRecord launched = findLatestTransitFrom(level, s9CargoOriginAdjPos, VehicleKind.STANDARD_DRONE);
+        qa.check("s9.remote_dispatch_success_deducts_100eu",
+                launched != null
+                        && cargoOrigin.findReadyDroneBay() < 0
+                        && Math.abs(OperationTerminalItem.getStoredEu(player.getInventory().getItem(0)) - 900.0) < 1e-6,
+                "transit=" + launched + ", termEu=" + OperationTerminalItem.getStoredEu(player.getInventory().getItem(0)));
+        s9RemoteDroneTransitId = launched.id();
+
+        // 5. Live Disconnect Protection
+        // 5a: Removing terminal from player inventory -> immediately stillValid == false
+        SmartPortMenu liveMenu1 = new SmartPortMenu(403, player.getInventory(), smartPort, s9CommMainPos, terminalId);
+        boolean validBeforeDrop = liveMenu1.stillValid(player);
+        ItemStack savedTerm = player.getInventory().getItem(0).copy();
+        player.getInventory().setItem(0, ItemStack.EMPTY);
+        boolean invalidAfterDrop = !liveMenu1.stillValid(player);
+        player.getInventory().setItem(0, savedTerm);
+        qa.check("s9.disconnect_removing_terminal", validBeforeDrop && invalidAfterDrop,
+                "before=" + validBeforeDrop + ", invalidAfter=" + invalidAfterDrop);
+
+        // 5b: Draining Comm Base Station EU to 0 -> immediately stillValid == false
+        SmartPortMenu liveMenu2 = new SmartPortMenu(404, player.getInventory(), smartPort, s9CommMainPos, terminalId);
+        boolean validBeforeDrain = liveMenu2.stillValid(player);
+        commMain.setStoredEu(0.0);
+        boolean invalidAfterDrain = !liveMenu2.stillValid(player);
+        commMain.setStoredEu(2000.0);
+        qa.check("s9.disconnect_draining_comm_eu", validBeforeDrain && invalidAfterDrain,
+                "before=" + validBeforeDrain + ", invalidAfter=" + invalidAfterDrain);
+
+        // 5c: Breaking Comm Base Station -> immediately stillValid == false
+        SmartPortMenu liveMenu3 = new SmartPortMenu(405, player.getInventory(), smartPort, s9CommMainPos, terminalId);
+        boolean validBeforeBreak = liveMenu3.stillValid(player);
+        level.setBlock(s9CommMainPos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        boolean invalidAfterBreak = !liveMenu3.stillValid(player);
+        qa.check("s9.disconnect_breaking_comm", validBeforeBreak && invalidAfterBreak,
+                "before=" + validBeforeBreak + ", invalidAfter=" + invalidAfterBreak);
+
+        // 5d: Non-adjacent station rejected immediately
+        CargoStationMenu nonAdjMenu =
+                new CargoStationMenu(406, player.getInventory(), cargoTarget, s9CommSecondPos, terminalId);
+        qa.check("s9.disconnect_non_adjacent_rejected", !nonAdjMenu.stillValid(player), "non-adjacent blocked");
+
+        player.getInventory().clearContent();
+    }
+
+    private void verifyScenario9ReadOnlyMenu(
+            String label,
+            AbstractStationMenu menu,
+            int machineSlots,
+            AbstractLogisticsStationBlockEntity station,
+            Item outboundItem,
+            int outboundCount,
+            Item storageItem,
+            int storageCount,
+            FakePlayer player
+    ) {
+        ItemStack probe = new ItemStack(Items.COBBLESTONE, 1);
+        boolean allSlotsLocked = true;
+        for (int i = 0; i < machineSlots; i++) {
+            var slot = menu.getSlot(i);
+            if (slot.mayPlace(probe)
+                    || slot.mayPickup(player)
+                    || slot.allowModification(player)
+                    || menu.canDragTo(slot)
+                    || menu.canTakeItemForPickAll(probe, slot)) {
+                allSlotsLocked = false;
+                break;
+            }
+        }
+
+        ItemStack qmOut = menu.quickMoveStack(player, 0);
+        ItemStack qmSto = menu.quickMoveStack(player, AbstractLogisticsStationBlockEntity.STORAGE_START);
+        ItemStack qmPlr = menu.quickMoveStack(player, machineSlots);
+
+        menu.setCarried(ItemStack.EMPTY);
+        menu.clicked(0, 0, ClickType.PICKUP, player);
+        boolean pickupBlocked = menu.getCarried().isEmpty();
+
+        menu.setCarried(new ItemStack(Items.IRON_INGOT, 8));
+        menu.clicked(1, 0, ClickType.PICKUP, player);
+        boolean placeBlocked = station.getItem(1).isEmpty()
+                && menu.getCarried().is(Items.IRON_INGOT) && menu.getCarried().getCount() == 8;
+
+        menu.setCarried(new ItemStack(outboundItem, 1));
+        menu.clicked(machineSlots + 1, 0, ClickType.PICKUP_ALL, player);
+        boolean pickupAllBlocked = station.getItem(0).is(outboundItem)
+                && station.getItem(0).getCount() == outboundCount;
+
+        menu.setCarried(ItemStack.EMPTY);
+        menu.clicked(0, 0, ClickType.QUICK_MOVE, player);
+        menu.clicked(machineSlots, 0, ClickType.QUICK_MOVE, player);
+        menu.clicked(0, 1, ClickType.SWAP, player);
+        menu.clicked(0, 0, ClickType.THROW, player);
+        menu.setCarried(ItemStack.EMPTY);
+
+        boolean untouched = station.getItem(0).is(outboundItem)
+                && station.getItem(0).getCount() == outboundCount
+                && station.getItem(AbstractLogisticsStationBlockEntity.STORAGE_START).is(storageItem)
+                && station.getItem(AbstractLogisticsStationBlockEntity.STORAGE_START).getCount() == storageCount
+                && player.getInventory().getItem(9).is(Items.COBBLESTONE)
+                && player.getInventory().getItem(9).getCount() == 16;
+
+        qa.check("s9.readonly_" + label + "_locked",
+                allSlotsLocked
+                        && qmOut.isEmpty() && qmSto.isEmpty() && qmPlr.isEmpty()
+                        && pickupBlocked && placeBlocked && pickupAllBlocked && untouched,
+                String.format("locked=%s, qm=%s/%s/%s, pickup=%s, place=%s, pickupAll=%s, untouched=%s",
+                        allSlotsLocked, qmOut.isEmpty(), qmSto.isEmpty(), qmPlr.isEmpty(),
+                        pickupBlocked, placeBlocked, pickupAllBlocked, untouched));
+    }
+
+    private void tickScenario9WaitRemoteDroneArrival(ServerLevel level) {
+        if (stageTicks > 250) {
+            throw new AssertionError("Scenario 9 remote-dispatched drone delivery timed out after 250 ticks");
+        }
+        if (LogisticsLevelManager.isTransitActive(level, s9RemoteDroneTransitId)) {
+            return;
+        }
+        CargoStationBlockEntity target = (CargoStationBlockEntity) level.getBlockEntity(s9CargoTargetPos);
+        Map<Item, Integer> storage = Lc2QaHelpers.countStationStorage(target);
+        qa.checkEquals("s9.remote_drone_delivered_gold_storage", 8, storage.getOrDefault(Items.GOLD_INGOT, 0));
+        qa.checkEquals("s9.remote_drone_target_outbound_empty", 0,
+                Lc2QaHelpers.totalItemCount(Lc2QaHelpers.countStationOutbound(target)));
+        qa.check("s9.remote_drone_docked_at_target", target.findReadyDroneBay() >= 0, "docked");
+
+        // Cleanup Scenario 9 blocks cleanly
+        for (BlockPos pos : List.of(
+                s9GenPos, s9CablePos, s9CommEuPos, s9CommDrainPos, s9CommMainPos,
+                s9PortAdjPos, s9CargoOriginAdjPos, s9NonStationChestPos, s9CommSecondPos, s9CargoTargetPos)) {
+            level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        }
         advance(Stage.S7_WRITE_DISPATCH);
+    }
+
+    private static void invokeRemoteDispatch1192(
+            ServerLevel level,
+            ServerPlayer player,
+            AbstractLogisticsStationBlockEntity station,
+            AbstractStationMenu remoteMenu
+    ) {
+        try {
+            Method m = C2SStationActionPacket.class.getDeclaredMethod(
+                    "handleDispatch",
+                    ServerLevel.class,
+                    ServerPlayer.class,
+                    AbstractLogisticsStationBlockEntity.class,
+                    AbstractStationMenu.class
+            );
+            m.setAccessible(true);
+            m.invoke(null, level, player, station, remoteMenu);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Could not invoke C2SStationActionPacket.handleDispatch", e);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -2012,6 +2589,25 @@ final class Lc2QaRunner {
         qa.checkEquals("s7.write_boat_cargo_stacks", 10, data.getTransitCargo(s7BoatTransitId).size());
         qa.checkEquals("s7.write_drone_cargo_stacks", 8, data.getTransitCargo(s7DroneTransitId).size());
 
+        // Persist a charged Comm Base Station + a bound & charged Operation Terminal inside a Chest!
+        Block commBlock = Lc2QaHelpers.requireBlock(LogisticsConstants.COMM_BASE_STATION_ID);
+        level.setBlock(s7CommStationPos,
+                commBlock.defaultBlockState().setValue(CommBaseStationBlock.ACTIVE, true),
+                Block.UPDATE_ALL);
+        CommBaseStationBlockEntity persistComm = (CommBaseStationBlockEntity) level.getBlockEntity(s7CommStationPos);
+        persistComm.setStoredEu(S7_EXPECTED_COMM_EU);
+
+        level.setBlock(s7TerminalChestPos, Blocks.CHEST.defaultBlockState(), Block.UPDATE_ALL);
+        ChestBlockEntity termChest = (ChestBlockEntity) level.getBlockEntity(s7TerminalChestPos);
+        String dim = level.dimension().location().toString();
+        ItemStack persistTerm = Lc2QaHelpers.itemStack(LogisticsConstants.OPERATION_TERMINAL_ID, 1);
+        OperationTerminalItem.setStoredEu(persistTerm, S7_EXPECTED_TERMINAL_EU);
+        OperationTerminalItem.bind(persistTerm, dim, s7CommStationPos);
+        OperationTerminalItem.bind(persistTerm, dim, s7PortAPos);
+        String savedTermId = OperationTerminalItem.getOrCreateTerminalId(persistTerm);
+        termChest.setItem(0, persistTerm);
+        termChest.setChanged();
+
         Map<String, String> extra = new LinkedHashMap<>();
         extra.put("persist.boat.id", s7BoatTransitId.toString());
         extra.put("persist.drone.id", s7DroneTransitId.toString());
@@ -2019,6 +2615,9 @@ final class Lc2QaRunner {
         extra.put("persist.drone.expectedItems", Integer.toString(s7ExpectedDroneItems));
         extra.put("persist.boat.savedX", Double.toString(boatOpt.get().currentPos().x()));
         extra.put("persist.drone.savedX", Double.toString(droneOpt.get().currentPos().x()));
+        extra.put("persist.comm.eu", Double.toString(S7_EXPECTED_COMM_EU));
+        extra.put("persist.terminal.id", savedTermId);
+        extra.put("persist.terminal.eu", Double.toString(S7_EXPECTED_TERMINAL_EU));
 
         // Force flush world + SavedData cleanly before halting!
         data.setDirty();
@@ -2042,6 +2641,9 @@ final class Lc2QaRunner {
         s7DroneTransitId = UUID.fromString(prev.getProperty("persist.drone.id"));
         s7ExpectedBoatItems = Integer.parseInt(prev.getProperty("persist.boat.expectedItems"));
         s7ExpectedDroneItems = Integer.parseInt(prev.getProperty("persist.drone.expectedItems"));
+        double savedCommEu = Double.parseDouble(prev.getProperty("persist.comm.eu"));
+        String savedTermId = prev.getProperty("persist.terminal.id");
+        double savedTermEu = Double.parseDouble(prev.getProperty("persist.terminal.eu"));
 
         LogisticsSavedData data = LogisticsLevelManager.data(level);
         StationRegistry reg = data.stationRegistry();
@@ -2065,6 +2667,33 @@ final class Lc2QaRunner {
         int droneCargoCount = data.getTransitCargo(s7DroneTransitId).stream().mapToInt(ItemStack::getCount).sum();
         qa.checkEquals("s7.read_boat_cargo_intact_after_restart", s7ExpectedBoatItems, boatCargoCount);
         qa.checkEquals("s7.read_drone_cargo_intact_after_restart", s7ExpectedDroneItems, droneCargoCount);
+
+        // Verify Comm Base Station EU + Operation Terminal ID/EU/bindings survived cold restart!
+        CommBaseStationBlockEntity reloadedComm = (CommBaseStationBlockEntity) level.getBlockEntity(s7CommStationPos);
+        qa.check("s7.read_comm_base_station_eu_survived_cold_restart",
+                reloadedComm != null
+                        && reloadedComm.getStoredEu() <= savedCommEu + 1e-6
+                        && reloadedComm.getStoredEu() >= savedCommEu - 30.0
+                        && reloadedComm.isOnline()
+                        && level.getBlockState(s7CommStationPos).getValue(CommBaseStationBlock.ACTIVE),
+                "reloadedCommEu=" + (reloadedComm != null ? reloadedComm.getStoredEu() : -1)
+                        + " (saved=" + savedCommEu + ")");
+
+        ChestBlockEntity reloadedChest = (ChestBlockEntity) level.getBlockEntity(s7TerminalChestPos);
+        ItemStack reloadedTerm = reloadedChest != null ? reloadedChest.getItem(0) : ItemStack.EMPTY;
+        String dim = level.dimension().location().toString();
+        List<CommBinding> reloadedBindings = OperationTerminalItem.getBindings(reloadedTerm);
+        qa.check("s7.read_operation_terminal_survived_cold_restart",
+                !reloadedTerm.isEmpty()
+                        && reloadedTerm.getItem() instanceof OperationTerminalItem
+                        && savedTermId.equals(OperationTerminalItem.getTerminalId(reloadedTerm))
+                        && Math.abs(OperationTerminalItem.getStoredEu(reloadedTerm) - savedTermEu) < 1e-6
+                        && reloadedBindings.size() == 2
+                        && OperationTerminalItem.isBoundTo(reloadedTerm, dim, s7CommStationPos)
+                        && OperationTerminalItem.isBoundTo(reloadedTerm, dim, s7PortAPos),
+                "termId=" + OperationTerminalItem.getTerminalId(reloadedTerm)
+                        + ", eu=" + OperationTerminalItem.getStoredEu(reloadedTerm)
+                        + ", bindings=" + reloadedBindings.size());
     }
 
     private void tickScenario7ReadWaitCompletion(MinecraftServer server, ServerLevel level) throws Exception {
@@ -2093,6 +2722,15 @@ final class Lc2QaRunner {
                 stA.findReadyDroneBay() >= 0 && stA.getBayDroneKind(stA.findReadyDroneBay()) == VehicleKind.HEAVY_DRONE,
                 "stA dockedMask=" + Integer.toBinaryString(stA.getDockedBayMask()));
         qa.checkClose("s7.read_target_paid_heavy_return_1600eu", 3400.0, stB.getStoredEu(), 1e-6);
+
+        CommBaseStationBlockEntity postComm = (CommBaseStationBlockEntity) level.getBlockEntity(s7CommStationPos);
+        qa.check("s7.read_comm_base_station_ticks_after_restart",
+                postComm != null
+                        && postComm.getStoredEu() < S7_EXPECTED_COMM_EU
+                        && postComm.getStoredEu() > 2000.0
+                        && postComm.isOnline()
+                        && level.getBlockState(s7CommStationPos).getValue(CommBaseStationBlock.ACTIVE),
+                "postCommEu=" + (postComm != null ? postComm.getStoredEu() : -1));
 
         qa.writePassedReport(READ_REPORT, Map.of());
         Lc2QaMod.LOGGER.info("[LC2-QA] Read phase COMPLETE ({} checks PASSED). Halting server...", qa.passedCount());

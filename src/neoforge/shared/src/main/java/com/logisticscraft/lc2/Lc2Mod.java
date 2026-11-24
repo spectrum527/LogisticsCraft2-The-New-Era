@@ -1,6 +1,7 @@
 package com.logisticscraft.lc2;
 
 import com.logisticscraft.lc2.client.Lc2ClientSetup;
+import com.logisticscraft.lc2.compat.Lc2TopCompat;
 import com.logisticscraft.lc2.core.LogisticsConstants;
 import com.logisticscraft.lc2.network.Lc2Network;
 import com.logisticscraft.lc2.platform.LogisticsChunkTickets;
@@ -25,6 +26,7 @@ public final class Lc2Mod {
         LogisticsChunkTickets.install(modBus);
         Lc2Registries.registerCapabilities(modBus);
         Lc2Network.install(modBus, side);
+        Lc2TopCompat.install(modBus);
         LogisticsLevelManager.install(NeoForge.EVENT_BUS);
 
         if (side == Dist.CLIENT) {

@@ -46,7 +46,10 @@ public enum DispatchFailure {
     INVALID_VEHICLE_FOR_STATION("status.lc2.failure.invalid_vehicle_for_station"),
 
     /** Player attempted to board an autonomous Electric Smart Cargo Boat while in motion. */
-    BOARDING_BLOCKED_IN_TRANSIT("status.lc2.failure.boarding_blocked_in_transit");
+    BOARDING_BLOCKED_IN_TRANSIT("status.lc2.failure.boarding_blocked_in_transit"),
+
+    /** Operation Terminal lacks the 100 EU (400 FE) required to execute a remote dispatch. */
+    TERMINAL_INSUFFICIENT_ENERGY("status.lc2.failure.terminal_insufficient_energy");
 
     private final String translationKey;
 

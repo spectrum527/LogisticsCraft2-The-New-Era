@@ -121,7 +121,11 @@ public final class SmartPortBlock extends Lc2StationBlockBase
                 && player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos) instanceof SmartPortBlockEntity port) {
             port.requestImmediateWaterCheck();
-            serverPlayer.openMenu(port, buf -> buf.writeBlockPos(pos));
+            serverPlayer.openMenu(port, buf -> {
+                buf.writeBlockPos(pos);
+                buf.writeBoolean(false);
+                buf.writeUtf("", 64);
+            });
             Lc2Native.sendToPlayer(serverPlayer, port.buildSyncPayload(serverLevel));
         }
         return InteractionResult.SUCCESS;

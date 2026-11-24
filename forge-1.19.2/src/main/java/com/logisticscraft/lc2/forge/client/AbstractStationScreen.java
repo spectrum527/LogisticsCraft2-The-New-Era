@@ -4,6 +4,7 @@ import com.logisticscraft.lc2.core.EnergyPriority;
 import com.logisticscraft.lc2.core.LogisticsConstants;
 import com.logisticscraft.lc2.forge.gui.AbstractStationMenu;
 import com.logisticscraft.lc2.forge.network.C2SStationActionPacket;
+import com.logisticscraft.lc2.forge.network.C2STerminalActionPacket;
 import com.logisticscraft.lc2.forge.network.Lc2Network;
 import com.logisticscraft.lc2.forge.network.S2CStationSyncPacket;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -51,6 +52,11 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
     @Nullable
     protected S2CStationSyncPacket sync;
     private boolean initializedFromSync = false;
+
+    private int remoteBadgeX = 0;
+    private int remoteBadgeY = 2;
+    private int remoteBadgeW = 0;
+    private int remoteBadgeH = 10;
 
     protected AbstractStationScreen(
             T menu,
@@ -186,6 +192,20 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                         C2SStationActionPacket.Action.SWAP_CARGO_ZONES
                 ))
         ));
+
+        // Remote mode: compact "Back to List" button at (leftPos + 279, topPos + 1, 68, 11)
+        if (this.menu.isRemoteMode()) {
+            addRenderableWidget(new CompactButton(
+                    this.leftPos + 279,
+                    this.topPos + 1,
+                    68,
+                    11,
+                    Component.translatable("gui.lc2.back_to_terminal"),
+                    btn -> Lc2Network.sendToServer(
+                            C2STerminalActionPacket.returnToList(this.menu.getRemoteTerminalId())
+                    )
+            ));
+        }
 
         // Apply any sync already buffered in the menu and request fresh sync
         if (this.menu.getLatestSync() != null) {
@@ -376,7 +396,26 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
         Component headerTitle = (this.sync != null && !this.sync.stationName().isBlank())
                 ? Component.literal(this.sync.stationName())
                 : this.title;
-        this.font.draw(poseStack, headerTitle, this.titleLabelX, this.titleLabelY, TITLE_COLOR);
+        if (this.menu.isRemoteMode()) {
+            String badgeText = Component.translatable("gui.lc2.remote_readonly").getString();
+            int badgeW = Math.min(110, this.font.width(badgeText) + 8);
+            int maxTitleW = Math.max(40, 274 - this.titleLabelX - badgeW - 6);
+            String titleStr = trimToWidth(headerTitle.getString(), maxTitleW);
+            this.font.draw(poseStack, titleStr, this.titleLabelX, this.titleLabelY, TITLE_COLOR);
+
+            int titleW = this.font.width(titleStr);
+            this.remoteBadgeX = this.titleLabelX + titleW + 6;
+            this.remoteBadgeY = 2;
+            this.remoteBadgeW = badgeW;
+            this.remoteBadgeH = 10;
+
+            fill(poseStack, remoteBadgeX, remoteBadgeY, remoteBadgeX + remoteBadgeW, remoteBadgeY + remoteBadgeH, 0xFF38D9FF);
+            fill(poseStack, remoteBadgeX + 1, remoteBadgeY + 1, remoteBadgeX + remoteBadgeW - 1, remoteBadgeY + remoteBadgeH - 1, 0xFF1A2D40);
+            drawFittedLcdText(poseStack, badgeText, remoteBadgeX + 4, remoteBadgeY + 1, remoteBadgeW - 8, LCD_TEXT_CYAN);
+        } else {
+            this.remoteBadgeW = 0;
+            this.font.draw(poseStack, headerTitle, this.titleLabelX, this.titleLabelY, TITLE_COLOR);
+        }
         this.font.draw(poseStack, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, TITLE_COLOR);
 
         // 2-Zone Cargo Headers: Outbound at (8, 77), Storage at (190, 77)
@@ -400,6 +439,14 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
     private void renderCustomTooltips(PoseStack poseStack, int mouseX, int mouseY) {
         int relX = mouseX - this.leftPos;
         int relY = mouseY - this.topPos;
+
+        // Remote read-only badge tooltip
+        if (this.menu.isRemoteMode()
+                && this.remoteBadgeW > 0
+                && inRect(relX, relY, this.remoteBadgeX, this.remoteBadgeY, this.remoteBadgeW, this.remoteBadgeH)) {
+            renderTooltip(poseStack, Component.translatable("gui.lc2.remote_readonly.tooltip"), mouseX, mouseY);
+            return;
+        }
 
         // Center Swap Button tooltip (172, 104, 16, 20)
         if (inRect(relX, relY, 172, 104, 16, 20)) {

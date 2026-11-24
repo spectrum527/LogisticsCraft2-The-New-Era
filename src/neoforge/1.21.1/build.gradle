@@ -6,3 +6,12 @@ ext.loaderMetadata = 'modLoader="javafml"\nloaderVersion="[4,)"'
 apply from: '../platform.gradle'
 sourceSets.main.java.srcDir('../pre-26.2/src/main/java')
 apply from: rootProject.file('src/qa/neoforge-qa.gradle')
+
+dependencies {
+    compileOnly('maven.modrinth:the-one-probe:kxB9y8zd') { transitive = false }
+    compileOnly('maven.modrinth:curios:KJsZIQrT') { transitive = false }
+    compileOnly('maven.modrinth:jade:eYz2YBGT') { transitive = false }
+    compileOnly('maven.modrinth:wthit:xmRpwbgr') { transitive = false }
+    compileOnly('maven.modrinth:jei:lDv3cHMp') { transitive = false }
+    compileOnly('maven.modrinth:emi:5sIPA1To') { transitive = false }
+}

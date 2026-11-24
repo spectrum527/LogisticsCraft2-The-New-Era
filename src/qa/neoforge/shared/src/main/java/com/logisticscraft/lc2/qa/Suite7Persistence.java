@@ -1,19 +1,24 @@
 package com.logisticscraft.lc2.qa;
 
 import com.logisticscraft.lc2.Lc2Registries;
+import com.logisticscraft.lc2.block.CommBaseStationBlock;
 import com.logisticscraft.lc2.block.SmartPortBlock;
 import com.logisticscraft.lc2.blockentity.CargoStationBlockEntity;
+import com.logisticscraft.lc2.blockentity.CommBaseStationBlockEntity;
 import com.logisticscraft.lc2.blockentity.SmartPortBlockEntity;
+import com.logisticscraft.lc2.core.CommBinding;
 import com.logisticscraft.lc2.core.EnergyPriority;
 import com.logisticscraft.lc2.core.LogisticsConstants;
 import com.logisticscraft.lc2.core.TransitPhase;
 import com.logisticscraft.lc2.core.TransitRecord;
+import com.logisticscraft.lc2.item.OperationTerminalItem;
 import com.logisticscraft.lc2.platform.Lc2Native;
 import com.logisticscraft.lc2.world.LogisticsLevelManager;
 import com.logisticscraft.lc2.world.LogisticsSavedData;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Properties;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -23,6 +28,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
 
 /**
@@ -50,6 +56,11 @@ public final class Suite7Persistence {
     private static final BlockPos PERSIST_AIR_A = new BlockPos(10, 64, -48);
     private static final BlockPos PERSIST_AIR_B = new BlockPos(50, 64, -48);
     private static final BlockPos PERSIST_AIR_B_CHEST = PERSIST_AIR_B.east();
+
+    private static final BlockPos PERSIST_COMM_STATION = new BlockPos(10, 64, -44);
+    private static final BlockPos PERSIST_TERMINAL_CHEST = new BlockPos(12, 64, -44);
+    private static final double EXPECTED_COMM_EU = 3_200.0;
+    private static final double EXPECTED_TERMINAL_EU = 4_321.5;
 
     private boolean writeForced = false;
     private int writeForceTick = 0;
@@ -184,12 +195,33 @@ public final class Suite7Persistence {
                         && reloaded.stationRegistry().get(LogisticsSavedData.toPos3i(PERSIST_AIR_B)).isPresent(),
                 "rtDiamonds=" + rtBoatDiamonds + ", rtEmeralds=" + rtDroneEmeralds);
 
+        // Place Comm Base Station & Operation Terminal inside a Chest right before server save & halt
+        level.setBlockAndUpdate(PERSIST_COMM_STATION,
+                QaChecks.block(LogisticsConstants.COMM_BASE_STATION_ID).defaultBlockState()
+                        .setValue(CommBaseStationBlock.ACTIVE, true));
+        CommBaseStationBlockEntity persistComm = (CommBaseStationBlockEntity) level.getBlockEntity(PERSIST_COMM_STATION);
+        persistComm.setStoredEu(EXPECTED_COMM_EU);
+
+        level.setBlockAndUpdate(PERSIST_TERMINAL_CHEST, Blocks.CHEST.defaultBlockState());
+        ChestBlockEntity termChest = (ChestBlockEntity) level.getBlockEntity(PERSIST_TERMINAL_CHEST);
+        String dim = Lc2Native.dimensionId(level);
+        ItemStack persistTerm = new ItemStack(Lc2Registries.OPERATION_TERMINAL_ITEM.get());
+        OperationTerminalItem.setStoredEu(persistTerm, EXPECTED_TERMINAL_EU);
+        OperationTerminalItem.bindCommStation(persistTerm, dim, PERSIST_COMM_STATION);
+        OperationTerminalItem.bindCommStation(persistTerm, dim, PERSIST_PORT_A);
+        String savedTermId = OperationTerminalItem.ensureTerminalId(persistTerm);
+        termChest.setItem(0, persistTerm);
+        termChest.setChanged();
+
         // Record expected state for cold-restart read phase!
         Properties state = new Properties();
         state.setProperty("boatId", boatId.toString());
         state.setProperty("droneId", droneId.toString());
         state.setProperty("boatX", Double.toString(boat.currentPos().x()));
         state.setProperty("droneY", Double.toString(drone.currentPos().y()));
+        state.setProperty("commEu", Double.toString(EXPECTED_COMM_EU));
+        state.setProperty("terminalId", savedTermId);
+        state.setProperty("terminalEu", Double.toString(EXPECTED_TERMINAL_EU));
         try (var w = Files.newBufferedWriter(STATE_FILE)) {
             state.store(w, "LC2 cold restart persistence baseline");
         } catch (IOException e) {
@@ -209,6 +241,9 @@ public final class Suite7Persistence {
         droneId = UUID.fromString(state.getProperty("droneId"));
         double savedBoatX = Double.parseDouble(state.getProperty("boatX"));
         double savedDroneY = Double.parseDouble(state.getProperty("droneY"));
+        double savedCommEu = Double.parseDouble(state.getProperty("commEu"));
+        String savedTermId = state.getProperty("terminalId");
+        double savedTermEu = Double.parseDouble(state.getProperty("terminalEu"));
 
         LogisticsSavedData data = LogisticsLevelManager.getData(level);
         TransitRecord boat = data.engine().getTransit(boatId).orElse(null);
@@ -234,6 +269,32 @@ public final class Suite7Persistence {
                         boat != null ? boat.currentPos().x() : -1, savedBoatX,
                         drone != null ? drone.currentPos().y() : -1, savedDroneY,
                         boatDiamonds, droneEmeralds));
+
+        // Verify Comm Base Station EU + Operation Terminal bindings & EU survived cold restart intact!
+        CommBaseStationBlockEntity reloadedComm =
+                (CommBaseStationBlockEntity) level.getBlockEntity(PERSIST_COMM_STATION);
+        checks.check("s7.cold.comm_base_station_eu_and_online_restored",
+                reloadedComm != null
+                        && Math.abs(reloadedComm.getStoredEu() - savedCommEu) < 1e-6
+                        && reloadedComm.isOnline()
+                        && level.getBlockState(PERSIST_COMM_STATION).getValue(CommBaseStationBlock.ACTIVE),
+                "reloadedCommEu=" + (reloadedComm != null ? reloadedComm.getStoredEu() : -1));
+
+        ChestBlockEntity reloadedChest = (ChestBlockEntity) level.getBlockEntity(PERSIST_TERMINAL_CHEST);
+        ItemStack reloadedTerm = reloadedChest != null ? reloadedChest.getItem(0) : ItemStack.EMPTY;
+        String dim = Lc2Native.dimensionId(level);
+        List<CommBinding> reloadedBindings = OperationTerminalItem.getBindings(reloadedTerm);
+        checks.check("s7.cold.operation_terminal_id_eu_and_bindings_restored",
+                !reloadedTerm.isEmpty()
+                        && reloadedTerm.getItem() instanceof OperationTerminalItem
+                        && savedTermId.equals(OperationTerminalItem.getTerminalId(reloadedTerm))
+                        && Math.abs(OperationTerminalItem.getStoredEu(reloadedTerm) - savedTermEu) < 1e-6
+                        && reloadedBindings.size() == 2
+                        && OperationTerminalItem.isBoundTo(reloadedTerm, dim, PERSIST_COMM_STATION)
+                        && OperationTerminalItem.isBoundTo(reloadedTerm, dim, PERSIST_PORT_A),
+                "termId=" + OperationTerminalItem.getTerminalId(reloadedTerm)
+                        + ", eu=" + OperationTerminalItem.getStoredEu(reloadedTerm)
+                        + ", bindings=" + reloadedBindings.size());
     }
 
     /** Ticks read phase until restarted mid-flight boat and drone finish delivery. */
@@ -270,6 +331,16 @@ public final class Suite7Persistence {
                         && QaChecks.countOutboundItems(airB).isEmpty()
                         && airB != null && airB.countReadyDrones() == 1,
                 "deliveredStorage=" + droneDelivered);
+
+        CommBaseStationBlockEntity reloadedComm =
+                (CommBaseStationBlockEntity) level.getBlockEntity(PERSIST_COMM_STATION);
+        checks.check("s7.cold.restarted_comm_base_station_ticks_standby_drain",
+                reloadedComm != null
+                        && reloadedComm.getStoredEu() < EXPECTED_COMM_EU
+                        && reloadedComm.getStoredEu() > 2_000.0
+                        && reloadedComm.isOnline()
+                        && level.getBlockState(PERSIST_COMM_STATION).getValue(CommBaseStationBlock.ACTIVE),
+                "postTickCommEu=" + (reloadedComm != null ? reloadedComm.getStoredEu() : -1));
 
         readDone = true;
         return true;

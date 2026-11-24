@@ -22,6 +22,8 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -29,6 +31,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.energy.EnergyHandler;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 /**
  * NeoForge 26.x (26.1.2 & 26.2) version-specific QA helpers.
@@ -147,5 +152,136 @@ public final class QaPlatform {
         root.put("items", encodedItems);
         root.put("lc2", legacyLc2Tag.copy());
         be.loadCustomOnly(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), root));
+    }
+
+    /** Returns {@code true} if the block at {@code pos} exposes a 26.x transactional FE block capability. */
+    public static boolean hasBlockFeCapability(ServerLevel level, BlockPos pos, Direction side) {
+        return level.getCapability(Capabilities.Energy.BLOCK, pos, side) != null;
+    }
+
+    /** Reads the FE energy stored in the block capability at {@code pos} on {@code side}. */
+    public static int blockFeStored(ServerLevel level, BlockPos pos, Direction side) {
+        EnergyHandler handler = level.getCapability(Capabilities.Energy.BLOCK, pos, side);
+        if (handler == null) {
+            throw new AssertionError("Missing FE block capability at " + pos + " side=" + side);
+        }
+        return (int) handler.getAmountAsLong();
+    }
+
+    /** Reads the FE capacity of the block capability at {@code pos} on {@code side}. */
+    public static int blockFeCapacity(ServerLevel level, BlockPos pos, Direction side) {
+        EnergyHandler handler = level.getCapability(Capabilities.Energy.BLOCK, pos, side);
+        if (handler == null) {
+            throw new AssertionError("Missing FE block capability at " + pos + " side=" + side);
+        }
+        return (int) handler.getCapacityAsLong();
+    }
+
+    /** Inserts FE into the 26.x block capability using a root {@link Transaction} (rolled back if simulated). */
+    public static int blockFeReceive(ServerLevel level, BlockPos pos, Direction side, int offeredFe, boolean simulate) {
+        EnergyHandler handler = level.getCapability(Capabilities.Energy.BLOCK, pos, side);
+        if (handler == null) {
+            throw new AssertionError("Missing FE block capability at " + pos + " side=" + side);
+        }
+        try (var tx = Transaction.openRoot()) {
+            int accepted = handler.insert(offeredFe, tx);
+            if (!simulate) {
+                tx.commit();
+            }
+            return accepted;
+        }
+    }
+
+    /** Attempts to extract FE from the 26.x block capability using a root {@link Transaction}. */
+    public static int blockFeExtract(ServerLevel level, BlockPos pos, Direction side, int maxExtract, boolean simulate) {
+        EnergyHandler handler = level.getCapability(Capabilities.Energy.BLOCK, pos, side);
+        if (handler == null) {
+            throw new AssertionError("Missing FE block capability at " + pos + " side=" + side);
+        }
+        try (var tx = Transaction.openRoot()) {
+            int extracted = handler.extract(maxExtract, tx);
+            if (!simulate) {
+                tx.commit();
+            }
+            return extracted;
+        }
+    }
+
+    /** Returns {@code true} if the item in {@code player}'s inventory slot {@code invSlot} exposes FE capability. */
+    public static boolean hasItemFeCapability(Player player, int invSlot) {
+        return ItemAccess.forPlayerSlot(player, invSlot).getCapability(Capabilities.Energy.ITEM) != null;
+    }
+
+    /** Reads the FE energy stored in the item capability in {@code player}'s inventory slot {@code invSlot}. */
+    public static int itemFeStored(Player player, int invSlot) {
+        EnergyHandler handler = ItemAccess.forPlayerSlot(player, invSlot).getCapability(Capabilities.Energy.ITEM);
+        if (handler == null) {
+            throw new AssertionError("Missing FE item capability in player slot " + invSlot);
+        }
+        return (int) handler.getAmountAsLong();
+    }
+
+    /** Reads the FE capacity of the item capability in {@code player}'s inventory slot {@code invSlot}. */
+    public static int itemFeCapacity(Player player, int invSlot) {
+        EnergyHandler handler = ItemAccess.forPlayerSlot(player, invSlot).getCapability(Capabilities.Energy.ITEM);
+        if (handler == null) {
+            throw new AssertionError("Missing FE item capability in player slot " + invSlot);
+        }
+        return (int) handler.getCapacityAsLong();
+    }
+
+    /** Inserts FE into the 26.x item capability via {@link ItemAccess} and a root {@link Transaction}. */
+    public static int itemFeReceive(Player player, int invSlot, int offeredFe, boolean simulate) {
+        EnergyHandler handler = ItemAccess.forPlayerSlot(player, invSlot).getCapability(Capabilities.Energy.ITEM);
+        if (handler == null) {
+            throw new AssertionError("Missing FE item capability in player slot " + invSlot);
+        }
+        try (var tx = Transaction.openRoot()) {
+            int accepted = handler.insert(offeredFe, tx);
+            if (!simulate) {
+                tx.commit();
+            }
+            return accepted;
+        }
+    }
+
+    /** Attempts to extract FE from the 26.x item capability via {@link ItemAccess} and a root {@link Transaction}. */
+    public static int itemFeExtract(Player player, int invSlot, int maxExtract, boolean simulate) {
+        EnergyHandler handler = ItemAccess.forPlayerSlot(player, invSlot).getCapability(Capabilities.Energy.ITEM);
+        if (handler == null) {
+            throw new AssertionError("Missing FE item capability in player slot " + invSlot);
+        }
+        try (var tx = Transaction.openRoot()) {
+            int extracted = handler.extract(maxExtract, tx);
+            if (!simulate) {
+                tx.commit();
+            }
+            return extracted;
+        }
+    }
+
+    /** Invokes {@code menu.clicked(..., ContainerInput.PICKUP, player)} on 26.x. */
+    public static void clickMenuPickup(AbstractContainerMenu menu, int slotId, int button, Player player) {
+        menu.clicked(slotId, button, ContainerInput.PICKUP, player);
+    }
+
+    /** Invokes {@code menu.clicked(..., ContainerInput.QUICK_MOVE, player)} on 26.x. */
+    public static void clickMenuQuickMove(AbstractContainerMenu menu, int slotId, int button, Player player) {
+        menu.clicked(slotId, button, ContainerInput.QUICK_MOVE, player);
+    }
+
+    /** Invokes {@code menu.clicked(..., ContainerInput.PICKUP_ALL, player)} on 26.x. */
+    public static void clickMenuPickupAll(AbstractContainerMenu menu, int slotId, int button, Player player) {
+        menu.clicked(slotId, button, ContainerInput.PICKUP_ALL, player);
+    }
+
+    /** Invokes {@code menu.clicked(..., ContainerInput.SWAP, player)} on 26.x. */
+    public static void clickMenuSwap(AbstractContainerMenu menu, int slotId, int hotbarButton, Player player) {
+        menu.clicked(slotId, hotbarButton, ContainerInput.SWAP, player);
+    }
+
+    /** Invokes {@code menu.clicked(..., ContainerInput.THROW, player)} on 26.x. */
+    public static void clickMenuThrow(AbstractContainerMenu menu, int slotId, int button, Player player) {
+        menu.clicked(slotId, button, ContainerInput.THROW, player);
     }
 }

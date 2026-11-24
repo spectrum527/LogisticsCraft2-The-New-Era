@@ -40,6 +40,7 @@ public final class Lc2QaHarness {
     private final Suite5ChunkLoader suite5 = new Suite5ChunkLoader();
     private final Suite6CollisionAvoidance suite6 = new Suite6CollisionAvoidance();
     private final Suite8TwoZoneAndVehicleFix suite8 = new Suite8TwoZoneAndVehicleFix();
+    private final Suite9RemoteTerminal suite9 = new Suite9RemoteTerminal();
     private final Suite7Persistence suite7 = new Suite7Persistence();
     private final FieldTestRunner fieldRunner = new FieldTestRunner();
     private final FieldLiveServer fieldLiveServer = new FieldLiveServer();
@@ -159,14 +160,15 @@ public final class Lc2QaHarness {
                 case 5 -> suite5.tick(level, ticks, checks);
                 case 6 -> suite6.tick(level, ticks, checks);
                 case 7 -> suite8.tick(level, ticks, checks);
-                case 8 -> suite7.tickWrite(level, ticks, checks);
+                case 8 -> suite9.tick(level, ticks, checks);
+                case 9 -> suite7.tickWrite(level, ticks, checks);
                 default -> true;
             };
 
             if (suiteDone) {
                 LOGGER.info("[LC2-QA] Completed Suite {} at tick {}", activeSuite, ticks);
                 activeSuite++;
-                if (activeSuite > 8) {
+                if (activeSuite > 9) {
                     checks.check("write.world_saved", server.saveEverything(false, true, true));
                     complete(server, null);
                 }

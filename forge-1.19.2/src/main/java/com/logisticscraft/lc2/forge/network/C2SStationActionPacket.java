@@ -1,9 +1,17 @@
 package com.logisticscraft.lc2.forge.network;
 
+import com.logisticscraft.lc2.core.DispatchFailure;
+import com.logisticscraft.lc2.core.EnergyUnits;
+import com.logisticscraft.lc2.core.RemoteDisconnectReason;
 import com.logisticscraft.lc2.forge.block.AbstractLogisticsStationBlockEntity;
+import com.logisticscraft.lc2.forge.block.SmartPortBlockEntity;
+import com.logisticscraft.lc2.forge.gui.AbstractStationMenu;
+import com.logisticscraft.lc2.forge.item.OperationTerminalItem;
+import com.logisticscraft.lc2.forge.util.TerminalSessionService;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -11,7 +19,8 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
 
 /**
- * Client-to-server control packet for Smart Port and Cargo Station GUI interactions.
+ * Client-to-server control packet for Smart Port and Cargo Station GUI interactions,
+ * supporting both local proximity access and authenticated Operation Terminal remote sessions.
  */
 public record C2SStationActionPacket(
         BlockPos stationPos,
@@ -82,9 +91,19 @@ public record C2SStationActionPacket(
             if (!level.isLoaded(packet.stationPos)) {
                 return;
             }
-            if (player.distanceToSqr(Vec3.atCenterOf(packet.stationPos)) > 64.0) {
+
+            AbstractStationMenu remoteMenu = null;
+            if (player.containerMenu instanceof AbstractStationMenu menu
+                    && menu.isRemoteMode()
+                    && menu.getStationPos().equals(packet.stationPos)
+                    && menu.stillValid(player)) {
+                remoteMenu = menu;
+            }
+            boolean localAccess = player.distanceToSqr(Vec3.atCenterOf(packet.stationPos)) <= 64.0;
+            if (!localAccess && remoteMenu == null) {
                 return;
             }
+
             BlockEntity be = level.getBlockEntity(packet.stationPos);
             if (!(be instanceof AbstractLogisticsStationBlockEntity station)) {
                 return;
@@ -97,7 +116,7 @@ public record C2SStationActionPacket(
                 case CYCLE_TARGET -> station.cycleTarget(level, packet.xArg >= 0 ? 1 : -1);
                 case TOGGLE_AUTO_RETURN -> station.toggleAutoReturn();
                 case TOGGLE_ENERGY_PRIORITY -> station.toggleEnergyPriority();
-                case DISPATCH -> station.tryDispatch(level, true);
+                case DISPATCH -> handleDispatch(level, player, station, remoteMenu);
                 case SWAP_CARGO_ZONES -> {
                     station.swapCargoZones();
                     if (player.containerMenu != null) {
@@ -105,7 +124,7 @@ public record C2SStationActionPacket(
                     }
                 }
                 case REQUEST_SYNC -> {
-                    if (station instanceof com.logisticscraft.lc2.forge.block.SmartPortBlockEntity port) {
+                    if (station instanceof SmartPortBlockEntity port) {
                         port.requestWaterCheckIfStale(level);
                     }
                 }
@@ -113,5 +132,39 @@ public record C2SStationActionPacket(
             station.sendSyncTo(player);
         });
         ctx.setPacketHandled(true);
+    }
+
+    private static void handleDispatch(
+            ServerLevel level,
+            ServerPlayer player,
+            AbstractLogisticsStationBlockEntity station,
+            AbstractStationMenu remoteMenu
+    ) {
+        if (remoteMenu == null) {
+            station.tryDispatch(level, true);
+            return;
+        }
+        TerminalSessionService.FoundTerminal found =
+                TerminalSessionService.findTerminal(player, remoteMenu.getRemoteTerminalId());
+        if (found == null) {
+            player.displayClientMessage(
+                    Component.translatable(RemoteDisconnectReason.TERMINAL_MISSING.translationKey()),
+                    true
+            );
+            return;
+        }
+        double currentEu = OperationTerminalItem.getStoredEu(found.stack());
+        if (!player.isCreative() && !EnergyUnits.canAffordTerminalDispatch(currentEu)) {
+            String key = DispatchFailure.TERMINAL_INSUFFICIENT_ENERGY.translationKey();
+            station.setStatusKey(key);
+            player.displayClientMessage(Component.translatable(key), true);
+            return;
+        }
+        boolean dispatched = station.tryDispatch(level, true);
+        if (dispatched && !player.isCreative()) {
+            double remaining = EnergyUnits.deductTerminalDispatch(OperationTerminalItem.getStoredEu(found.stack()));
+            OperationTerminalItem.setStoredEu(found.stack(), remaining);
+            found.markDirty();
+        }
     }
 }

@@ -150,7 +150,15 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
     public abstract StationSyncPayload buildSyncPayload(ServerLevel level);
 
     /** Attempts to dispatch a vehicle from this station (called by redstone or GUI button). */
-    public abstract void handleManualDispatch(ServerLevel level);
+    public final void handleManualDispatch(ServerLevel level) {
+        handleManualDispatchWithResult(level);
+    }
+
+    /**
+     * Attempts to manually dispatch a vehicle from this station and returns {@code true} iff
+     * the launch succeeded (used by remote Operation Terminal dispatch energy accounting).
+     */
+    public abstract boolean handleManualDispatchWithResult(ServerLevel level);
 
     // --- Lifecycle ---
 

@@ -3,6 +3,8 @@ package com.logisticscraft.lc2.forge;
 import com.logisticscraft.lc2.core.LogisticsConstants;
 import com.logisticscraft.lc2.forge.block.CargoStationBlock;
 import com.logisticscraft.lc2.forge.block.CargoStationBlockEntity;
+import com.logisticscraft.lc2.forge.block.CommBaseStationBlock;
+import com.logisticscraft.lc2.forge.block.CommBaseStationBlockEntity;
 import com.logisticscraft.lc2.forge.block.SmartPortBlock;
 import com.logisticscraft.lc2.forge.block.SmartPortBlockEntity;
 import com.logisticscraft.lc2.forge.entity.CargoDroneEntity;
@@ -13,6 +15,7 @@ import com.logisticscraft.lc2.forge.gui.SmartPortMenu;
 import com.logisticscraft.lc2.forge.item.ElectricCargoBoatItem;
 import com.logisticscraft.lc2.forge.item.Lc2BlockItem;
 import com.logisticscraft.lc2.forge.item.Lc2TooltipItem;
+import com.logisticscraft.lc2.forge.item.OperationTerminalItem;
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -60,6 +63,9 @@ public final class Lc2Registries {
         public void fillItemList(NonNullList<ItemStack> items) {
             items.add(new ItemStack(SMART_PORT_ITEM.get()));
             items.add(new ItemStack(CARGO_STATION_ITEM.get()));
+            items.add(new ItemStack(COMM_BASE_STATION_ITEM.get()));
+            items.add(new ItemStack(OPERATION_TERMINAL_ITEM.get()));
+            items.add(OperationTerminalItem.createChargedStack());
             items.add(new ItemStack(ELECTRIC_CARGO_BOAT_ITEM.get()));
             items.add(new ItemStack(TRANSPORT_DRONE_ITEM.get()));
             items.add(new ItemStack(HEAVY_TRANSPORT_DRONE_ITEM.get()));
@@ -70,7 +76,7 @@ public final class Lc2Registries {
         }
     };
 
-    // --- Blocks (2) ---
+    // --- Blocks (3) ---
 
     public static final RegistryObject<Block> SMART_PORT_BLOCK =
             BLOCKS.register("smart_port", SmartPortBlock::new);
@@ -78,7 +84,10 @@ public final class Lc2Registries {
     public static final RegistryObject<Block> CARGO_STATION_BLOCK =
             BLOCKS.register("cargo_station", CargoStationBlock::new);
 
-    // --- Block Entities (2) ---
+    public static final RegistryObject<Block> COMM_BASE_STATION_BLOCK =
+            BLOCKS.register("comm_base_station", CommBaseStationBlock::new);
+
+    // --- Block Entities (3) ---
 
     public static final RegistryObject<BlockEntityType<SmartPortBlockEntity>> SMART_PORT_BE =
             BLOCK_ENTITIES.register("smart_port", () ->
@@ -87,6 +96,10 @@ public final class Lc2Registries {
     public static final RegistryObject<BlockEntityType<CargoStationBlockEntity>> CARGO_STATION_BE =
             BLOCK_ENTITIES.register("cargo_station", () ->
                     BlockEntityType.Builder.of(CargoStationBlockEntity::new, CARGO_STATION_BLOCK.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<CommBaseStationBlockEntity>> COMM_BASE_STATION_BE =
+            BLOCK_ENTITIES.register("comm_base_station", () ->
+                    BlockEntityType.Builder.of(CommBaseStationBlockEntity::new, COMM_BASE_STATION_BLOCK.get()).build(null));
 
     // --- Entities (2) ---
 
@@ -106,7 +119,7 @@ public final class Lc2Registries {
                             .updateInterval(2)
                             .build(LogisticsConstants.CARGO_DRONE_ENTITY_ID));
 
-    // --- Items (9: 2 BlockItems + 7 Items) ---
+    // --- Items (11: 3 BlockItems + 8 Items) ---
 
     public static final RegistryObject<Item> SMART_PORT_ITEM =
             ITEMS.register("smart_port", () -> new Lc2BlockItem(
@@ -125,6 +138,18 @@ public final class Lc2Registries {
                     "tooltip.lc2.cargo_station.line2",
                     "tooltip.lc2.cargo_station.line3"
             ));
+
+    public static final RegistryObject<Item> COMM_BASE_STATION_ITEM =
+            ITEMS.register("comm_base_station", () -> new Lc2BlockItem(
+                    COMM_BASE_STATION_BLOCK.get(),
+                    tabProps(),
+                    "tooltip.lc2.comm_base_station.line1",
+                    "tooltip.lc2.comm_base_station.line2",
+                    "tooltip.lc2.comm_base_station.line3"
+            ));
+
+    public static final RegistryObject<Item> OPERATION_TERMINAL_ITEM =
+            ITEMS.register("operation_terminal", () -> new OperationTerminalItem(tabProps().stacksTo(1)));
 
     public static final RegistryObject<Item> ELECTRIC_CARGO_BOAT_ITEM =
             ITEMS.register("electric_cargo_boat", () -> new ElectricCargoBoatItem(tabProps().stacksTo(1)));

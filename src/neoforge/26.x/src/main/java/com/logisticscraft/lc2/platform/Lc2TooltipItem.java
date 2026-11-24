@@ -21,6 +21,10 @@ public class Lc2TooltipItem extends Item {
         this.tooltipKeys = List.copyOf(tooltipKeys);
     }
 
+    /** Subclass hook for appending dynamic per-stack tooltip lines after static localized lines. */
+    protected void appendExtraHoverText(ItemStack stack, Consumer<Component> tooltipAdder) {
+    }
+
     @Override
     public void appendHoverText(
             ItemStack stack,
@@ -34,5 +38,6 @@ public class Lc2TooltipItem extends Item {
             ChatFormatting color = i == 0 ? ChatFormatting.AQUA : ChatFormatting.GRAY;
             tooltipAdder.accept(Component.translatable(tooltipKeys.get(i)).withStyle(color));
         }
+        appendExtraHoverText(stack, tooltipAdder);
     }
 }

@@ -68,7 +68,11 @@ public final class CargoStationBlock extends Lc2StationBlockBase
         if (level instanceof ServerLevel serverLevel
                 && player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos) instanceof CargoStationBlockEntity station) {
-            serverPlayer.openMenu(station, buf -> buf.writeBlockPos(pos));
+            serverPlayer.openMenu(station, buf -> {
+                buf.writeBlockPos(pos);
+                buf.writeBoolean(false);
+                buf.writeUtf("", 64);
+            });
             Lc2Native.sendToPlayer(serverPlayer, station.buildSyncPayload(serverLevel));
         }
         return InteractionResult.SUCCESS;

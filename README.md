@@ -4,24 +4,24 @@
 
 ![物流时代2：新纪元 (LogisticsCraft²: The New Era) 项目封面](assets/brand/cover.jpg)
 
-**物流时代2：新纪元（`lc2`）** 是 [工业时代2：新纪元 (IndustrialCraft²: The New Era)](https://github.com/spectrum527/IndustrialCraft2-The-New-Era) 的独立物流附属模组，为主模组加入可跨未加载区块运行的电动智能运输船与货运无人机。
+**物流时代2：新纪元（`lc2`）** 是 [工业时代2：新纪元 (IndustrialCraft²: The New Era)](https://github.com/spectrum527/IndustrialCraft2-The-New-Era) 的独立物流附属模组，为主模组加入可跨未加载区块运行的电动智能运输船、货运无人机，以及通过通讯基站与操作终端实现的同维度远程调度系统。
 
 ## 下载与安装
 
 请先安装对应 Minecraft 版本的 **IndustrialCraft²: The New Era (`ic2` v1.0.5+)**，再将下表中对应版本的 `lc2` JAR 放入 `mods/` 目录。联机时客户端和服务端都需要安装。
 
-[v1.1.1 发行说明](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/tag/v1.1.1) · [SHA-256 校验](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.1/SHA256SUMS.txt)
+[v1.2.0 发行说明](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/tag/v1.2.0) · [SHA-256 校验](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.0/SHA256SUMS.txt)
 
 | Minecraft | 加载器 | Java | 下载 |
 | --- | --- | ---: | --- |
-| 1.19.2 | Forge 43.5.0 | 17 | [Forge 1.19.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.1/lc2-forge-1.19.2-1.1.1.jar) |
-| 1.21.1 | NeoForge 21.1.265 | 21 | [NeoForge 1.21.1 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.1/lc2-neoforge-1.21.1-1.1.1.jar) |
-| 26.1.2 | NeoForge 26.1.2.128 | 25 | [NeoForge 26.1.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.1/lc2-neoforge-26.1.2-1.1.1.jar) |
-| 26.2 | NeoForge 26.2.0.95 | 25 | [NeoForge 26.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.1.1/lc2-neoforge-26.2-1.1.1.jar) |
+| 1.19.2 | Forge 43.5.0 | 17 | [Forge 1.19.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.0/lc2-forge-1.19.2-1.2.0.jar) |
+| 1.21.1 | NeoForge 21.1.265 | 21 | [NeoForge 1.21.1 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.0/lc2-neoforge-1.21.1-1.2.0.jar) |
+| 26.1.2 | NeoForge 26.1.2.128 | 25 | [NeoForge 26.1.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.0/lc2-neoforge-26.1.2-1.2.0.jar) |
+| 26.2 | NeoForge 26.2.0.95 | 25 | [NeoForge 26.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.0/lc2-neoforge-26.2-1.2.0.jar) |
 
 ## 上手教程
 
-模组包含水路和空路两套运输系统：水路用**智能港口 + 电动智能运输船**，空路用**货运基站 + 运输无人机**。两种站点共用同一套货区、供电与升级规则。全部合成配方可在游戏内配方查询模组或 [设计文档](docs/DESIGN.md) 中查看。
+模组包含水路和空路两套运输系统，并配套远程调度终端：水路用**智能港口 + 电动智能运输船**，空路用**货运基站 + 运输无人机**，远程控制用**通讯基站 + 操作终端**。水路和空路站点共用同一套货区、供电与升级规则。全部合成配方可在 JEI / EMI 或 [设计文档](docs/DESIGN.md) 中查看。
 
 ### 站点货区与供电
 
@@ -70,11 +70,27 @@
 - **自动返航由目标站付费**：开启自动返航后，去程由起点站扣费，卸货后的返程由**目标站**扣费。如果目标站电量不足或起点站机位已满，无人机会安全停在目标机位等待，条件满足后自动返航。
 - **空中避撞**：无人机采用垂直起降，去程、返程及多条并发航线会自动分高度巡航，空中接近时会动态错层避让。
 
-### 跨未加载区块、无人值守与 IC2 联动
+### 远程控制：通讯基站与操作终端
+
+如果想在基地另一头随时查看站点库存、改航线或手动发车，可以在站点旁部署**通讯基站**并随身携带**操作终端**，同维度内不限距离远程调度（前提是目标区块已加载且通讯基站正常供电）。
+
+1. **放置通讯基站并供电**：把**通讯基站（`lc2:comm_base_station`）**直接贴放在智能港口或货运基站的六个面之一，一台通讯基站最多可同时接入 **6 座**相邻站点。它没有独立 GUI，空手或手持其他物品右键即可在操作栏查看在线状态、电量与关联站点。通讯基站六面同时支持 **IC2 EU** 与 **FE** 供电（`1 EU = 4 FE`），最高输入 **LV 32 EU/t（128 FE/t）**，内置 **4,000 EU（16,000 FE）** 缓存，维持在线消耗 **2 EU/t（8 FE/t）**。
+2. **绑定终端与充电**：手持**操作终端（`lc2:operation_terminal`）**直接**右键**通讯基站即可绑定（未通电或尚未贴放站点也能先绑，单台终端最多绑定 **256** 座通讯基站）；**潜行右键**通讯基站或在终端列表里点 `×` 即可解绑。操作终端内置 **10,000 EU（40,000 FE）** 电池（LV **32 EU/t / 128 FE/t**），既可用 IC2 蓄电盒、CESU、MFE、MFSU、充电座、充电电池和电池背包充电，也支持各类 **FE 物品充电机**。
+3. **打开站点选择界面**：手持操作终端**右键空气或其他方块**，或者直接按快捷键（默认 **`G`**，即使终端放在背包或 Curios 饰品栏中也能唤出）即可打开操作终端界面。列表会自动汇总同维度下所有已绑定基站关联的站点并去重，按**在线优先**排序，支持搜索名称/类型/坐标、手动刷新、状态指示灯查看与一键解绑。
+4. **远程只读调度与耗能**：点击在线站点的**连接**即可远程打开该智能港口或货运基站的界面，顶栏会显示**远程只读**标识与**返回列表**按钮。为避免变成无线跨图存物，远程模式下机器内所有物品/升级/电池/无人机槽位均锁定为**只读**，但重命名、切换目标、开关自动返航、切换能源优先、待发货区/存储区一键互换（`<->`）和手动**发车**均可正常使用。
+   - **能耗规则**：打开列表、远程查看与修改配置全部**免费（0 EU）**，终端没电时也照常可看可配；仅在**远程手动发车成功**时扣除终端 **100 EU（400 FE）**（发车失败不扣电，创造模式免耗电）。
+   - **实时断线保护**：远程打开期间，一旦切换维度、目标区块卸载、通讯基站断电或被破坏、站点被移除或不再相邻、或身上不再持有该绑定终端，界面会立刻关闭并在操作栏提示原因。
+
+### 跨未加载区块、无人值守与模组联动
 
 - **跨未加载区块运行**：运输船和无人机离开已加载区块后，会自动转为服务端后台模拟，沿途不需要铺区块加载器，退出重进存档也能接着跑。
-- **区块加载升级（`lc2:chunk_loading_upgrade`）**：如果希望玩家不在基地时站点也能自动发车和收货，在起点和终点站右侧升级槽放一张区块加载升级即可。通电时消耗 **2 EU/t** 维持自身周围 **3×3 区块**加载，断电或取下会立刻释放。
-- **容器与 IC2 升级**：站点紧贴原版箱子（含大箱子）、木桶或潜影盒就能互通，也支持 IC2 储物箱。右侧 4 个升级槽兼容 IC2 常用机器升级，包括变压器、储能和超频升级，也可以装弹出、抽入（含高级版）以及红石信号反转升级，并兼容 The One Probe 和 IC2 扳手。
+- **区块加载升级（`lc2:chunk_loading_upgrade`）**：如果希望玩家不在基地时站点也能自动发车、收货并保持通讯基站在线，在起点和终点站右侧升级槽放一张区块加载升级即可。通电时消耗 **2 EU/t** 维持自身周围 **3×3 区块**加载，断电或取下会立刻释放。
+- **容器与 IC2 联动**：站点紧贴原版箱子（含大箱子）、木桶或潜影盒就能互通，也支持 IC2 储物箱。右侧 4 个升级槽兼容 IC2 常用机器升级（变压器、储能、超频、弹出/抽入含高级版、红石信号反转升级）；智能港口、货运基站与通讯基站均支持 IC2 导线连接与 IC2 扳手，操作终端完整融入 IC2 充电生态。
+- **可选模组联动（均无前置硬依赖）**：
+  - **FE 能源生态**：通讯基站六面直接接收 FE，操作终端支持 FE 充电机（`1 EU = 4 FE`）。
+  - **信息提示（The One Probe / Jade / WTHIT）**：准星对准通讯基站和物流站点时直接显示在线状态、EU/FE 电量与关联站点列表。
+  - **Curios 饰品栏**：操作终端可装备在 `charm`（护符）或 `belt`（腰带）槽位，随时按 **`G`** 键打开。
+  - **JEI / EMI**：查看全部合成配方，并附带通讯基站与操作终端的内置说明页。
 
 ## 从源码构建
 
@@ -116,10 +132,10 @@
 
 构建完成后，各版本 JAR 会输出到对应模块的 `build/libs/` 目录，直接放入游戏 `mods/` 即可使用。
 
-- NeoForge 1.21.1：`src/neoforge/1.21.1/build/libs/lc2-neoforge-1.21.1-1.1.0.jar`
-- NeoForge 26.1.2：`src/neoforge/26.1.2/build/libs/lc2-neoforge-26.1.2-1.1.0.jar`
-- NeoForge 26.2：`src/neoforge/26.2/build/libs/lc2-neoforge-26.2-1.1.0.jar`
-- Forge 1.19.2：`forge-1.19.2/build/libs/lc2-forge-1.19.2-1.1.0.jar`
+- NeoForge 1.21.1：`src/neoforge/1.21.1/build/libs/lc2-neoforge-1.21.1-1.2.0.jar`
+- NeoForge 26.1.2：`src/neoforge/26.1.2/build/libs/lc2-neoforge-26.1.2-1.2.0.jar`
+- NeoForge 26.2：`src/neoforge/26.2/build/libs/lc2-neoforge-26.2-1.2.0.jar`
+- Forge 1.19.2：`forge-1.19.2/build/libs/lc2-forge-1.19.2-1.2.0.jar`
 
 更多工程规格见 [设计文档](docs/DESIGN.md)、[GUI 布局](docs/GUI_LAYOUT.md) 与 [无人机模型 UV](docs/DRONE_MODEL_UV.md)。
 

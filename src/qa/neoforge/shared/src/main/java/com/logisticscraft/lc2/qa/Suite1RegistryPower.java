@@ -63,7 +63,13 @@ public final class Suite1RegistryPower {
                     'I', "lc2:rf_chip_2", 'L', "ic2:lapotron_crystal")),
             new RecipeSpec("lc2:chunk_loading_upgrade", new String[]{"ALA", "CKC", "AEA"}, Map.of(
                     'A', "ic2:alloy", 'L', "ic2:insulated_gold_cable", 'C', "ic2:advanced_circuit",
-                    'K', "ic2:chunk_loader", 'E', "minecraft:ender_eye"))
+                    'K', "ic2:chunk_loader", 'E', "minecraft:ender_eye")),
+            new RecipeSpec("lc2:comm_base_station", new String[]{"CFC", "IMI", "WBW"}, Map.of(
+                    'C', "ic2:circuit", 'F', "ic2:frequency_transmitter", 'I', "ic2:iron_plate",
+                    'M', "ic2:machine", 'W', "ic2:insulated_copper_cable", 'B', "ic2:re_battery")),
+            new RecipeSpec("lc2:operation_terminal", new String[]{"IGI", "CFC", "WBW"}, Map.of(
+                    'I', "ic2:iron_plate", 'G', "minecraft:glass_pane", 'C', "ic2:circuit",
+                    'F', "ic2:frequency_transmitter", 'W', "ic2:insulated_copper_cable", 'B', "ic2:re_battery"))
     );
 
     private static final BlockPos GEN_PORT = new BlockPos(10, 64, 8);
@@ -94,8 +100,8 @@ public final class Suite1RegistryPower {
         checks.check("s1.jar.ic2_loaded_from_mods",
                 Files.isSameFile(ic2Jar, Path.of("mods", expectedIc2)), ic2Jar.getFileName().toString());
 
-        // 2. Verify all registries: 2 blocks, 2 BEs, 2 entities, 9 items, 3 menus
-        for (String id : List.of("lc2:smart_port", "lc2:cargo_station")) {
+        // 2. Verify all registries: 3 blocks, 3 BEs, 2 entities, 11 items, 3 menus
+        for (String id : List.of("lc2:smart_port", "lc2:cargo_station", "lc2:comm_base_station")) {
             checks.check("s1.reg.block." + id, QaChecks.hasBlock(id));
             checks.check("s1.reg.be." + id, QaChecks.hasBlockEntity(id));
         }
@@ -103,8 +109,8 @@ public final class Suite1RegistryPower {
             checks.check("s1.reg.entity." + id, QaChecks.hasEntity(id));
         }
         for (String id : List.of(
-                "lc2:smart_port", "lc2:cargo_station", "lc2:electric_cargo_boat",
-                "lc2:transport_drone", "lc2:heavy_transport_drone",
+                "lc2:smart_port", "lc2:cargo_station", "lc2:comm_base_station", "lc2:operation_terminal",
+                "lc2:electric_cargo_boat", "lc2:transport_drone", "lc2:heavy_transport_drone",
                 "lc2:rf_chip_1", "lc2:rf_chip_2", "lc2:rf_chip_3", "lc2:chunk_loading_upgrade")) {
             checks.check("s1.reg.item." + id, QaChecks.hasItem(id));
         }

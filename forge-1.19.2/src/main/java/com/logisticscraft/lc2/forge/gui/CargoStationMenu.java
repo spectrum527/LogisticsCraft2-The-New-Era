@@ -6,6 +6,7 @@ import com.logisticscraft.lc2.core.UpgradeSummary;
 import com.logisticscraft.lc2.forge.Lc2Registries;
 import com.logisticscraft.lc2.forge.block.CargoStationBlockEntity;
 import com.logisticscraft.lc2.forge.util.Lc2Coords;
+import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.Container;
@@ -37,25 +38,69 @@ public class CargoStationMenu extends AbstractStationMenu {
         this(
                 containerId,
                 playerInventory,
-                extraData.readBlockPos(),
+                readExtraData(extraData),
                 createClientContainer(),
                 null
         );
     }
 
-    /** Server constructor invoked by {@link CargoStationBlockEntity#createMenu}. */
+    /** Server constructor for local proximity access. */
     public CargoStationMenu(int containerId, Inventory playerInventory, CargoStationBlockEntity blockEntity) {
-        this(containerId, playerInventory, blockEntity.getBlockPos(), blockEntity, blockEntity);
+        this(
+                containerId,
+                playerInventory,
+                new OpenParams(blockEntity.getBlockPos(), false, BlockPos.ZERO, ""),
+                blockEntity,
+                blockEntity
+        );
+    }
+
+    /** Server constructor for remote read-only Operation Terminal access. */
+    public CargoStationMenu(
+            int containerId,
+            Inventory playerInventory,
+            CargoStationBlockEntity blockEntity,
+            BlockPos remoteCommPos,
+            String remoteTerminalId
+    ) {
+        this(
+                containerId,
+                playerInventory,
+                new OpenParams(blockEntity.getBlockPos(), true, remoteCommPos, remoteTerminalId),
+                blockEntity,
+                blockEntity
+        );
+    }
+
+    private record OpenParams(BlockPos pos, boolean remoteMode, BlockPos remoteCommPos, String remoteTerminalId) {
+    }
+
+    private static OpenParams readExtraData(FriendlyByteBuf buf) {
+        BlockPos pos = buf.readBlockPos();
+        boolean remote = buf.isReadable() && buf.readBoolean();
+        BlockPos commPos = (remote && buf.isReadable()) ? buf.readBlockPos() : BlockPos.ZERO;
+        String terminalId = (remote && buf.isReadable()) ? buf.readUtf(64) : "";
+        return new OpenParams(pos, remote, commPos, terminalId);
     }
 
     private CargoStationMenu(
             int containerId,
             Inventory playerInventory,
-            BlockPos pos,
+            OpenParams params,
             Container container,
-            CargoStationBlockEntity serverBe
+            @Nullable CargoStationBlockEntity serverBe
     ) {
-        super(Lc2Registries.CARGO_STATION_MENU.get(), containerId, playerInventory, pos, container, serverBe);
+        super(
+                Lc2Registries.CARGO_STATION_MENU.get(),
+                containerId,
+                playerInventory,
+                params.pos(),
+                container,
+                serverBe,
+                params.remoteMode(),
+                params.remoteCommPos(),
+                params.remoteTerminalId()
+        );
 
         // 0..26: Outbound Area (3x9 at x = 8 + col * 18, y = 87 + row * 18)
         for (int row = 0; row < 3; row++) {
@@ -111,6 +156,11 @@ public class CargoStationMenu extends AbstractStationMenu {
         addPlayerInventorySlots(playerInventory);
     }
 
+    @Override
+    protected int machineSlotCount() {
+        return MACHINE_SLOTS;
+    }
+
     private static Container createClientContainer() {
         return new SimpleContainer(MACHINE_SLOTS) {
             @Override
@@ -140,6 +190,9 @@ public class CargoStationMenu extends AbstractStationMenu {
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        if (this.remoteMode) {
+            return ItemStack.EMPTY;
+        }
         Slot slot = this.slots.get(index);
         if (slot == null || !slot.hasItem()) {
             return ItemStack.EMPTY;

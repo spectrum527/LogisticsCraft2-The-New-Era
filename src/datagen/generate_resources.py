@@ -22,7 +22,7 @@ TARGETS = ("forge-1.19.2", "neoforge-1.21.1", "neoforge-26.1.2", "neoforge-26.2"
 MOD_ID = "lc2"
 MARKER_NAME = ".lc2-generated-output"
 
-BLOCK_ITEMS = ("smart_port", "cargo_station")
+BLOCK_ITEMS = ("smart_port", "cargo_station", "comm_base_station")
 SPRITE_ITEMS = (
     "electric_cargo_boat",
     "transport_drone",
@@ -31,10 +31,11 @@ SPRITE_ITEMS = (
     "rf_chip_2",
     "rf_chip_3",
     "chunk_loading_upgrade",
+    "operation_terminal",
 )
 ALL_ITEMS = BLOCK_ITEMS + SPRITE_ITEMS
 
-# Canonical 9 crafting recipes from docs/DESIGN.md Section 3
+# Canonical crafting recipes (v1.0-v1.1 + v1.2.0 Comm Base Station & Operation Terminal)
 SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
     "smart_port": (
         ["CMC", "IHI", "CRC"],
@@ -134,6 +135,30 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
             "C": "ic2:advanced_circuit",
             "K": "ic2:chunk_loader",
             "E": "minecraft:ender_eye",
+        },
+        1,
+    ),
+    "comm_base_station": (
+        ["CFC", "IMI", "WBW"],
+        {
+            "C": "ic2:circuit",
+            "F": "ic2:frequency_transmitter",
+            "I": "ic2:iron_plate",
+            "M": "ic2:machine",
+            "W": "ic2:insulated_copper_cable",
+            "B": "ic2:re_battery",
+        },
+        1,
+    ),
+    "operation_terminal": (
+        ["IGI", "CFC", "WBW"],
+        {
+            "I": "ic2:iron_plate",
+            "G": "minecraft:glass_pane",
+            "C": "ic2:circuit",
+            "F": "ic2:frequency_transmitter",
+            "W": "ic2:insulated_copper_cable",
+            "B": "ic2:re_battery",
         },
         1,
     ),
@@ -286,6 +311,106 @@ def generate(target: str, destination: Path) -> int:
             },
         )
 
+        # Communication Base Station: custom 3D multi-element model strictly within [0,0,0]..[16,16,16]
+        for active in (False, True):
+            suffix = "_active" if active else ""
+            beacon_element = {
+                "from": [6.5, 14.5, 6.5],
+                "to": [9.5, 16, 9.5],
+                "faces": {
+                    "up": {"uv": [6, 1, 10, 5], "texture": "#antenna"},
+                    "down": {"uv": [6, 4, 10, 5], "texture": "#antenna"},
+                    "north": {"uv": [6, 2, 10, 4], "texture": "#antenna"},
+                    "south": {"uv": [6, 2, 10, 4], "texture": "#antenna"},
+                    "east": {"uv": [6, 2, 10, 4], "texture": "#antenna"},
+                    "west": {"uv": [6, 2, 10, 4], "texture": "#antenna"},
+                },
+            }
+            if active:
+                beacon_element["shade"] = False
+            asset(
+                f"models/block/comm_base_station{suffix}",
+                {
+                    "parent": "minecraft:block/block",
+                    "textures": {
+                        "base": mod("block/comm_base_station_base"),
+                        "top": mod("block/comm_base_station_top"),
+                        "front": mod(f"block/comm_base_station_front{suffix}"),
+                        "antenna": mod(f"block/comm_base_station_antenna{suffix}"),
+                        "particle": mod("block/comm_base_station_base"),
+                    },
+                    "elements": [
+                        {
+                            "from": [0, 0, 0],
+                            "to": [16, 9, 16],
+                            "faces": {
+                                "down": {"uv": [0, 0, 16, 16], "texture": "#base", "cullface": "down"},
+                                "up": {"uv": [0, 0, 16, 16], "texture": "#top"},
+                                "north": {"uv": [0, 7, 16, 16], "texture": "#front", "cullface": "north"},
+                                "south": {"uv": [0, 7, 16, 16], "texture": "#front", "cullface": "south"},
+                                "east": {"uv": [0, 7, 16, 16], "texture": "#front", "cullface": "east"},
+                                "west": {"uv": [0, 7, 16, 16], "texture": "#front", "cullface": "west"},
+                            },
+                        },
+                        {
+                            "from": [4, 9, 4],
+                            "to": [12, 11, 12],
+                            "faces": {
+                                "up": {"uv": [4, 4, 12, 12], "texture": "#top"},
+                                "north": {"uv": [4, 5, 12, 7], "texture": "#front"},
+                                "south": {"uv": [4, 5, 12, 7], "texture": "#front"},
+                                "east": {"uv": [4, 5, 12, 7], "texture": "#front"},
+                                "west": {"uv": [4, 5, 12, 7], "texture": "#front"},
+                            },
+                        },
+                        {
+                            "from": [7, 11, 7],
+                            "to": [9, 15, 9],
+                            "faces": {
+                                "north": {"uv": [7, 11, 9, 15], "texture": "#antenna"},
+                                "south": {"uv": [7, 11, 9, 15], "texture": "#antenna"},
+                                "east": {"uv": [7, 11, 9, 15], "texture": "#antenna"},
+                                "west": {"uv": [7, 11, 9, 15], "texture": "#antenna"},
+                            },
+                        },
+                        {
+                            "from": [4, 12.5, 7.5],
+                            "to": [12, 13.5, 8.5],
+                            "faces": {
+                                "north": {"uv": [4, 7, 12, 8], "texture": "#antenna"},
+                                "south": {"uv": [4, 7, 12, 8], "texture": "#antenna"},
+                                "up": {"uv": [4, 8, 12, 9], "texture": "#antenna"},
+                                "down": {"uv": [4, 8, 12, 9], "texture": "#antenna"},
+                                "east": {"uv": [2, 7, 3, 8], "texture": "#antenna"},
+                                "west": {"uv": [2, 7, 3, 8], "texture": "#antenna"},
+                            },
+                        },
+                        {
+                            "from": [7.5, 12.5, 4],
+                            "to": [8.5, 13.5, 12],
+                            "faces": {
+                                "east": {"uv": [4, 7, 12, 8], "texture": "#antenna"},
+                                "west": {"uv": [4, 7, 12, 8], "texture": "#antenna"},
+                                "up": {"uv": [4, 8, 12, 9], "texture": "#antenna"},
+                                "down": {"uv": [4, 8, 12, 9], "texture": "#antenna"},
+                                "north": {"uv": [2, 7, 3, 8], "texture": "#antenna"},
+                                "south": {"uv": [2, 7, 3, 8], "texture": "#antenna"},
+                            },
+                        },
+                        beacon_element,
+                    ],
+                },
+            )
+        asset(
+            "blockstates/comm_base_station",
+            {
+                "multipart": [
+                    {"when": {"active": "false"}, "apply": {"model": mod("block/comm_base_station")}},
+                    {"when": {"active": "true"}, "apply": {"model": mod("block/comm_base_station_active")}},
+                ]
+            },
+        )
+
         # ---------------------------------------------------------------------
         # 2. Item Models & 26.x Client Item Definitions
         # ---------------------------------------------------------------------
@@ -355,6 +480,14 @@ def generate(target: str, destination: Path) -> int:
             f"data/minecraft/{tag_dir}mineable/pickaxe.json",
             {"replace": False, "values": [mod(b) for b in BLOCK_ITEMS]},
         )
+
+        # Curios API item tags (optional integration; version-specific tags/items vs tags/item)
+        item_tag_dir = "tags/items/" if forge else "tags/item/"
+        for curio_slot in ("charm", "belt"):
+            write_json(
+                f"data/curios/{item_tag_dir}{curio_slot}.json",
+                {"replace": False, "values": [mod("operation_terminal")]},
+            )
 
         # ---------------------------------------------------------------------
         # 5. Forge 1.19.2 pack.mcmeta

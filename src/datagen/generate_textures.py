@@ -2,12 +2,13 @@
 """Reproducible pixel-art texture generator for LogisticsCraft²: The New Era (lc2).
 
 Generates all original CC BY-SA 4.0 textures under assets/lc2/textures/:
-  - 10 block textures (16x16)
-  - 7 item textures (16x16)
+  - 16 block textures (16x16): Smart Port (5), Cargo Station (5), Comm Base Station (6)
+  - 8 item textures (16x16): Boat, Drones (2), RF Chips (3), Chunk Loader, Operation Terminal
   - 3 entity textures (128x128 ChestBoat UV + two 64x64 CargoDrone UVs)
-  - 2 GUI textures (512x256 atlas, 392x234 2-zone panel + right-margin dynamic sprites)
+  - 3 GUI textures (512x256 atlases: 392x234 2-zone machine panels + 320x224 Operation Terminal)
 
-Optionally writes a visual contact sheet via --preview <path> or a 2x GUI-only preview via --gui-preview <path>.
+Optionally writes a visual contact sheet via --preview <path>, a 2x GUI-only preview via --gui-preview <path>,
+or a focused v1.2.0 asset sheet via --v120-preview <path>.
 """
 
 import argparse
@@ -401,6 +402,323 @@ def make_cargo_station_side(active: bool) -> Image.Image:
     return im
 
 
+def make_comm_base_station_base() -> Image.Image:
+    """16x16 steel industrial base casing side/bottom with ventilation slits & rivets."""
+    im = draw_ic2_casing(dark=False)
+    px = im.load()
+    c_dk = rgba("#151B24")
+    c_sl = rgba("#2C3747")
+    c_rib = rgba("#7E91A8")
+    c_hi = rgba("#B6C7DB")
+    c_cu = rgba("#C27A3A")
+
+    # Inner recessed panel frame
+    fill_rect(px, 3, 3, 12, 12, c_sl)
+    hline(px, 3, 12, 3, c_dk)
+    vline(px, 3, 3, 12, c_dk)
+    hline(px, 3, 12, 12, c_rib)
+    vline(px, 12, 3, 12, c_rib)
+
+    # Upper & lower horizontal ventilation louvres
+    for y in (4, 6, 10, 12):
+        hline(px, 5, 10, y, c_dk)
+        if y in (4, 10):
+            hline(px, 5, 10, y + 1, c_rib)
+
+    # Central reinforced riveted steel belt across y=7..8 with copper RF grounding bolts
+    fill_rect(px, 3, 7, 12, 8, rgba("#536478"))
+    hline(px, 3, 12, 7, c_rib)
+    hline(px, 3, 12, 8, rgba("#364252"))
+    px[7, 7] = c_cu
+    px[8, 7] = rgba("#E6A85C")
+    px[7, 8] = rgba("#824C1C")
+    px[8, 8] = c_cu
+
+    # Four heavy mounting rivets
+    for rx, ry in ((3, 3), (12, 3), (3, 12), (12, 12)):
+        px[rx, ry] = c_dk
+    for rx, ry in ((4, 4), (11, 4), (4, 11), (11, 11)):
+        px[rx, ry] = c_hi
+    return im
+
+
+def make_comm_base_station_top() -> Image.Image:
+    """16x16 industrial top deck plate with central antenna mount socket & cyan/amber circuit accents.
+
+    Outer ring (0..3, 12..15) renders on the pedestal top [0,9,0]..[16,9,16];
+    inner socket (4..11, 4..11) renders 1:1 on the upper collar top [4,11,4]..[12,11,12].
+    """
+    im = draw_ic2_casing(dark=False)
+    px = im.load()
+    c_dk = rgba("#141A22")
+    c_sl = rgba("#26303E")
+    c_mid = rgba("#54657A")
+    c_hi = rgba("#A8B9CE")
+    c_spec = rgba("#D0DFEE")
+    c_cyn = rgba("#3CF2B8")
+    c_cyn_d = rgba("#1A7F78")
+    c_amb = rgba("#F0A829")
+    c_amb_d = rgba("#9E6414")
+
+    # Outer deck diagonal circuit traces feeding from corners into central collar
+    # Top-left & bottom-right: cyan-green RF traces
+    for x, y in ((2, 3), (3, 3), (3, 2), (12, 12), (12, 13), (13, 12)):
+        px[x, y] = c_cyn_d
+    for x, y in ((3, 3), (12, 12)):
+        px[x, y] = c_cyn
+    # Top-right & bottom-left: amber power bus traces
+    for x, y in ((12, 2), (12, 3), (13, 3), (2, 12), (3, 12), (3, 13)):
+        px[x, y] = c_amb_d
+    for x, y in ((12, 3), (3, 12)):
+        px[x, y] = c_amb
+    # Mid-edge conduit ports touching collar sides
+    for x, y in ((7, 2), (8, 2), (7, 13), (8, 13), (2, 7), (2, 8), (13, 7), (13, 8)):
+        px[x, y] = c_dk
+    for x, y in ((7, 3), (8, 3), (7, 12), (8, 12)):
+        px[x, y] = c_cyn
+    for x, y in ((3, 7), (3, 8), (12, 7), (12, 8)):
+        px[x, y] = c_amb
+
+    # Central antenna mount socket (4..11, 4..11) — 1:1 on collar top face
+    fill_rect(px, 4, 4, 11, 11, c_dk)
+    fill_rect(px, 5, 5, 10, 10, c_mid)
+    hline(px, 5, 10, 5, c_hi)
+    vline(px, 5, 5, 10, c_hi)
+    hline(px, 5, 10, 10, rgba("#333F4F"))
+    vline(px, 10, 5, 10, rgba("#333F4F"))
+    px[5, 5] = c_spec
+
+    # Inner dark coaxial socket ring (6..9, 6..9) + central steel mast seat (7..8, 7..8)
+    fill_rect(px, 6, 6, 9, 9, c_sl)
+    for cx, cy in ((6, 6), (9, 6), (6, 9), (9, 9)):
+        px[cx, cy] = c_cyn_d
+    px[6, 6] = c_cyn
+    px[9, 9] = c_cyn
+    px[9, 6] = c_amb
+    px[6, 9] = c_amb
+    fill_rect(px, 7, 7, 8, 8, c_dk)
+    px[7, 7] = c_hi
+    px[8, 8] = rgba("#4E5F73")
+    return im
+
+
+def make_comm_base_station_front(active: bool) -> Image.Image:
+    """16x16 faceplate for Communication Base Station (inactive dark-red vs active cyan-green).
+
+    Designed with exact 1:1 3D voxel UV zones:
+      - y=5..6 (x=4..11): upper transceiver collar sides [4,9,4]..[12,11,12]
+      - y=7..15 (x=0..15): heavy base pedestal horizontal faces [0,0,0]..[16,9,16]
+    """
+    im = draw_ic2_casing(dark=False)
+    px = im.load()
+    c_out = rgba("#151A22")
+    c_hi = rgba("#A8B9CE")
+    c_spec = rgba("#CDDCEF")
+    c_mid = rgba("#78899F")
+    c_base = rgba("#5D6E83")
+    c_sh = rgba("#3A4656")
+    c_deep = rgba("#1E2530")
+
+    if active:
+        led_hi = rgba("#C8FFF4")
+        led_main = rgba("#3CF2B8")
+        led_cyan = rgba("#4CE8FF")
+        led_low = rgba("#1DA892")
+        led_low2 = rgba("#1E9CC2")
+        sig_a = rgba("#3CF2B8")
+        sig_b = rgba("#4CE8FF")
+        sig_c = rgba("#C4FFF6")
+        col_led = rgba("#4CE8FF")
+    else:
+        led_hi = rgba("#A83440")
+        led_main = rgba("#82212B")
+        led_cyan = rgba("#6E1B24")
+        led_low = rgba("#4D131A")
+        led_low2 = rgba("#3E0F15")
+        sig_a = rgba("#70242D")
+        sig_b = rgba("#4C1C22")
+        sig_c = rgba("#8F313C")
+        col_led = rgba("#82212B")
+
+    # Upper ventilation louver bay (y=2..4, x=3..12) for cohesive 16x16 tile
+    fill_rect(px, 3, 2, 12, 4, c_deep)
+    hline(px, 4, 11, 3, c_sh)
+    for x in (4, 6, 8, 10):
+        px[x, 3] = c_mid
+
+    # Upper transceiver collar strip (y=5..6; x=4..11 sampled 1:1 by 3D collar)
+    fill_rect(px, 2, 5, 13, 6, c_deep)
+    hline(px, 4, 11, 5, c_hi)
+    hline(px, 4, 11, 6, c_base)
+    px[4, 5] = c_deep
+    px[11, 5] = c_deep
+    px[4, 6] = c_sh
+    px[11, 6] = c_sh
+    # Twin collar indicator micro-LEDs
+    px[6, 5] = col_led
+    px[9, 5] = col_led
+    px[7, 6] = c_mid
+    px[8, 6] = c_mid
+
+    # Main base pedestal 16x9 faceplate (y=7..15, x=0..15)
+    fill_rect(px, 0, 7, 15, 15, c_out)
+    fill_rect(px, 1, 7, 14, 14, c_base)
+    # Crisp pedestal top/left highlight bevel & right/bottom shadow bevel
+    hline(px, 1, 14, 7, c_hi)
+    vline(px, 1, 7, 14, c_hi)
+    hline(px, 1, 14, 14, c_sh)
+    vline(px, 14, 7, 14, c_sh)
+    px[1, 7] = c_spec
+    px[2, 7] = c_spec
+    px[14, 7] = c_mid
+    px[1, 14] = c_mid
+    px[14, 14] = c_deep
+
+    # LED status bar housing (x=2..13, y=8..9)
+    fill_rect(px, 2, 8, 13, 9, c_out)
+    for x in range(3, 13):
+        if x in (7, 8):
+            px[x, 8] = led_hi
+            px[x, 9] = led_main if active else led_low
+        elif x % 2 == 0:
+            px[x, 8] = led_cyan
+            px[x, 9] = led_low2
+        else:
+            px[x, 8] = led_main
+            px[x, 9] = led_low
+
+    # Recessed RF terminal port + signal monitor (x=2..13, y=10..13)
+    fill_rect(px, 2, 10, 13, 13, c_out)
+    fill_rect(px, 3, 10, 12, 12, rgba("#18212C"))
+    hline(px, 3, 12, 10, rgba("#10161E"))
+    # Left coaxial RF plug socket (x=4..5, y=11..12)
+    px[4, 11] = rgba("#D49442")
+    px[5, 11] = rgba("#965E1E")
+    px[4, 12] = rgba("#6B4214")
+    px[5, 12] = rgba("#C28234")
+    # Vertical separator
+    vline(px, 6, 10, 12, c_out)
+    # Right miniature RF signal strength screen (x=7..11, y=11..12)
+    px[7, 12] = sig_a
+    px[8, 12] = sig_a
+    px[9, 11] = sig_b
+    px[9, 12] = sig_a
+    px[10, 11] = sig_c
+    px[10, 12] = sig_b
+    px[11, 11] = sig_b
+    px[11, 12] = sig_b
+
+    # Bottom faceplate steel trim strip & corner bolts (y=13)
+    hline(px, 3, 12, 13, c_mid)
+    px[2, 13] = c_deep
+    px[13, 13] = c_deep
+    px[3, 13] = c_hi
+    px[12, 13] = c_sh
+    return im
+
+
+def make_comm_base_station_antenna(active: bool) -> Image.Image:
+    """16x16 metallic antenna mast/dish texture with unpowered dark-red or glowing cyan-green beacon tip.
+
+    UV layout for 3D Comm Base Station elements:
+      - y=0..5  (center x=6..9): Signal beacon cap [6.5,14.5,6.5]..[9.5,16,9.5]
+      - y=6..10 (x=4..11 / end x=2..3): Crossed RF transceiver dish/fin arms
+      - y=11..15 (x=7..8): Central vertical antenna mast [7,11,7]..[9,15,9]
+    """
+    im = Image.new("RGBA", (16, 16), rgba("#242D38"))
+    px = im.load()
+
+    c_out = rgba("#141922")
+    c_dk = rgba("#26303D")
+    c_sh = rgba("#3D4B5C")
+    c_md = rgba("#6B7E94")
+    c_lt = rgba("#A3B5C9")
+    c_hi = rgba("#D4E2F0")
+
+    if active:
+        b_core = rgba("#DBFFF6")
+        b_hi = rgba("#4CE8FF")
+        b_mid = rgba("#3CF2B8")
+        b_edge = rgba("#199C88")
+        b_base = rgba("#13595C")
+        fin_node = rgba("#4CE8FF")
+        fin_node2 = rgba("#3CF2B8")
+        mast_glow = rgba("#3CF2B8")
+    else:
+        b_core = rgba("#9E3540")
+        b_hi = rgba("#7D222C")
+        b_mid = rgba("#5E1820")
+        b_edge = rgba("#3D1016")
+        b_base = rgba("#290D12")
+        fin_node = rgba("#7A252E")
+        fin_node2 = rgba("#521920")
+        mast_glow = rgba("#4A5869")
+
+    # --- Top Band (y=0..5): Beacon emitter crystal + gunmetal cap ---
+    fill_rect(px, 0, 0, 15, 5, c_dk)
+    hline(px, 0, 15, 0, c_out)
+    hline(px, 0, 15, 5, c_out)
+    # Full-width glow strip for side UVs + concentrated core at x=6..9, y=1..4 for top UV
+    fill_rect(px, 1, 1, 14, 4, b_edge)
+    fill_rect(px, 4, 1, 11, 3, b_mid)
+    fill_rect(px, 6, 1, 9, 4, b_edge)
+    fill_rect(px, 6, 1, 9, 3, b_mid)
+    hline(px, 6, 9, 2, b_hi)
+    px[7, 2] = b_core
+    px[8, 2] = b_core
+    px[7, 3] = b_hi
+    px[8, 3] = b_mid
+    hline(px, 1, 14, 4, b_base)
+    # Cap corner steel brackets
+    for x in (0, 5, 10, 15):
+        vline(px, x, 1, 4, c_sh)
+    px[5, 1] = c_lt
+    px[10, 1] = c_lt
+
+    # --- Middle Band (y=6..10): Crossed RF transceiver dish/fin bars ---
+    fill_rect(px, 0, 6, 15, 10, c_out)
+    # End caps (x=0..3, 12..15)
+    fill_rect(px, 1, 7, 3, 9, c_sh)
+    fill_rect(px, 12, 7, 14, 9, c_sh)
+    hline(px, 1, 3, 7, c_lt)
+    hline(px, 12, 14, 7, c_lt)
+    px[2, 7] = fin_node
+    px[13, 7] = fin_node
+    # Main horizontal dipole arms (x=4..11, y=7..9)
+    hline(px, 4, 11, 7, c_lt)
+    hline(px, 4, 11, 8, c_md)
+    hline(px, 4, 11, 9, c_sh)
+    # Center hub highlight & tuning coils
+    px[7, 7] = c_hi
+    px[8, 7] = c_hi
+    px[7, 8] = c_lt
+    px[8, 8] = c_lt
+    for nx in (5, 10):
+        px[nx, 7] = fin_node
+        px[nx, 8] = fin_node2
+
+    # --- Bottom Band (y=11..15): Vertical machined antenna mast ---
+    fill_rect(px, 0, 11, 15, 15, c_dk)
+    # Flanking strut grooves for cohesive 16x16 look
+    for x in (2, 3, 12, 13):
+        vline(px, x, 11, 15, c_sh)
+    vline(px, 6, 11, 15, c_out)
+    vline(px, 9, 11, 15, c_out)
+    # Central mast column (x=7..8, y=11..15 -> exact 2x4 UV at [7,11,9,15])
+    vline(px, 7, 11, 15, c_lt)
+    vline(px, 8, 11, 15, c_md)
+    # Machined horizontal mast collar rib at y=13
+    px[7, 13] = c_sh
+    px[8, 13] = c_dk
+    # Vertical RF power conduit tracer on mast
+    px[7, 11] = c_hi
+    px[8, 11] = mast_glow
+    px[8, 12] = mast_glow
+    px[8, 14] = mast_glow
+    hline(px, 0, 15, 15, c_out)
+    return im
+
+
 # =============================================================================
 # 2. ITEM TEXTURES (16x16)
 # =============================================================================
@@ -704,6 +1022,83 @@ def make_item_chunk_loading_upgrade() -> Image.Image:
     # Corner LED speculars
     px[2, 1] = rgba("#B8FFF0")
     px[13, 1] = rgba("#2AF0BE")
+    return im
+
+
+def make_item_operation_terminal() -> Image.Image:
+    """16x16 rugged industrial handheld Operation Terminal (bezel, RF antenna stub, cyan LCD, keypad)."""
+    grid = [
+        "............oCo.",
+        "............oGo.",
+        "..oooooooooooAo.",
+        ".oHHHHHHHHHHMMo.",
+        ".oHooooooooooMo.",
+        ".oHoDGCCCCDDoMo.",
+        ".oHoDGCCCDDDoMo.",
+        ".oHoDACCCCDDoMo.",
+        ".oHoDDDDGGDDoMo.",
+        ".oHooooooooooMo.",
+        ".oMMoSSSSSSoMMo.",
+        ".oMMoSkSGSAoMMo.",
+        ".oMMokkkSSSoMMo.",
+        ".oMMoSkSSkSoMMo.",
+        ".oDDMMMMMMMMDDo.",
+        "..oooooooooooo..",
+    ]
+    pal = {
+        "o": rgba("#141922"),  # crisp dark outline
+        "C": rgba("#4CE8FF"),  # glowing cyan antenna tip & screen readout
+        "G": rgba("#3CF2B8"),  # cyan-green active signal & confirm key
+        "A": rgba("#FFB833"),  # amber telemetry dot & launch micro-key
+        "H": rgba("#B2C4D8"),  # top/left brushed steel bezel highlight
+        "M": rgba("#5E7086"),  # rugged steel casing mid
+        "D": rgba("#0D1E29"),  # dark marine-slate LCD background & rubber bumpers
+        "S": rgba("#3A4757"),  # recessed keypad bed
+        "k": rgba("#8EA2B8"),  # tactile steel micro-keys / D-pad
+    }
+    im = render_grid(grid, pal)
+    px = im.load()
+    # Refine top-right antenna stub (x=13, y=0..2 with dark outline at x=12,14)
+    px[13, 0] = rgba("#B8FFFF")
+    px[13, 1] = rgba("#3CF2B8")
+    px[13, 2] = rgba("#4C5D73")
+    # Crisp miniature station list readout rows inside LCD (x=4..11, y=5..8)
+    # Row 1 (y=5): online green dot + bright cyan station text line
+    px[5, 5] = rgba("#3CF285")
+    px[6, 5] = rgba("#0D1E29")
+    px[7, 5] = rgba("#A8FFF4")
+    px[8, 5] = rgba("#4CE8FF")
+    px[9, 5] = rgba("#4CE8FF")
+    px[10, 5] = rgba("#2AB5CC")
+    # Row 2 (y=6): online green dot + shorter teal station line
+    px[5, 6] = rgba("#3CF285")
+    px[6, 6] = rgba("#0D1E29")
+    px[7, 6] = rgba("#3CF2B8")
+    px[8, 6] = rgba("#3CF2B8")
+    px[9, 6] = rgba("#1E9E8C")
+    px[10, 6] = rgba("#0D1E29")
+    # Row 3 (y=7): amber warning dot + dim status line
+    px[5, 7] = rgba("#FFB833")
+    px[6, 7] = rgba("#0D1E29")
+    px[7, 7] = rgba("#6FA0B8")
+    px[8, 7] = rgba("#4A738A")
+    px[9, 7] = rgba("#4A738A")
+    px[10, 7] = rgba("#0D1E29")
+    # Row 4 (y=8): miniature glowing cyan-green terminal EU bar at bottom-right of LCD
+    px[5, 8] = rgba("#183242")
+    px[6, 8] = rgba("#183242")
+    px[7, 8] = rgba("#183242")
+    px[8, 8] = rgba("#3CF2B8")
+    px[9, 8] = rgba("#4CE8FF")
+    px[10, 8] = rgba("#4CE8FF")
+    # Dark armored side grip bumpers at lower corners
+    px[2, 14] = rgba("#26303D")
+    px[3, 14] = rgba("#26303D")
+    px[12, 14] = rgba("#26303D")
+    px[13, 14] = rgba("#26303D")
+    # Subtle golden/steel bottom charge contacts
+    px[7, 14] = rgba("#D99B38")
+    px[8, 14] = rgba("#F2C45A")
     return im
 
 
@@ -1633,6 +2028,403 @@ def _draw_base_gui(is_cargo_station: bool) -> Image.Image:
     return im
 
 
+def _verify_terminal_gui_layout_non_overlapping():
+    """Verify mathematically that every Operation Terminal GUI panel region and atlas sprite has ZERO overlaps."""
+    panel_rects = [
+        ("title_label", 8, 5, 174, 8),
+        ("eu_lcd", 186, 4, 126, 11),
+        ("header_seam", 7, 17, 306, 2),
+        ("search_box", 8, 20, 236, 14),
+        ("refresh_btn", 248, 20, 64, 14),
+        ("toolbar_seam", 7, 36, 306, 1),
+        ("list_viewport", 8, 38, 296, 166),
+        ("scrollbar_track", 306, 38, 6, 166),
+        ("footer_lcd", 8, 207, 304, 12),
+    ]
+    for name, x, y, w, h in panel_rects:
+        assert x >= 3 and y >= 3 and x + w <= 317 and y + h <= 221, (
+            f"Terminal panel element {name} ({x},{y},{w},{h}) exceeds safe interior (3..316, 3..220)"
+        )
+    for i, (n1, x1, y1, w1, h1) in enumerate(panel_rects):
+        for n2, x2, y2, w2, h2 in panel_rects[i + 1:]:
+            overlap_x = x1 < x2 + w2 and x2 < x1 + w1
+            overlap_y = y1 < y2 + h2 and y2 < y1 + h1
+            assert not (overlap_x and overlap_y), (
+                f"Terminal GUI overlap between {n1} ({x1},{y1},{w1},{h1}) and {n2} ({x2},{y2},{w2},{h2})"
+            )
+
+    # Verify 6 visible rows fit strictly inside list_viewport interior (9..302, 39..202)
+    for row_idx in range(6):
+        rx, ry, rw, rh = 10, 40 + row_idx * 27, 292, 25
+        assert rx >= 9 and rx + rw <= 303 and ry >= 39 and ry + rh <= 203, (
+            f"Terminal row {row_idx} ({rx},{ry},{rw},{rh}) clips list_viewport interior"
+        )
+
+    atlas_rects = [
+        ("main_panel", 0, 0, 320, 224),
+        ("badge_smart_port", 328, 0, 14, 14),
+        ("badge_cargo_station", 344, 0, 14, 14),
+        ("badge_comm_base", 360, 0, 14, 14),
+        ("led_online", 328, 18, 8, 8),
+        ("led_unpowered", 338, 18, 8, 8),
+        ("led_offline", 348, 18, 8, 8),
+        ("led_error", 358, 18, 8, 8),
+        ("eu_fill", 328, 30, 124, 9),
+        ("unbind_icon", 328, 44, 10, 10),
+        ("unbind_icon_hover", 328, 56, 10, 10),
+        ("scrollbar_thumb", 344, 44, 6, 24),
+        ("connect_icon", 358, 44, 10, 10),
+        ("readonly_icon", 370, 44, 10, 10),
+    ]
+    for name, x, y, w, h in atlas_rects:
+        assert x >= 0 and y >= 0 and x + w <= 512 and y + h <= 256, (
+            f"Terminal atlas sprite {name} ({x},{y},{w},{h}) exceeds 512x256"
+        )
+    for i, (n1, x1, y1, w1, h1) in enumerate(atlas_rects):
+        for n2, x2, y2, w2, h2 in atlas_rects[i + 1:]:
+            overlap_x = x1 < x2 + w2 and x2 < x1 + w1
+            overlap_y = y1 < y2 + h2 and y2 < y1 + h1
+            assert not (overlap_x and overlap_y), (
+                f"Terminal atlas overlap between {n1} and {n2}"
+            )
+
+
+def _draw_status_led_8x8(px, u0: int, v0: int, c_hi, c_mid, c_dk, c_rim):
+    """Draw a crisp 8x8 industrial indicator LED orb in a dark steel bezel."""
+    grid = [
+        "..oooo..",
+        ".oRddRo.",
+        "oRdHHMRo",
+        "oRdHMMRo",
+        "oRdMMMRo",
+        "oRddddRo",
+        ".oRRRRo.",
+        "..oooo..",
+    ]
+    pal = {
+        "o": rgba("#141922"),
+        "R": c_rim,
+        "d": c_dk,
+        "M": c_mid,
+        "H": c_hi,
+    }
+    for dy, row in enumerate(grid):
+        for dx, ch in enumerate(row):
+            if ch != ".":
+                px[u0 + dx, v0 + dy] = pal[ch]
+
+
+def _draw_badge_14x14(px, u0: int, v0: int, bg, border_tl, border_br, grid: list[str], pal: dict):
+    """Draw a crisp 14x14 recessed industrial badge icon with 1px beveled frame."""
+    fill_rect(px, u0, v0, u0 + 13, v0 + 13, bg)
+    hline(px, u0, u0 + 12, v0, border_tl)
+    vline(px, u0, v0, v0 + 12, border_tl)
+    hline(px, u0 + 1, u0 + 13, v0 + 13, border_br)
+    vline(px, u0 + 13, v0 + 1, v0 + 13, border_br)
+    px[u0 + 13, v0] = bg
+    px[u0, v0 + 13] = bg
+    assert len(grid) == 12 and all(len(r) == 12 for r in grid)
+    for dy, row in enumerate(grid):
+        for dx, ch in enumerate(row):
+            if ch != ".":
+                px[u0 + 1 + dx, v0 + 1 + dy] = pal[ch]
+
+
+def make_gui_operation_terminal() -> Image.Image:
+    """512x256 RGBA atlas for Operation Terminal selection screen (320x224 panel + right-margin sprites)."""
+    _verify_terminal_gui_layout_non_overlapping()
+
+    im = Image.new("RGBA", (512, 256), (0, 0, 0, 0))
+    px = im.load()
+
+    # Exact IC2 beveled steel panel matching smart_port.png & cargo_station.png
+    PW, PH = 320, 224
+    c_out = rgba("#1E232B")
+    c_hi = rgba("#F2F4F7")
+    c_bg = rgba("#C6C6C6")
+    c_bg2 = rgba("#C0C2C6")
+    c_sh = rgba("#555B66")
+    c_seam = rgba("#9BA0A8")
+    c_seam_hi = rgba("#E4E7EC")
+
+    fill_rect(px, 0, 0, PW - 1, PH - 1, c_out)
+    for cx, cy in ((0, 0), (PW - 1, 0), (0, PH - 1), (PW - 1, PH - 1)):
+        px[cx, cy] = (0, 0, 0, 0)
+    fill_rect(px, 1, 1, PW - 2, PH - 2, c_bg)
+    hline(px, 1, PW - 3, 1, c_hi)
+    hline(px, 1, PW - 4, 2, c_hi)
+    vline(px, 1, 1, PH - 3, c_hi)
+    vline(px, 2, 1, PH - 4, c_hi)
+    hline(px, 2, PW - 2, PH - 2, c_sh)
+    hline(px, 3, PW - 2, PH - 3, c_sh)
+    vline(px, PW - 2, 2, PH - 2, c_sh)
+    vline(px, PW - 3, 3, PH - 2, c_sh)
+    for y in range(4, PH - 3, 2):
+        hline(px, 3, PW - 4, y, c_bg2)
+    # Corner rivets (clear of header/footer LCDs)
+    for rx, ry in ((4, 4), (PW - 6, 4), (4, PH - 6), (PW - 6, PH - 6)):
+        px[rx, ry] = rgba("#707680")
+        px[rx + 1, ry + 1] = c_hi
+
+    # 1) Top Title Header Strip (y=0..16):
+    # Right-side Terminal EU/FE LCD mini-bar frame at (186, 4, 126, 11) -> inner fill (187, 5, 124, 9)
+    _draw_lcd(px, 186, 4, 126, 11)
+    # Subtle 10% vertical scale ticks inside dark EU mini-bar
+    for tick_i in range(1, 10):
+        tx = 187 + round(tick_i * 124 / 10)
+        vline(px, tx, 6, 12, rgba("#253545"))
+    # Bevel seam below header (y=17..18)
+    hline(px, 7, 312, 17, c_seam)
+    hline(px, 7, 312, 18, c_seam_hi)
+
+    # 2) Control Toolbar (y=19..36):
+    # Search EditBox recessed dark well at (8, 20, 236, 14)
+    _draw_lcd(px, 8, 20, 236, 14)
+    # Subtle teal focus accent strip on left interior edge of search bar
+    vline(px, 9, 21, 32, rgba("#1D6F7D"))
+    # Refresh button area (248, 20, 64, 14) stays clean steel panel surface for vanilla Button
+    # Horizontal seam below toolbar (y=36)
+    hline(px, 7, 312, 36, c_seam)
+
+    # 3) Dark Recessed Scrollable Station List Viewport (8, 38, 296, 166)
+    vx0, vy0, vx1, vy1 = 8, 38, 8 + 296 - 1, 38 + 166 - 1
+    fill_rect(px, vx0, vy0, vx1, vy1, rgba("#11171F"))
+    hline(px, vx0, vx1 - 1, vy0, rgba("#090D12"))
+    vline(px, vx0, vy0, vy1 - 1, rgba("#090D12"))
+    hline(px, vx0 + 1, vx1, vy1, rgba("#DCE2EA"))
+    vline(px, vx1, vy0 + 1, vy1, rgba("#DCE2EA"))
+    px[vx1, vy0] = c_seam
+    px[vx0, vy1] = c_seam
+    # Ultra-subtle industrial horizontal scanline grain inside list viewport
+    for y in range(vy0 + 2, vy1 - 1, 2):
+        hline(px, vx0 + 1, vx1 - 1, y, rgba("#151D27"))
+
+    # 4) Vertical Scrollbar Track (306, 38, 6, 166)
+    sx0, sy0, sx1, sy1 = 306, 38, 306 + 6 - 1, 38 + 166 - 1
+    fill_rect(px, sx0, sy0, sx1, sy1, rgba("#151C24"))
+    hline(px, sx0, sx1 - 1, sy0, rgba("#373B42"))
+    vline(px, sx0, sy0, sy1 - 1, rgba("#373B42"))
+    hline(px, sx0 + 1, sx1, sy1, rgba("#EEF1F5"))
+    vline(px, sx1, sy0 + 1, sy1, rgba("#EEF1F5"))
+    vline(px, sx0 + 2, sy0 + 2, sy1 - 2, rgba("#0D1218"))
+    vline(px, sx0 + 3, sy0 + 2, sy1 - 2, rgba("#0D1218"))
+
+    # 5) Bottom Footer Status LCD (8, 207, 304, 12)
+    _draw_lcd(px, 8, 207, 304, 12)
+    vline(px, 9, 208, 217, rgba("#1F8B8A"))
+    px[9, 210] = rgba("#3CF2B8")
+    px[9, 211] = rgba("#4CE8FF")
+
+    # =========================================================================
+    # RIGHT-MARGIN DYNAMIC SPRITES (u = 328..452)
+    # =========================================================================
+
+    # 1) Smart Port Badge Icon (14x14) at UV (328, 0, 14, 14) — maritime blue anchor
+    _draw_badge_14x14(
+        px, 328, 0,
+        bg=rgba("#132336"),
+        border_tl=rgba("#0A121C"),
+        border_br=rgba("#2D5D96"),
+        grid=[
+            ".....HH.....",
+            "....H..H....",
+            ".....CC.....",
+            "..CCCCCCCC..",
+            ".....CC.....",
+            ".....CC.....",
+            ".....CC.....",
+            ".B...CC...B.",
+            ".BB..CC..BB.",
+            "..BBBHHBBB..",
+            "....BBBB....",
+            "............",
+        ],
+        pal={
+            "H": rgba("#C2FAFF"),
+            "C": rgba("#4CE8FF"),
+            "B": rgba("#2B74CC"),
+        },
+    )
+
+    # 2) Cargo Station Badge Icon (14x14) at UV (344, 0, 14, 14) — amber quad-rotor drone
+    _draw_badge_14x14(
+        px, 344, 0,
+        bg=rgba("#261D12"),
+        border_tl=rgba("#140E08"),
+        border_br=rgba("#9E681E"),
+        grid=[
+            ".AA......AA.",
+            ".AH......HA.",
+            "..A..AA..A..",
+            "...A.HH.A...",
+            "....AHHA....",
+            "...AAHHAA...",
+            "...AAHHAA...",
+            "....AAAA....",
+            "...A.OO.A...",
+            "..A..OO..A..",
+            ".AO......OA.",
+            ".AA......AA.",
+        ],
+        pal={
+            "H": rgba("#FFF0A6"),
+            "A": rgba("#F2A429"),
+            "O": rgba("#C46E18"),
+        },
+    )
+
+    # 3) Comm Base Station Badge Icon (14x14) at UV (360, 0, 14, 14) — cyan RF antenna
+    _draw_badge_14x14(
+        px, 360, 0,
+        bg=rgba("#102428"),
+        border_tl=rgba("#091418"),
+        border_br=rgba("#218A87"),
+        grid=[
+            "..C......C..",
+            ".C..C..C..C.",
+            ".C.C.HH.C.C.",
+            ".C..CHHC..C.",
+            "..C..GG..C..",
+            ".....GG.....",
+            "....SGGS....",
+            ".....GG.....",
+            "....SSSS....",
+            "...SSGGSS...",
+            "..SSSSSSSS..",
+            "............",
+        ],
+        pal={
+            "H": rgba("#D4FFF5"),
+            "C": rgba("#4CE8FF"),
+            "G": rgba("#3CF2B8"),
+            "S": rgba("#8EA2B8"),
+        },
+    )
+
+    # 4) Status LEDs (8x8) at v=18:
+    # Online green (328, 18, 8, 8)
+    _draw_status_led_8x8(px, 328, 18, rgba("#D4FFE4"), rgba("#3CF285"), rgba("#168F4D"), rgba("#2E443B"))
+    # Unpowered amber (338, 18, 8, 8)
+    _draw_status_led_8x8(px, 338, 18, rgba("#FFF2B2"), rgba("#F5A623"), rgba("#9E5E0E"), rgba("#4A3B24"))
+    # Offline / unloaded gray-blue (348, 18, 8, 8)
+    _draw_status_led_8x8(px, 348, 18, rgba("#B4C6D8"), rgba("#667D96"), rgba("#3B4B5E"), rgba("#2B3542"))
+    # Missing / error red (358, 18, 8, 8)
+    _draw_status_led_8x8(px, 358, 18, rgba("#FFC2C6"), rgba("#EB3B46"), rgba("#8F1820"), rgba("#47262A"))
+
+    # 5) Terminal EU Gauge Fill (124x9) at UV (328, 30, 124, 9) — cyan-green segmented bar
+    for dx in range(124):
+        frac = dx / 123.0
+        # Smooth cyan-green to radiant cyan energy gradient
+        r = int(42 + frac * 34)
+        g = int(235 - frac * 10)
+        b = int(172 + frac * 83)
+        c_top = (min(255, r + 90), min(255, g + 20), min(255, b + 40), 255)
+        c_mid = (r, g, b, 255)
+        c_low = (max(0, r - 24), max(0, g - 65), max(0, b - 40), 255)
+        c_bot = (max(0, r - 34), max(0, g - 110), max(0, b - 70), 255)
+        is_seg = (dx % 6 == 5) and dx < 123
+        for dy in range(9):
+            if is_seg:
+                px[328 + dx, 30 + dy] = rgba("#11474A")
+            elif dy == 0:
+                px[328 + dx, 30 + dy] = c_top
+            elif dy in (1, 2):
+                px[328 + dx, 30 + dy] = c_top if dy == 1 else c_mid
+            elif dy in (3, 4, 5, 6):
+                px[328 + dx, 30 + dy] = c_mid
+            elif dy == 7:
+                px[328 + dx, 30 + dy] = c_low
+            else:
+                px[328 + dx, 30 + dy] = c_bot
+
+    # 6) Unbind Trash / X Icon (10x10) at UV (328, 44, 10, 10) + Hover Variant at (328, 56, 10, 10)
+    x_grid = [
+        "..........",
+        ".oo....oo.",
+        ".oRo..oRo.",
+        "..oRooRo..",
+        "...oRRo...",
+        "...oRRo...",
+        "..oRooRo..",
+        ".oRo..oRo.",
+        ".oo....oo.",
+        "..........",
+    ]
+    for v_off, col_r, col_o in (
+        (44, rgba("#C9545C"), rgba("#2E181B")),
+        (56, rgba("#FF6B74"), rgba("#4A1419")),
+    ):
+        for dy, row in enumerate(x_grid):
+            for dx, ch in enumerate(row):
+                if ch == "R":
+                    px[328 + dx, v_off + dy] = col_r
+                elif ch == "o":
+                    px[328 + dx, v_off + dy] = col_o
+
+    # 7) Scrollbar Thumb (6x24) at UV (344, 44, 6, 24)
+    tx0, ty0, tx1, ty1 = 344, 44, 349, 67
+    fill_rect(px, tx0, ty0, tx1, ty1, rgba("#8F9AA8"))
+    hline(px, tx0, tx1 - 1, ty0, rgba("#E4EAF2"))
+    vline(px, tx0, ty0, ty1 - 1, rgba("#D5DDE8"))
+    hline(px, tx0 + 1, tx1, ty1, rgba("#48515E"))
+    vline(px, tx1, ty0 + 1, ty1, rgba("#48515E"))
+    px[tx1, ty0] = rgba("#8F9AA8")
+    px[tx0, ty1] = rgba("#8F9AA8")
+    # 3 recessed horizontal grip ridges at vertical center
+    for gy in (ty0 + 9, ty0 + 12, ty0 + 15):
+        hline(px, tx0 + 1, tx1 - 1, gy, rgba("#4A5461"))
+        hline(px, tx0 + 1, tx1 - 1, gy + 1, rgba("#CBD4E0"))
+
+    # 8) Optional Bonus Crisp 10x10 Icons (non-overlapping right-margin slots):
+    # Connect right-arrow icon at (358, 44, 10, 10)
+    conn_grid = [
+        "....oo....",
+        "....oCo...",
+        ".ooooCHo..",
+        "oCCCCCHHo.",
+        "oCCCCCHHHo",
+        "oCCCCCHHo.",
+        ".ooooCHo..",
+        "....oCo...",
+        "....oo....",
+        "..........",
+    ]
+    for dy, row in enumerate(conn_grid):
+        for dx, ch in enumerate(row):
+            if ch == "o":
+                px[358 + dx, 44 + dy] = rgba("#0D262B")
+            elif ch == "C":
+                px[358 + dx, 44 + dy] = rgba("#3CF2B8")
+            elif ch == "H":
+                px[358 + dx, 44 + dy] = rgba("#A8FFF4")
+
+    # Remote Read-Only eye badge icon at (370, 44, 10, 10)
+    eye_grid = [
+        "..........",
+        "..oooooo..",
+        ".oAAAAAAo.",
+        "oAAoCCoAAo",
+        "oAoCHHCoAo",
+        "oAAoCCoAAo",
+        ".oAAAAAAo.",
+        "..oooooo..",
+        "..........",
+        "..........",
+    ]
+    for dy, row in enumerate(eye_grid):
+        for dx, ch in enumerate(row):
+            if ch == "o":
+                px[370 + dx, 44 + dy] = rgba("#1C170E")
+            elif ch == "A":
+                px[370 + dx, 44 + dy] = rgba("#F2B233")
+            elif ch == "C":
+                px[370 + dx, 44 + dy] = rgba("#3CE8FF")
+            elif ch == "H":
+                px[370 + dx, 44 + dy] = rgba("#E0FFFF")
+
+    return im
+
+
 # =============================================================================
 # 5. VISUAL PREVIEW CONTACT SHEET (4x nearest-neighbor)
 # =============================================================================
@@ -1650,27 +2442,31 @@ def generate_preview(out_path: Path, generated: dict[str, Image.Image]):
         "block/smart_port_side", "block/smart_port_top", "block/smart_port_bottom",
         "block/cargo_station_top", "block/cargo_station_top_active",
         "block/cargo_station_side", "block/cargo_station_side_active", "block/cargo_station_bottom",
+        "block/comm_base_station_base", "block/comm_base_station_top",
+        "block/comm_base_station_front", "block/comm_base_station_front_active",
+        "block/comm_base_station_antenna", "block/comm_base_station_antenna_active",
     ]
     items = [
         "item/electric_cargo_boat", "item/transport_drone", "item/heavy_transport_drone",
         "item/rf_chip_1", "item/rf_chip_2", "item/rf_chip_3", "item/chunk_loading_upgrade",
+        "item/operation_terminal",
     ]
     entities = [
         "entity/boat/electric_cargo_boat",
         "entity/drone/transport_drone",
         "entity/drone/heavy_transport_drone",
     ]
-    guis = ["gui/smart_port", "gui/cargo_station"]
+    guis = ["gui/smart_port", "gui/cargo_station", "gui/operation_terminal"]
 
     # Layout canvas width = 1180 px, stacked 2x 512x256 GUIs cleanly
     W = 1180
-    H = 1996
+    H = 2780
     sheet = Image.new("RGBA", (W, H), bg)
     draw = ImageDraw.Draw(sheet)
 
     draw.text((20, 14), "LogisticsCraft2 (lc2) - Complete Original Asset Preview (Nearest-Neighbor)", fill=hdr_col)
 
-    # Section 1: Blocks (2 rows of 5)
+    # Section 1: Blocks (4 rows of up to 5)
     y = 42
     draw.text((20, y), "BLOCKS (16x16 @ 4x = 64x64)", fill=hdr_col)
     y += 18
@@ -1684,23 +2480,23 @@ def generate_preview(out_path: Path, generated: dict[str, Image.Image]):
         sheet.alpha_composite(tile, (cx + 12, cy + 15))
         label = key.split("/", 1)[1]
         parts = label.split("_")
-        line1 = "_".join(parts[:2])
-        line2 = "_".join(parts[2:])
+        line1 = "_".join(parts[:3]) if parts[0] == "comm" else "_".join(parts[:2])
+        line2 = "_".join(parts[3:]) if parts[0] == "comm" else "_".join(parts[2:])
         draw.text((cx + 86, cy + 28), line1, fill=text_col)
         draw.text((cx + 86, cy + 44), line2, fill=rgba("#9FB2C8"))
 
-    # Section 2: Items (1 row of 7)
-    y += 220
+    # Section 2: Items (1 row of 8)
+    y += 428
     draw.text((20, y), "ITEMS (16x16 @ 4x = 64x64)", fill=hdr_col)
     y += 18
     for idx, key in enumerate(items):
-        cx = 20 + idx * 163
+        cx = 20 + idx * 143
         cy = y
-        draw.rectangle([cx, cy, cx + 153, cy + 106], fill=card_bg, outline=border)
+        draw.rectangle([cx, cy, cx + 135, cy + 106], fill=card_bg, outline=border)
         tile = generated[key].resize((16 * scale, 16 * scale), Image.NEAREST)
-        sheet.alpha_composite(tile, (cx + 44, cy + 10))
+        sheet.alpha_composite(tile, (cx + 36, cy + 10))
         label = key.split("/", 1)[1]
-        draw.text((cx + 8, cy + 82), label[:22], fill=text_col)
+        draw.text((cx + 6, cy + 82), label[:20], fill=text_col)
 
     # Section 3: Entity UV Maps (Boat 128x128 @ 3x = 384x384; Drones 64x64 @ 4x = 256x256)
     y += 124
@@ -1725,9 +2521,9 @@ def generate_preview(out_path: Path, generated: dict[str, Image.Image]):
     sheet.alpha_composite(d2_img, (dx2 + 46, by + 82))
     draw.text((dx2 + 12, by + 8), "entity/drone/heavy_transport_drone.png (64x64 @ 4x)", fill=text_col)
 
-    # Section 4: 2-Zone Machine GUIs (512x256 @ 2x = 1024x512 stacked cleanly)
+    # Section 4: Machine & Terminal GUIs (512x256 @ 2x = 1024x512 stacked cleanly)
     y += 438
-    draw.text((20, y), "MACHINE GUIs (512x256 atlas: 392x234 2-zone panel + u=396..444 sprites @ 2x)", fill=hdr_col)
+    draw.text((20, y), "GUIs (512x256 atlases @ 2x)", fill=hdr_col)
     y += 18
     for idx, key in enumerate(guis):
         gx = 20
@@ -1735,7 +2531,8 @@ def generate_preview(out_path: Path, generated: dict[str, Image.Image]):
         draw.rectangle([gx, gy, gx + 1140, gy + 548], fill=card_bg, outline=border)
         g_img = generated[key].resize((512 * 2, 256 * 2), Image.NEAREST)
         sheet.alpha_composite(g_img, (gx + 58, gy + 26))
-        draw.text((gx + 16, gy + 8), f"{key}.png (512x256 atlas -> 392x234 2-zone panel)", fill=text_col)
+        panel_dim = "320x224 terminal panel" if key == "gui/operation_terminal" else "392x234 2-zone panel"
+        draw.text((gx + 16, gy + 8), f"{key}.png (512x256 atlas -> {panel_dim})", fill=text_col)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(out_path)
@@ -1743,7 +2540,7 @@ def generate_preview(out_path: Path, generated: dict[str, Image.Image]):
 
 
 def generate_gui_preview(out_path: Path, generated: dict[str, Image.Image]):
-    """Render a clean 2x nearest-neighbor preview PNG of BOTH 512x256 2-zone GUIs."""
+    """Render a clean 2x nearest-neighbor preview PNG of all three 512x256 LC2 GUIs."""
     bg = rgba("#151A22")
     card_bg = rgba("#222936")
     border = rgba("#47556B")
@@ -1751,15 +2548,14 @@ def generate_gui_preview(out_path: Path, generated: dict[str, Image.Image]):
     sub_col = rgba("#9AB0C7")
     hdr_col = rgba("#5CE8FF")
 
-    # Two 512x256 GUIs @ 2x = 1024x512 each, stacked vertically with tight framing
     W = 1088
-    H = 1172
+    H = 1736
     sheet = Image.new("RGBA", (W, H), bg)
     draw = ImageDraw.Draw(sheet)
 
     draw.text(
         (24, 14),
-        "LogisticsCraft2 (v1.1.0) - 2-Zone Inventory GUIs (512x256 Atlas @ 2x Nearest-Neighbor | 392x234 Panel)",
+        "LogisticsCraft2 (v1.2.0) - All GUI Atlases (512x256 @ 2x Nearest-Neighbor)",
         fill=hdr_col,
     )
 
@@ -1767,31 +2563,145 @@ def generate_gui_preview(out_path: Path, generated: dict[str, Image.Image]):
         (
             "gui/smart_port",
             "Smart Port (assets/lc2/textures/gui/smart_port.png) - 512x256 -> 392x234 | 0..26 Outbound (Amber) | Swap | 27..53 Storage (Cyan)",
+            "Dynamic Sprites (u=396..444):\n- EU Fill (396,0 16x40)\n- EU Bolt (414,0 10x14)\n- Ready Badge (396,44 16x16)\n- Warn Badge (414,44 16x16)\n- Chunk Badge (396,64 16x16)\n- Swap Arrows (414,64 12x10)",
+            792,
         ),
         (
             "gui/cargo_station",
             "Cargo Station (assets/lc2/textures/gui/cargo_station.png) - 512x256 -> 392x234 | RF + 6 Drone Bays | 0..26 Outbound | Swap | 27..53 Storage",
+            "Dynamic Sprites (u=396..444):\n- EU Fill (396,0 16x40)\n- EU Bolt (414,0 10x14)\n- Ready Badge (396,44 16x16)\n- Warn Badge (414,44 16x16)\n- Chunk Badge (396,64 16x16)\n- Swap Arrows (414,64 12x10)",
+            792,
+        ),
+        (
+            "gui/operation_terminal",
+            "Operation Terminal (assets/lc2/textures/gui/operation_terminal.png) - 512x256 -> 320x224 | 6-Row Scrollable List + EU Mini-Bar",
+            "Dynamic Sprites (u=328..452):\n- Badges 14x14: Port(328,0) Cargo(344,0) Comm(360,0)\n- LEDs 8x8 @ v=18: Online/Warn/Off/Err\n- EU Fill 124x9: (328,30)\n- Unbind 10x10: (328,44)/(328,56)\n- Scroll Thumb 6x24: (344,44)\n- Connect/Eye 10x10: (358,44)/(370,44)",
+            656,
         ),
     ]
-    for idx, (key, caption) in enumerate(entries):
+    for idx, (key, caption, legend, legend_dx) in enumerate(entries):
         cx = 16
         cy = 40 + idx * 562
         draw.rectangle([cx, cy, cx + 1055, cy + 548], fill=card_bg, outline=border)
         draw.text((cx + 16, cy + 9), caption, fill=text_col)
-        # Subtle bounding box around active 512x256 @ 2x region so sprite margin edges are clearly visible
         ax, ay = cx + 16, cy + 28
         draw.rectangle([ax - 1, ay - 1, ax + 1024, ay + 512], fill=rgba("#181E28"), outline=rgba("#384457"))
         g_img = generated[key].resize((512 * 2, 256 * 2), Image.NEAREST)
         sheet.alpha_composite(g_img, (ax, ay))
-        draw.text(
-            (ax + 792, ay + 180),
-            "Dynamic Sprites (u=396..444):\n- EU Fill (396,0 16x40)\n- EU Bolt (414,0 10x14)\n- Ready Badge (396,44 16x16)\n- Warn Badge (414,44 16x16)\n- Chunk Badge (396,64 16x16)\n- Swap Arrows (414,64 12x10)",
-            fill=sub_col,
-        )
+        draw.text((ax + legend_dx, ay + 180), legend, fill=sub_col)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(out_path)
     print(f"Saved 2x GUI preview: {out_path} ({sheet.size[0]}x{sheet.size[1]})")
+
+
+def generate_v120_preview(out_path: Path, generated: dict[str, Image.Image]):
+    """Render a crisp v1.2.0 contact sheet showing all new Comm Base Station, Operation Terminal & GUI assets."""
+    bg = rgba("#141922")
+    card_bg = rgba("#1E2532")
+    border = rgba("#3F4E63")
+    text_col = rgba("#E8F0F8")
+    sub_col = rgba("#98AEC6")
+    hdr_col = rgba("#4CE8FF")
+    acc_col = rgba("#3CF2B8")
+
+    W = 1088
+    H = 928
+    sheet = Image.new("RGBA", (W, H), bg)
+    draw = ImageDraw.Draw(sheet)
+
+    draw.text(
+        (20, 14),
+        "LogisticsCraft2 v1.2.0 - Comm Base Station & Operation Terminal Original Assets (CC BY-SA 4.0)",
+        fill=hdr_col,
+    )
+
+    # Row 1: 6 Comm Base Station block textures + 1 Operation Terminal item texture @ 6x (96x96)
+    y = 42
+    draw.text((20, y), "BLOCK & ITEM TEXTURES (16x16 @ 6x Nearest-Neighbor = 96x96)", fill=acc_col)
+    y += 20
+    tiles = [
+        ("block/comm_base_station_base", "comm_base", "base"),
+        ("block/comm_base_station_top", "comm_base", "top"),
+        ("block/comm_base_station_front", "comm_base", "front (off)"),
+        ("block/comm_base_station_front_active", "comm_base", "front (on)"),
+        ("block/comm_base_station_antenna", "comm_base", "antenna (off)"),
+        ("block/comm_base_station_antenna_active", "comm_base", "antenna (on)"),
+        ("item/operation_terminal", "operation", "terminal (item)"),
+    ]
+    for idx, (key, l1, l2) in enumerate(tiles):
+        cx = 20 + idx * 150
+        cy = y
+        draw.rectangle([cx, cy, cx + 140, cy + 148], fill=card_bg, outline=border)
+        # Checker/dark tile backdrop so transparent pixels pop clearly
+        draw.rectangle([cx + 21, cy + 11, cx + 118, cy + 108], fill=rgba("#12171F"), outline=rgba("#344052"))
+        tile = generated[key].resize((96, 96), Image.NEAREST)
+        sheet.alpha_composite(tile, (cx + 22, cy + 12))
+        draw.text((cx + 12, cy + 114), l1, fill=text_col)
+        draw.text((cx + 12, cy + 128), l2, fill=sub_col)
+
+    # Row 2: Zoomed 3x Sprite Inspection Strip from gui/operation_terminal.png
+    y += 166
+    draw.text((20, y), "OPERATION TERMINAL DYNAMIC SPRITES (3x Zoom from Right Margin u=328..452)", fill=acc_col)
+    y += 20
+    draw.rectangle([20, y, 1068, y + 114], fill=card_bg, outline=border)
+    gui_im = generated["gui/operation_terminal"]
+    sprite_specs = [
+        ("Port", 328, 0, 14, 14),
+        ("Cargo", 344, 0, 14, 14),
+        ("Comm", 360, 0, 14, 14),
+        ("On", 328, 18, 8, 8),
+        ("LowPwr", 338, 18, 8, 8),
+        ("Off", 348, 18, 8, 8),
+        ("Err", 358, 18, 8, 8),
+        ("Unbind", 328, 44, 10, 10),
+        ("UnbHov", 328, 56, 10, 10),
+        ("Thumb", 344, 44, 6, 24),
+        ("Conn", 358, 44, 10, 10),
+        ("ReadOnly", 370, 44, 10, 10),
+    ]
+    sx = 34
+    for label, u, v, sw, sh in sprite_specs:
+        crop = gui_im.crop((u, v, u + sw, v + sh)).resize((sw * 3, sh * 3), Image.NEAREST)
+        cy_off = y + 14 + max(0, (72 - sh * 3) // 2)
+        draw.rectangle([sx - 3, cy_off - 3, sx + sw * 3 + 2, cy_off + sh * 3 + 2], fill=rgba("#12171F"), outline=rgba("#344052"))
+        sheet.alpha_composite(crop, (sx, cy_off))
+        draw.text((sx - 2, y + 94), label, fill=sub_col)
+        sx += max(sw * 3 + 20, 58)
+    # EU Fill 124x9 @ 2x on the right side of the strip
+    eu_crop = gui_im.crop((328, 30, 328 + 124, 30 + 9)).resize((248, 18), Image.NEAREST)
+    ex, ey = 796, y + 36
+    draw.rectangle([ex - 3, ey - 3, ex + 250, ey + 20], fill=rgba("#12171F"), outline=rgba("#344052"))
+    sheet.alpha_composite(eu_crop, (ex, ey))
+    draw.text((ex, y + 66), "EU Fill 124x9 @ 2x (328,30)", fill=sub_col)
+
+    # Row 3: Operation Terminal GUI Atlas @ 2x (1024x512)
+    y += 128
+    draw.text((20, y), "OPERATION TERMINAL GUI ATLAS (assets/lc2/textures/gui/operation_terminal.png | 512x256 @ 2x)", fill=acc_col)
+    y += 20
+    cx, cy = 16, y
+    draw.rectangle([cx, cy, cx + 1055, cy + 536], fill=card_bg, outline=border)
+    ax, ay = cx + 16, cy + 12
+    draw.rectangle([ax - 1, ay - 1, ax + 1024, ay + 512], fill=rgba("#181E28"), outline=rgba("#384457"))
+    g2 = gui_im.resize((512 * 2, 256 * 2), Image.NEAREST)
+    sheet.alpha_composite(g2, (ax, ay))
+    draw.text(
+        (ax + 656, ay + 160),
+        "Panel: 320x224 at (0,0)\n"
+        "Header EU LCD: (186,4,126,11)\n"
+        "Search Well: (8,20,236,14)\n"
+        "Refresh Area: (248,20,64,14)\n"
+        "List Viewport: (8,38,296,166)\n"
+        "  6 rows: x=10, y=40+i*27\n"
+        "  row inner: 292x25\n"
+        "Scrollbar Track: (306,38,6,166)\n"
+        "Footer LCD: (8,207,304,12)",
+        fill=sub_col,
+    )
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(out_path)
+    print(f"Saved v1.2.0 contact sheet: {out_path} ({sheet.size[0]}x{sheet.size[1]})")
 
 
 def main():
@@ -1799,7 +2709,8 @@ def main():
     parser.add_argument("--output", type=Path, default=TEX_ROOT, help="Output textures directory")
     parser.add_argument("--preview", type=Path, default=None, help="Optional zoomed full contact sheet PNG")
     parser.add_argument("--gui-preview", type=Path, default=None, help="Optional 2x GUI-only preview PNG")
-    parser.add_argument("--gui-only", action="store_true", help="Regenerate only the 2 GUI textures")
+    parser.add_argument("--v120-preview", type=Path, default=None, help="Optional v1.2.0 assets contact sheet PNG")
+    parser.add_argument("--gui-only", action="store_true", help="Regenerate only the GUI textures")
     args = parser.parse_args()
 
     out_root = args.output.resolve()
@@ -1814,6 +2725,12 @@ def main():
         "block/cargo_station_side": lambda: make_cargo_station_side(False),
         "block/cargo_station_side_active": lambda: make_cargo_station_side(True),
         "block/cargo_station_bottom": make_cargo_station_bottom,
+        "block/comm_base_station_base": make_comm_base_station_base,
+        "block/comm_base_station_top": make_comm_base_station_top,
+        "block/comm_base_station_front": lambda: make_comm_base_station_front(False),
+        "block/comm_base_station_front_active": lambda: make_comm_base_station_front(True),
+        "block/comm_base_station_antenna": lambda: make_comm_base_station_antenna(False),
+        "block/comm_base_station_antenna_active": lambda: make_comm_base_station_antenna(True),
         "item/electric_cargo_boat": make_item_electric_cargo_boat,
         "item/transport_drone": make_item_transport_drone,
         "item/heavy_transport_drone": make_item_heavy_transport_drone,
@@ -1821,11 +2738,13 @@ def main():
         "item/rf_chip_2": lambda: make_item_rf_chip(2),
         "item/rf_chip_3": lambda: make_item_rf_chip(3),
         "item/chunk_loading_upgrade": make_item_chunk_loading_upgrade,
+        "item/operation_terminal": make_item_operation_terminal,
         "entity/boat/electric_cargo_boat": make_entity_electric_cargo_boat,
         "entity/drone/transport_drone": lambda: make_entity_drone(False),
         "entity/drone/heavy_transport_drone": lambda: make_entity_drone(True),
         "gui/smart_port": lambda: _draw_base_gui(False),
         "gui/cargo_station": lambda: _draw_base_gui(True),
+        "gui/operation_terminal": make_gui_operation_terminal,
     }
 
     generated = {}
@@ -1845,6 +2764,10 @@ def main():
         generate_preview(args.preview.resolve(), generated)
     if args.gui_preview is not None:
         generate_gui_preview(args.gui_preview.resolve(), generated)
+    if args.v120_preview is not None:
+        if args.gui_only:
+            raise SystemExit("--v120-preview cannot be combined with --gui-only")
+        generate_v120_preview(args.v120_preview.resolve(), generated)
 
 
 if __name__ == "__main__":

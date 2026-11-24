@@ -6,7 +6,20 @@ plugins {
 allprojects {
     group = 'com.logisticscraft.lc2'
     version = rootProject.property('mod_version')
-    repositories { mavenCentral() }
+    repositories {
+        mavenCentral()
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = 'Modrinth'
+                    url = 'https://api.modrinth.com/maven'
+                }
+            }
+            filter {
+                includeGroup 'maven.modrinth'
+            }
+        }
+    }
 }
 
 subprojects {
