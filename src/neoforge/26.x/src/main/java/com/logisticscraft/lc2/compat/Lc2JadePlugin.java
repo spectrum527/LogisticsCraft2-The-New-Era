@@ -37,18 +37,21 @@ public final class Lc2JadePlugin implements IWailaPlugin {
 
     @Override
     public void register(IWailaCommonRegistration registration) {
-        registration.registerBlockDataProvider(CommBaseStationProvider.INSTANCE, CommBaseStationBlockEntity.class);
-        registration.registerBlockDataProvider(StationProvider.INSTANCE, AbstractLogisticsStationBlockEntity.class);
+        registration.registerBlockDataProvider(
+                CommBaseStationServerProvider.INSTANCE, CommBaseStationBlockEntity.class);
+        registration.registerBlockDataProvider(
+                StationServerProvider.INSTANCE, AbstractLogisticsStationBlockEntity.class);
     }
 
     @Override
     public void registerClient(IWailaClientRegistration registration) {
-        registration.registerBlockComponent(CommBaseStationProvider.INSTANCE, CommBaseStationBlock.class);
-        registration.registerBlockComponent(StationProvider.INSTANCE, SmartPortBlock.class);
-        registration.registerBlockComponent(StationProvider.INSTANCE, CargoStationBlock.class);
+        registration.registerBlockComponent(
+                CommBaseStationClientProvider.INSTANCE, CommBaseStationBlock.class);
+        registration.registerBlockComponent(StationClientProvider.INSTANCE, SmartPortBlock.class);
+        registration.registerBlockComponent(StationClientProvider.INSTANCE, CargoStationBlock.class);
     }
 
-    private enum StationProvider implements IBlockComponentProvider, IServerDataProvider<BlockAccessor> {
+    private enum StationServerProvider implements IServerDataProvider<BlockAccessor> {
         INSTANCE;
 
         @Override
@@ -63,6 +66,15 @@ public final class Lc2JadePlugin implements IWailaPlugin {
                 Lc2ProbeHelper.writeStationData(data, serverLevel, station);
             }
         }
+    }
+
+    private enum StationClientProvider implements IBlockComponentProvider {
+        INSTANCE;
+
+        @Override
+        public Identifier getUid() {
+            return STATION_UID;
+        }
 
         @Override
         public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
@@ -72,7 +84,7 @@ public final class Lc2JadePlugin implements IWailaPlugin {
         }
     }
 
-    private enum CommBaseStationProvider implements IBlockComponentProvider, IServerDataProvider<BlockAccessor> {
+    private enum CommBaseStationServerProvider implements IServerDataProvider<BlockAccessor> {
         INSTANCE;
 
         @Override
@@ -86,6 +98,15 @@ public final class Lc2JadePlugin implements IWailaPlugin {
                     && accessor.getBlockEntity() instanceof CommBaseStationBlockEntity comm) {
                 Lc2ProbeHelper.writeCommStationData(data, serverLevel, comm);
             }
+        }
+    }
+
+    private enum CommBaseStationClientProvider implements IBlockComponentProvider {
+        INSTANCE;
+
+        @Override
+        public Identifier getUid() {
+            return UID;
         }
 
         @Override

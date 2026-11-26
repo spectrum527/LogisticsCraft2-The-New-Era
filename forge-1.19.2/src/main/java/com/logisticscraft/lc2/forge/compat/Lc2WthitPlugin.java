@@ -48,8 +48,8 @@ public final class Lc2WthitPlugin implements IWailaCommonPlugin, IWailaClientPlu
                 IPluginConfig config
         ) {
             AbstractLogisticsStationBlockEntity station = accessor.getTarget();
-            if (station != null) {
-                CommProbeHelper.writeStationProbeData(data.raw(), station);
+            if (station != null && accessor.getLevel() != null) {
+                CommProbeHelper.writeStationProbeData(data.raw(), accessor.getLevel(), station);
             }
         }
     }

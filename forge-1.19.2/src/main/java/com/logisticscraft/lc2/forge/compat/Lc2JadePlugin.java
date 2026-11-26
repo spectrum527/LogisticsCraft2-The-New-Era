@@ -62,8 +62,9 @@ public final class Lc2JadePlugin implements IWailaPlugin {
                 BlockEntity blockEntity,
                 boolean showDetails
         ) {
-            if (blockEntity instanceof AbstractLogisticsStationBlockEntity station) {
-                CommProbeHelper.writeStationProbeData(data, station);
+            if (level instanceof ServerLevel serverLevel
+                    && blockEntity instanceof AbstractLogisticsStationBlockEntity station) {
+                CommProbeHelper.writeStationProbeData(data, serverLevel, station);
             }
         }
 

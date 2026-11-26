@@ -10,14 +10,14 @@ LogisticsCraft²: The New Era (`lc2`) is a logistics addon for [IndustrialCraft�
 
 Install [IndustrialCraft²: The New Era](https://github.com/spectrum527/IndustrialCraft2-The-New-Era) (`ic2` v1.0.5 or newer) for your Minecraft version first, then put the matching `lc2` JAR into `mods/`. In multiplayer, install the mod on both the client and the server.
 
-[v1.2.1 release notes](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/tag/v1.2.1) · [SHA-256 checksums](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.1/SHA256SUMS.txt)
+[v1.2.2 release notes](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/tag/v1.2.2) · [SHA-256 checksums](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.2/SHA256SUMS.txt)
 
 | Minecraft | Loader | Java | Download |
 | --- | --- | ---: | --- |
-| 1.19.2 | Forge 43.5.0 | 17 | [Forge 1.19.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.1/lc2-forge-1.19.2-1.2.1.jar) |
-| 1.21.1 | NeoForge 21.1.265 | 21 | [NeoForge 1.21.1 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.1/lc2-neoforge-1.21.1-1.2.1.jar) |
-| 26.1.2 | NeoForge 26.1.2.128 | 25 | [NeoForge 26.1.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.1/lc2-neoforge-26.1.2-1.2.1.jar) |
-| 26.2 | NeoForge 26.2.0.95 | 25 | [NeoForge 26.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.1/lc2-neoforge-26.2-1.2.1.jar) |
+| 1.19.2 | Forge 43.5.0 | 17 | [Forge 1.19.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.2/lc2-forge-1.19.2-1.2.2.jar) |
+| 1.21.1 | NeoForge 21.1.265 | 21 | [NeoForge 1.21.1 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.2/lc2-neoforge-1.21.1-1.2.2.jar) |
+| 26.1.2 | NeoForge 26.1.2.128 | 25 | [NeoForge 26.1.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.2/lc2-neoforge-26.1.2-1.2.2.jar) |
+| 26.2 | NeoForge 26.2.0.95 | 25 | [NeoForge 26.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.2/lc2-neoforge-26.2-1.2.2.jar) |
 
 ## Getting started
 
@@ -130,10 +130,10 @@ Run Gradle from the repository root (on Windows, replace `./gradlew` with `gradl
 
 Copy the finished JAR for your version from its `build/libs/` folder into `mods/`.
 
-- `src/neoforge/1.21.1/build/libs/lc2-neoforge-1.21.1-1.2.1.jar`
-- `src/neoforge/26.1.2/build/libs/lc2-neoforge-26.1.2-1.2.1.jar`
-- `src/neoforge/26.2/build/libs/lc2-neoforge-26.2-1.2.1.jar`
-- `forge-1.19.2/build/libs/lc2-forge-1.19.2-1.2.1.jar`
+- `src/neoforge/1.21.1/build/libs/lc2-neoforge-1.21.1-1.2.2.jar`
+- `src/neoforge/26.1.2/build/libs/lc2-neoforge-26.1.2-1.2.2.jar`
+- `src/neoforge/26.2/build/libs/lc2-neoforge-26.2-1.2.2.jar`
+- `forge-1.19.2/build/libs/lc2-forge-1.19.2-1.2.2.jar`
 
 For technical details, see [docs/DESIGN.md](docs/DESIGN.md), [docs/GUI_LAYOUT.md](docs/GUI_LAYOUT.md), and [docs/DRONE_MODEL_UV.md](docs/DRONE_MODEL_UV.md).
 
