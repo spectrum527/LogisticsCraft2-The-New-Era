@@ -4,6 +4,8 @@ import com.logisticscraft.lc2.blockentity.AbstractLogisticsStationBlockEntity;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.WorldlyContainer;
@@ -87,6 +89,11 @@ public final class Lc2ItemAccess {
 
     private static Container resolveContainer(ServerLevel level, BlockPos pos, BlockEntity be) {
         BlockState state = level.getBlockState(pos);
+        // Never bypass a modded BlockEntity's explicit null Capability (e.g. disabled faces or multiblock shells)
+        ResourceLocation key = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        if (key == null || !"minecraft".equals(key.getNamespace())) {
+            return null;
+        }
         if (state.getBlock() instanceof ChestBlock chest) {
             return ChestBlock.getContainer(chest, state, level, pos, true);
         }

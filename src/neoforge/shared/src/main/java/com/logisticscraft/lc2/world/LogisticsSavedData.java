@@ -9,15 +9,16 @@ import com.logisticscraft.lc2.core.TransitSnapshot;
 import com.logisticscraft.lc2.core.Vec3d;
 import com.logisticscraft.lc2.core.VehicleKind;
 import com.logisticscraft.lc2.core.VirtualTransitEngine;
+import com.logisticscraft.lc2.core.WaterRouteKey;
 import com.logisticscraft.lc2.platform.Lc2Nbt;
 import com.logisticscraft.lc2.platform.Lc2SavedDataBase;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -34,11 +35,13 @@ import org.slf4j.LoggerFactory;
 public final class LogisticsSavedData extends Lc2SavedDataBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LogisticsSavedData.class);
+    private static final int MAX_CACHED_ROUTES = 512;
 
     private final StationRegistry stationRegistry;
     private final VirtualTransitEngine engine;
     private final Map<UUID, List<ItemStack>> transitCargos = new LinkedHashMap<>();
-    private final Map<String, List<Vec3d>> cachedWaterRoutes = new HashMap<>();
+    private final Map<WaterRouteKey, List<Vec3d>> cachedWaterRoutes = new LinkedHashMap<>();
+    private final Set<BlockPos3i> chunkLoadedStations = new LinkedHashSet<>();
 
     /** Creates a new empty SavedData container for the given dimension ID. */
     public LogisticsSavedData(String dimensionId) {
@@ -88,19 +91,30 @@ public final class LogisticsSavedData extends Lc2SavedDataBase {
         if (originBerth == null || targetBerth == null) {
             return null;
         }
-        return cachedWaterRoutes.get(routeKey(originBerth, targetBerth));
+        List<Vec3d> direct = cachedWaterRoutes.get(new WaterRouteKey(originBerth, targetBerth));
+        if (direct != null && !direct.isEmpty()) {
+            return direct;
+        }
+        List<Vec3d> reverse = cachedWaterRoutes.get(new WaterRouteKey(targetBerth, originBerth));
+        if (reverse != null && !reverse.isEmpty()) {
+            List<Vec3d> flipped = new ArrayList<>(reverse);
+            Collections.reverse(flipped);
+            return List.copyOf(flipped);
+        }
+        return null;
     }
 
-    /** Caches a verified water waypoint path (both forward and reverse directions). */
+    /** Caches a verified water waypoint path between two berths. */
     public void cacheWaterRoute(BlockPos3i originBerth, BlockPos3i targetBerth, List<Vec3d> waypoints) {
         if (originBerth == null || targetBerth == null || waypoints == null || waypoints.isEmpty()) {
             return;
         }
-        List<Vec3d> forward = List.copyOf(waypoints);
-        List<Vec3d> reverse = new ArrayList<>(forward);
-        Collections.reverse(reverse);
-        cachedWaterRoutes.put(routeKey(originBerth, targetBerth), forward);
-        cachedWaterRoutes.put(routeKey(targetBerth, originBerth), List.copyOf(reverse));
+        WaterRouteKey key = new WaterRouteKey(originBerth, targetBerth);
+        if (!cachedWaterRoutes.containsKey(key) && cachedWaterRoutes.size() >= MAX_CACHED_ROUTES) {
+            WaterRouteKey oldest = cachedWaterRoutes.keySet().iterator().next();
+            cachedWaterRoutes.remove(oldest);
+        }
+        cachedWaterRoutes.put(key, List.copyOf(waypoints));
         setDirty();
     }
 
@@ -109,15 +123,7 @@ public final class LogisticsSavedData extends Lc2SavedDataBase {
         if (berthPos == null || cachedWaterRoutes.isEmpty()) {
             return;
         }
-        String token = posToken(berthPos);
-        boolean changed = false;
-        Iterator<String> it = cachedWaterRoutes.keySet().iterator();
-        while (it.hasNext()) {
-            if (it.next().contains(token)) {
-                it.remove();
-                changed = true;
-            }
-        }
+        boolean changed = cachedWaterRoutes.keySet().removeIf(key -> key.touches(berthPos));
         if (changed) {
             setDirty();
         }
@@ -128,11 +134,27 @@ public final class LogisticsSavedData extends Lc2SavedDataBase {
         if (a == null || b == null) {
             return;
         }
-        boolean removed = cachedWaterRoutes.remove(routeKey(a, b)) != null;
-        removed |= cachedWaterRoutes.remove(routeKey(b, a)) != null;
+        boolean removed = cachedWaterRoutes.remove(new WaterRouteKey(a, b)) != null;
+        removed |= cachedWaterRoutes.remove(new WaterRouteKey(b, a)) != null;
         if (removed) {
             setDirty();
         }
+    }
+
+    /** Records or clears whether the station at {@code pos} should hold chunk-loading tickets across restarts. */
+    public void setChunkLoaderStation(BlockPos3i pos, boolean active) {
+        if (pos == null) {
+            return;
+        }
+        boolean changed = active ? chunkLoadedStations.add(pos) : chunkLoadedStations.remove(pos);
+        if (changed) {
+            setDirty();
+        }
+    }
+
+    /** Returns an immutable snapshot of stations persisted with active chunk-loading upgrades. */
+    public Set<BlockPos3i> getChunkLoadedStations() {
+        return Set.copyOf(chunkLoadedStations);
     }
 
     /** Converts a Minecraft BlockPos to a pure-core BlockPos3i. */
@@ -161,6 +183,7 @@ public final class LogisticsSavedData extends Lc2SavedDataBase {
             }
             st.putInt("maxBays", entry.maxDroneBays());
             st.putInt("docked", entry.dockedDrones());
+            st.putInt("dockedMask", entry.dockedBayMask());
             st.putInt("reserved", entry.reservedInboundDrones());
             stationList.add(st);
         }
@@ -193,6 +216,7 @@ public final class LogisticsSavedData extends Lc2SavedDataBase {
             tr.putDouble("latStarboard", snap.lateralStarboardOffset());
             tr.putInt("laneSlot", snap.laneSlot());
             tr.putInt("maxObsY", snap.maxObstacleY());
+            tr.putInt("entityGen", snap.entityGeneration());
             transitList.add(tr);
         }
         root.put("transits", transitList);
@@ -210,15 +234,25 @@ public final class LogisticsSavedData extends Lc2SavedDataBase {
         }
         root.put("cargos", cargoList);
 
-        // 4. Cached water routes
+        // 4. Cached water routes (typed WaterRouteKey)
         ListTag routeList = new ListTag();
-        for (Map.Entry<String, List<Vec3d>> entry : cachedWaterRoutes.entrySet()) {
+        for (Map.Entry<WaterRouteKey, List<Vec3d>> entry : cachedWaterRoutes.entrySet()) {
             CompoundTag rt = new CompoundTag();
-            rt.putString("key", entry.getKey());
+            writePos(rt, "originBerth", entry.getKey().originBerth());
+            writePos(rt, "targetBerth", entry.getKey().targetBerth());
             rt.put("waypoints", writeWaypoints(entry.getValue()));
             routeList.add(rt);
         }
         root.put("waterRoutes", routeList);
+
+        // 5. Persisted chunk-loaded stations
+        ListTag chunkLoaderList = new ListTag();
+        for (BlockPos3i pos : chunkLoadedStations) {
+            CompoundTag cl = new CompoundTag();
+            writePos(cl, "pos", pos);
+            chunkLoaderList.add(cl);
+        }
+        root.put("chunkLoaders", chunkLoaderList);
 
         return root;
     }
@@ -241,8 +275,9 @@ public final class LogisticsSavedData extends Lc2SavedDataBase {
                 BlockPos3i berth = st.contains("berth") ? readPos(st, "berth") : null;
                 int maxBays = Lc2Nbt.getInt(st, "maxBays", type.maxDroneBays());
                 int docked = Lc2Nbt.getInt(st, "docked", 0);
+                int dockedMask = st.contains("dockedMask") ? Lc2Nbt.getInt(st, "dockedMask", -1) : -1;
                 int reserved = Lc2Nbt.getInt(st, "reserved", 0);
-                stations.add(new StationEntry(pos, type, name, berth, maxBays, docked, reserved));
+                stations.add(new StationEntry(pos, type, name, berth, maxBays, docked, reserved, dockedMask));
             } catch (RuntimeException ex) {
                 LOGGER.warn("Skipping malformed LC2 station entry during load: {}", ex.getMessage());
             }
@@ -275,11 +310,12 @@ public final class LogisticsSavedData extends Lc2SavedDataBase {
                 double latStarboard = Lc2Nbt.getDouble(tr, "latStarboard", 0.0);
                 int laneSlot = Lc2Nbt.getInt(tr, "laneSlot", 0);
                 int maxObsY = Lc2Nbt.getInt(tr, "maxObsY", 0);
+                int entityGen = Math.max(0, Lc2Nbt.getInt(tr, "entityGen", 0));
                 // Reset physicalEntityLoaded to false on restart so LogisticsLevelManager cleanly rebinds or materializes
                 snapshots.add(new TransitSnapshot(
                         id, kind, origin, target, originBay, targetBay, autoReturn, returnPrepaid,
                         waypoints, wpIdx, segProg, nom, cur, yaw, speed, phase, hasRider,
-                        false, ticksWait, vertAvoid, latStarboard, laneSlot, maxObsY
+                        false, ticksWait, vertAvoid, latStarboard, laneSlot, maxObsY, entityGen
                 ));
             } catch (RuntimeException ex) {
                 LOGGER.warn("Skipping malformed LC2 transit snapshot during load: {}", ex.getMessage());
@@ -298,24 +334,61 @@ public final class LogisticsSavedData extends Lc2SavedDataBase {
             }
         }
 
-        // 4. Cached water routes
+        // 4. Cached water routes (supports both typed WaterRouteKey and legacy string key migration)
         for (CompoundTag rt : Lc2Nbt.getCompoundList(root, "waterRoutes")) {
-            String key = Lc2Nbt.getString(rt, "key", "");
             List<Vec3d> waypoints = readWaypoints(rt, "waypoints");
-            if (!key.isEmpty() && !waypoints.isEmpty()) {
+            if (waypoints.isEmpty()) {
+                continue;
+            }
+            if (rt.contains("originBerth") && rt.contains("targetBerth")) {
+                WaterRouteKey key = new WaterRouteKey(readPos(rt, "originBerth"), readPos(rt, "targetBerth"));
                 data.cachedWaterRoutes.put(key, List.copyOf(waypoints));
+            } else {
+                String legacyKey = Lc2Nbt.getString(rt, "key", "");
+                WaterRouteKey parsed = parseLegacyRouteKey(legacyKey);
+                if (parsed != null) {
+                    data.cachedWaterRoutes.put(parsed, List.copyOf(waypoints));
+                }
+            }
+        }
+
+        // 5. Persisted chunk-loaded stations
+        for (CompoundTag cl : Lc2Nbt.getCompoundList(root, "chunkLoaders")) {
+            if (cl.contains("pos")) {
+                data.chunkLoadedStations.add(readPos(cl, "pos"));
             }
         }
 
         return data;
     }
 
-    private static String routeKey(BlockPos3i a, BlockPos3i b) {
-        return posToken(a) + "->" + posToken(b);
+    private static WaterRouteKey parseLegacyRouteKey(String legacyKey) {
+        if (legacyKey == null || !legacyKey.contains("->")) {
+            return null;
+        }
+        String[] halves = legacyKey.split("->", 2);
+        BlockPos3i a = parsePosToken(halves[0]);
+        BlockPos3i b = parsePosToken(halves[1]);
+        return (a != null && b != null) ? new WaterRouteKey(a, b) : null;
     }
 
-    private static String posToken(BlockPos3i p) {
-        return p.x() + "," + p.y() + "," + p.z();
+    private static BlockPos3i parsePosToken(String token) {
+        if (token == null) {
+            return null;
+        }
+        String[] parts = token.split(",");
+        if (parts.length != 3) {
+            return null;
+        }
+        try {
+            return new BlockPos3i(
+                    Integer.parseInt(parts[0].trim()),
+                    Integer.parseInt(parts[1].trim()),
+                    Integer.parseInt(parts[2].trim())
+            );
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     private static void writePos(CompoundTag parent, String key, BlockPos3i pos) {

@@ -79,6 +79,7 @@ public final class StationRegistry {
                 waterBerthPos,
                 type.maxDroneBays(),
                 0,
+                0,
                 0
         );
         stations.put(pos, created);
@@ -100,7 +101,8 @@ public final class StationRegistry {
                 entry.waterBerthPos(),
                 entry.maxDroneBays(),
                 entry.dockedDrones(),
-                entry.reservedInboundDrones()
+                entry.reservedInboundDrones(),
+                entry.dockedBayMask()
         );
         stations.put(entry.pos(), state);
     }
@@ -315,6 +317,43 @@ public final class StationRegistry {
     }
 
     /**
+     * Returns {@code true} if {@code bayIndex} at {@code stationPos} is currently reserved for an
+     * inbound or waiting-return drone transit.
+     *
+     * @param stationPos Cargo Station position
+     * @param bayIndex   bay slot index ({@code 0..5})
+     * @return {@code true} if reserved by an active transit
+     */
+    public synchronized boolean isBayReserved(BlockPos3i stationPos, int bayIndex) {
+        MutableStation state = stations.get(Objects.requireNonNull(stationPos, "stationPos"));
+        if (state == null || bayIndex < 0 || bayIndex >= state.maxDroneBays) {
+            return false;
+        }
+        return state.reservedBays.containsValue(bayIndex);
+    }
+
+    /**
+     * Returns a bitmask of all bay indices currently reserved for inbound or waiting-return drones
+     * at {@code stationPos}.
+     *
+     * @param stationPos Cargo Station position
+     * @return bitmask of reserved bays
+     */
+    public synchronized int reservedBayMask(BlockPos3i stationPos) {
+        MutableStation state = stations.get(Objects.requireNonNull(stationPos, "stationPos"));
+        if (state == null) {
+            return 0;
+        }
+        int mask = 0;
+        for (Integer bay : state.reservedBays.values()) {
+            if (bay != null && bay >= 0 && bay < state.maxDroneBays) {
+                mask |= (1 << bay);
+            }
+        }
+        return mask;
+    }
+
+    /**
      * Reconciles all inbound bay reservations directly from active persisted drone transits
      * after loading SavedData, preventing stale or double-counted reservations across restarts.
      *
@@ -464,20 +503,28 @@ public final class StationRegistry {
                 BlockPos3i waterBerthPos,
                 int maxDroneBays,
                 int dockedDrones,
-                int anonymousReservations
+                int anonymousReservations,
+                int dockedBayMask
         ) {
             this.pos = pos;
             this.type = type;
             this.customName = customName;
             this.waterBerthPos = waterBerthPos;
             this.maxDroneBays = maxDroneBays;
-            this.dockedDrones = Math.min(maxDroneBays, Math.max(0, dockedDrones));
             this.anonymousReservations = Math.max(0, anonymousReservations);
-            int mask = 0;
-            for (int i = 0; i < this.dockedDrones; i++) {
-                mask |= (1 << i);
+            int validBits = maxDroneBays >= 31 ? Integer.MAX_VALUE : ((1 << maxDroneBays) - 1);
+            int masked = dockedBayMask & validBits;
+            if (masked != 0 || dockedDrones <= 0) {
+                this.dockedBayMask = masked;
+                this.dockedDrones = Integer.bitCount(masked);
+            } else {
+                this.dockedDrones = Math.min(maxDroneBays, Math.max(0, dockedDrones));
+                int fallbackMask = 0;
+                for (int i = 0; i < this.dockedDrones; i++) {
+                    fallbackMask |= (1 << i);
+                }
+                this.dockedBayMask = fallbackMask;
             }
-            this.dockedBayMask = mask;
         }
 
         int totalReserved() {
@@ -512,7 +559,8 @@ public final class StationRegistry {
                     waterBerthPos,
                     maxDroneBays,
                     dockedDrones,
-                    totalReserved()
+                    totalReserved(),
+                    dockedBayMask
             );
         }
     }

@@ -218,6 +218,7 @@ public final class OperationTerminalScreen extends TerminalScreenBase {
         TerminalTargetEntry entry = filteredEntries.get(idx);
         Lc2Native.sendToServer(TerminalActionPayload.unbind(
                 terminalId,
+                entry.dimensionId(),
                 LogisticsSavedData.toBlockPos(entry.commPos())
         ));
     }

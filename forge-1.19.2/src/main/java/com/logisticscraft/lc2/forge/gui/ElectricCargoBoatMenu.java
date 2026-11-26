@@ -51,7 +51,7 @@ public class ElectricCargoBoatMenu extends ChestMenu {
     @Override
     public boolean stillValid(Player player) {
         if (this.boat == null) {
-            return true;
+            return player.level.isClientSide;
         }
         return !this.boat.isRemoved()
                 && !this.boat.isAutonomousTransit()

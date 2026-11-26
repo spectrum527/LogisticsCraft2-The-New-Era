@@ -4,6 +4,7 @@ import com.logisticscraft.lc2.Lc2Registries;
 import com.logisticscraft.lc2.core.LogisticsConstants;
 import com.logisticscraft.lc2.network.TerminalActionPayload;
 import com.logisticscraft.lc2.platform.Lc2Native;
+import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -17,6 +18,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.settings.KeyConflictContext;
 import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.glfw.GLFW;
 
@@ -27,6 +29,8 @@ public final class Lc2ClientSetup {
 
     public static final KeyMapping OPEN_TERMINAL_KEY = new KeyMapping(
             "key.lc2.open_terminal",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_G,
             "key.categories.lc2"
     );

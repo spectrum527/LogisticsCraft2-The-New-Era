@@ -22,6 +22,7 @@ import com.logisticscraft.lc2.platform.Lc2StationBlockEntityBase;
 import com.logisticscraft.lc2.platform.LogisticsChunkTickets;
 import com.logisticscraft.lc2.world.LogisticsLevelManager;
 import com.logisticscraft.lc2.world.LogisticsSavedData;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
@@ -80,6 +81,26 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
     public static final int LAYOUT_VERSION = 2;
 
     private static final Ports SINK_ALL_FACES = new Ports(EnumSet.allOf(Face.class), Set.of(), false);
+    private static final Method IC2_MATCHES_FILTER = resolveIc2MatchesFilter();
+
+    private static Method resolveIc2MatchesFilter() {
+        try {
+            return MachineAutomation.class.getMethod("matchesFilter", ItemStack.class, ItemStack.class);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static boolean matchesUpgradeFilter(ItemStack upgrade, ItemStack candidate) {
+        if (IC2_MATCHES_FILTER == null || upgrade.isEmpty() || candidate.isEmpty()) {
+            return true;
+        }
+        try {
+            return Boolean.TRUE.equals(IC2_MATCHES_FILTER.invoke(null, upgrade, candidate));
+        } catch (Throwable ignored) {
+            return true;
+        }
+    }
 
     protected final NonNullList<ItemStack> items;
     protected double storedEu = 0.0;
@@ -204,6 +225,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         WorldEnergy.disconnect(this);
         releaseChunkTickets(level);
         LogisticsSavedData data = LogisticsLevelManager.getData(level);
+        data.setChunkLoaderStation(LogisticsSavedData.toPos3i(pos), false);
         onUnregisterFromWorld(level, data);
         data.stationRegistry().unregister(LogisticsSavedData.toPos3i(pos));
         data.setDirty();
@@ -279,10 +301,14 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
                 LogisticsChunkTickets.holdArea3x3(level, center);
                 chunkLoaderActive = true;
                 heldChunkCenter = center;
+                LogisticsLevelManager.getData(level)
+                        .setChunkLoaderStation(LogisticsSavedData.toPos3i(worldPosition), true);
             }
             setChanged();
         } else if (chunkLoaderActive) {
             releaseChunkTickets(level);
+            LogisticsLevelManager.getData(level)
+                    .setChunkLoaderStation(LogisticsSavedData.toPos3i(worldPosition), false);
         }
     }
 
@@ -344,6 +370,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         Set<Direction> faces = new LinkedHashSet<>();
         int start = upgradeSlotStart();
         boolean hasConfiguredPuller = false;
+        boolean hasExplicitPullFace = false;
         for (int i = 0; i < LogisticsConstants.MACHINE_UPGRADE_SLOTS; i++) {
             ItemStack stack = items.get(start + i);
             if (stack.isEmpty()) {
@@ -353,16 +380,90 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
             if (LogisticsConstants.UPGRADE_PULLING.equals(id)
                     || LogisticsConstants.UPGRADE_ADVANCED_PULLING.equals(id)) {
                 hasConfiguredPuller = true;
-                faces.addAll(MachineAutomation.faces(stack));
+                List<Direction> upgFaces = MachineAutomation.faces(stack);
+                if (upgFaces.size() < Direction.values().length) {
+                    hasExplicitPullFace = true;
+                }
+                faces.addAll(upgFaces);
             }
         }
         if (!hasConfiguredPuller) {
             return List.of();
         }
         if (faces.isEmpty()) {
-            return List.of(Direction.values());
+            faces.addAll(List.of(Direction.values()));
+        }
+        // Prevent single-chest push/pull loop-back by excluding faces actively used by ejector upgrades
+        if (upgrades.hasEjector()) {
+            Set<Direction> explicitEjectFaces = new LinkedHashSet<>();
+            for (int i = 0; i < LogisticsConstants.MACHINE_UPGRADE_SLOTS; i++) {
+                ItemStack stack = items.get(start + i);
+                if (stack.isEmpty()) {
+                    continue;
+                }
+                String id = Lc2Native.itemId(stack);
+                if (LogisticsConstants.UPGRADE_EJECTOR.equals(id)
+                        || LogisticsConstants.UPGRADE_ADVANCED_EJECTOR.equals(id)) {
+                    List<Direction> ef = MachineAutomation.faces(stack);
+                    if (ef.size() < Direction.values().length) {
+                        explicitEjectFaces.addAll(ef);
+                    }
+                }
+            }
+            faces.removeAll(explicitEjectFaces);
+            if (!hasExplicitPullFace) {
+                faces.removeAll(resolveEjectorFaces());
+            }
         }
         return List.copyOf(faces);
+    }
+
+    /** Returns {@code true} if at least one installed ejector upgrade targeting {@code face} permits {@code stack}. */
+    private boolean permitsEject(Direction face, ItemStack stack) {
+        int start = upgradeSlotStart();
+        boolean matchedUpgrade = false;
+        for (int i = 0; i < LogisticsConstants.MACHINE_UPGRADE_SLOTS; i++) {
+            ItemStack upg = items.get(start + i);
+            if (upg.isEmpty()) {
+                continue;
+            }
+            String id = Lc2Native.itemId(upg);
+            if (LogisticsConstants.UPGRADE_EJECTOR.equals(id)
+                    || LogisticsConstants.UPGRADE_ADVANCED_EJECTOR.equals(id)) {
+                List<Direction> upgFaces = MachineAutomation.faces(upg);
+                if (upgFaces.isEmpty() || upgFaces.contains(face)) {
+                    matchedUpgrade = true;
+                    if (matchesUpgradeFilter(upg, stack)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return !matchedUpgrade;
+    }
+
+    /** Returns {@code true} if at least one installed pulling upgrade targeting {@code face} permits {@code stack}. */
+    private boolean permitsPull(Direction face, ItemStack stack) {
+        int start = upgradeSlotStart();
+        boolean matchedUpgrade = false;
+        for (int i = 0; i < LogisticsConstants.MACHINE_UPGRADE_SLOTS; i++) {
+            ItemStack upg = items.get(start + i);
+            if (upg.isEmpty()) {
+                continue;
+            }
+            String id = Lc2Native.itemId(upg);
+            if (LogisticsConstants.UPGRADE_PULLING.equals(id)
+                    || LogisticsConstants.UPGRADE_ADVANCED_PULLING.equals(id)) {
+                List<Direction> upgFaces = MachineAutomation.faces(upg);
+                if (upgFaces.isEmpty() || upgFaces.contains(face)) {
+                    matchedUpgrade = true;
+                    if (matchesUpgradeFilter(upg, stack)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return !matchedUpgrade;
     }
 
     /**
@@ -393,6 +494,9 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
                     for (Direction dir : ejectFaces) {
                         if (remaining.isEmpty()) {
                             break;
+                        }
+                        if (!permitsEject(dir, remaining)) {
+                            continue;
                         }
                         int pushed = Lc2ItemAccess.push(level, worldPosition.relative(dir), dir.getOpposite(), remaining);
                         if (pushed > 0) {
@@ -448,7 +552,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
                             worldPosition.relative(dir),
                             dir.getOpposite(),
                             64,
-                            stack -> !stack.isEmpty()
+                            stack -> !stack.isEmpty() && permitsPull(dir, stack)
                     );
                     if (!extracted.isEmpty()) {
                         ItemStack leftover = addToCargoList(cargo, extracted, maxStacks);
@@ -571,7 +675,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
                         worldPosition.relative(dir),
                         dir.getOpposite(),
                         remainingBudget,
-                        stack -> !stack.isEmpty() && canFitInOutbound(stack)
+                        stack -> !stack.isEmpty() && permitsPull(dir, stack) && canFitInOutbound(stack)
                 );
                 if (!pulled.isEmpty()) {
                     remainingBudget -= pulled.getCount();
@@ -612,6 +716,9 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
             for (Direction dir : ejectFaces) {
                 if (offer.isEmpty()) {
                     break;
+                }
+                if (!permitsEject(dir, offer)) {
+                    continue;
                 }
                 int pushed = Lc2ItemAccess.push(level, worldPosition.relative(dir), dir.getOpposite(), offer);
                 if (pushed > 0) {
@@ -931,7 +1038,10 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
             migrateLegacyInventory(layoutVersion);
         }
         refreshUpgrades();
-        storedEu = Math.max(0.0, Math.min(upgrades.maxCapacityEu(), Lc2Nbt.getDouble(tag, "eu", 0.0)));
+        double rawEu = Lc2Nbt.getDouble(tag, "eu", 0.0);
+        storedEu = Double.isFinite(rawEu)
+                ? Math.max(0.0, Math.min(upgrades.maxCapacityEu(), rawEu))
+                : 0.0;
         stationName = Lc2Nbt.getString(tag, "name", "");
         if (Lc2Nbt.getBoolean(tag, "hasTarget", false)) {
             targetPos = new BlockPos(

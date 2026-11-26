@@ -101,6 +101,13 @@ public final class TerminalSessionService {
             }
         }
 
+        if (player.containerMenu != null) {
+            ItemStack carried = player.containerMenu.getCarried();
+            if (matchesTerminal(carried, matchId, requiredTerminalId)) {
+                return new FoundTerminal(carried, () -> player.containerMenu.broadcastChanges());
+            }
+        }
+
         return Lc2CuriosCompat.findTerminal(player, requiredTerminalId);
     }
 

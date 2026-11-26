@@ -36,6 +36,8 @@ public final class TransitRecord {
     private double lateralStarboardOffset;
     private final int laneSlot;
     private final int maxObstacleY;
+    private int entityGeneration;
+    private boolean returnAborted;
 
     /**
      * Constructs a new {@link TransitRecord} positioned at the start of {@code waypoints}.
@@ -99,6 +101,8 @@ public final class TransitRecord {
         this.lateralStarboardOffset = 0.0;
         this.laneSlot = laneSlot;
         this.maxObstacleY = maxObstacleY;
+        this.entityGeneration = 0;
+        this.returnAborted = false;
     }
 
     private TransitRecord(TransitSnapshot snapshot) {
@@ -125,6 +129,8 @@ public final class TransitRecord {
         this.lateralStarboardOffset = snapshot.lateralStarboardOffset();
         this.laneSlot = snapshot.laneSlot();
         this.maxObstacleY = snapshot.maxObstacleY();
+        this.entityGeneration = snapshot.entityGeneration();
+        this.returnAborted = false;
     }
 
     private static float computeInitialYaw(List<Vec3d> waypoints) {
@@ -178,7 +184,8 @@ public final class TransitRecord {
                 verticalAvoidanceOffset,
                 lateralStarboardOffset,
                 laneSlot,
-                maxObstacleY
+                maxObstacleY,
+                entityGeneration
         );
     }
 
@@ -344,6 +351,61 @@ public final class TransitRecord {
     /** @return cached max obstacle ceiling Y for drone return route planning */
     public int maxObstacleY() {
         return maxObstacleY;
+    }
+
+    /**
+     * Returns the monotonically increasing physical entity generation counter used to reject
+     * stale duplicate entities reloaded from previously unloaded chunks.
+     *
+     * @return current entity generation ({@code >= 0})
+     */
+    public int entityGeneration() {
+        return entityGeneration;
+    }
+
+    /**
+     * Advances and returns the next entity generation whenever a physical entity is bound or spawned.
+     *
+     * @return incremented entity generation
+     */
+    public int advanceEntityGeneration() {
+        this.entityGeneration++;
+        return this.entityGeneration;
+    }
+
+    /**
+     * Returns {@code true} if an auto-return transit was aborted at the target station (e.g. because
+     * the target or origin station was broken) and therefore completed at {@link #targetPos()} instead
+     * of returning to {@link #originPos()}.
+     *
+     * @return {@code true} when auto-return was aborted at target
+     */
+    public boolean isReturnAborted() {
+        return returnAborted;
+    }
+
+    /**
+     * Returns the authoritative station position where this transit ends ({@link #originPos()} for a
+     * completed round trip, or {@link #targetPos()} for one-way / aborted-return transits).
+     *
+     * @return final destination station position
+     */
+    public BlockPos3i finalStationPos() {
+        return (autoReturn && !returnAborted) ? originPos : targetPos;
+    }
+
+    /**
+     * Returns the authoritative drone bay index where this transit ends ({@link #originBay()} for a
+     * completed round trip, or {@link #targetBay()} for one-way / aborted-return transits).
+     *
+     * @return final bay index ({@code 0..5}), or {@code -1} for boats
+     */
+    public int finalBay() {
+        return (autoReturn && !returnAborted) ? originBay : targetBay;
+    }
+
+    void markReturnAborted() {
+        this.returnAborted = true;
     }
 
     // --- Package-private mutation helpers for VirtualTransitEngine & TrafficController ---

@@ -78,7 +78,7 @@ public record C2STerminalActionPacket(
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> {
             ServerPlayer player = ctx.getSender();
-            if (player == null) {
+            if (player == null || player.isSpectator()) {
                 return;
             }
             switch (packet.action) {

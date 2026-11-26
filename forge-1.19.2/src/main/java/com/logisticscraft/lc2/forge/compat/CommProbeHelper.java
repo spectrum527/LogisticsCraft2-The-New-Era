@@ -3,6 +3,8 @@ package com.logisticscraft.lc2.forge.compat;
 import com.logisticscraft.lc2.core.EnergyUnits;
 import com.logisticscraft.lc2.core.StationType;
 import com.logisticscraft.lc2.core.TerminalTargetResolver;
+import com.logisticscraft.lc2.core.UpgradeSummary;
+import com.logisticscraft.lc2.forge.block.AbstractLogisticsStationBlockEntity;
 import com.logisticscraft.lc2.forge.block.CommBaseStationBlock;
 import com.logisticscraft.lc2.forge.block.CommBaseStationBlockEntity;
 import java.util.ArrayList;
@@ -26,6 +28,14 @@ public final class CommProbeHelper {
     public static final String KEY_EU = "lc2Eu";
     public static final String KEY_MAX_EU = "lc2MaxEu";
     public static final String KEY_ADJACENT = "lc2Adj";
+
+    public static final String KEY_STATION_PRESENT = "lc2StationProbe";
+    public static final String KEY_STATION_EU = "lc2StationEu";
+    public static final String KEY_STATION_MAX_EU = "lc2StationMaxEu";
+    public static final String KEY_STATION_TIER = "lc2StationTier";
+    public static final String KEY_STATION_LIMIT = "lc2StationLimit";
+    public static final String KEY_STATION_STATUS = "lc2StationStatus";
+    public static final String KEY_STATION_CHUNK_LOADER = "lc2StationChunkLoader";
 
     private CommProbeHelper() {
     }
@@ -126,5 +136,74 @@ public final class CommProbeHelper {
                 EnergyUnits.euToFeFloor(eu),
                 EnergyUnits.euToFeFloor(maxEu)
         ).withStyle(ChatFormatting.AQUA);
+    }
+
+    /** Writes server-authoritative Smart Port / Cargo Station probe fields into {@code tag}. */
+    public static void writeStationProbeData(CompoundTag tag, AbstractLogisticsStationBlockEntity station) {
+        UpgradeSummary upg = station.getUpgrades();
+        tag.putBoolean(KEY_STATION_PRESENT, true);
+        tag.putDouble(KEY_STATION_EU, station.getStoredEu());
+        tag.putDouble(KEY_STATION_MAX_EU, station.maxCapacityEu());
+        tag.putInt(KEY_STATION_TIER, upg.inputTier());
+        tag.putInt(KEY_STATION_LIMIT, upg.packetLimitEu());
+        tag.putString(KEY_STATION_STATUS, station.getStatusKey());
+        tag.putBoolean(KEY_STATION_CHUNK_LOADER, station.isChunkLoaderActive());
+    }
+
+    /** Returns {@code true} if {@code tag} carries serialized logistics station probe data. */
+    public static boolean hasStationProbeData(CompoundTag tag) {
+        return tag != null && tag.getBoolean(KEY_STATION_PRESENT);
+    }
+
+    /** Builds localized tooltip lines for a Smart Port or Cargo Station directly on the server (TOP). */
+    public static List<Component> buildStationProbeLines(AbstractLogisticsStationBlockEntity station) {
+        UpgradeSummary upg = station.getUpgrades();
+        return buildStationLines(
+                station.getStoredEu(),
+                station.maxCapacityEu(),
+                upg.inputTier(),
+                upg.packetLimitEu(),
+                station.getStatusKey(),
+                station.isChunkLoaderActive()
+        );
+    }
+
+    /** Builds localized tooltip lines for a Smart Port or Cargo Station from synced NBT (Jade/WTHIT). */
+    public static List<Component> buildStationProbeLines(CompoundTag tag) {
+        return buildStationLines(
+                tag.getDouble(KEY_STATION_EU),
+                tag.getDouble(KEY_STATION_MAX_EU),
+                tag.getInt(KEY_STATION_TIER),
+                tag.getInt(KEY_STATION_LIMIT),
+                tag.getString(KEY_STATION_STATUS),
+                tag.getBoolean(KEY_STATION_CHUNK_LOADER)
+        );
+    }
+
+    private static List<Component> buildStationLines(
+            double eu,
+            double maxEu,
+            int tier,
+            int limit,
+            String statusKey,
+            boolean chunkLoaderActive
+    ) {
+        List<Component> lines = new ArrayList<>(3);
+        lines.add(Component.translatable(
+                "probe.lc2.station.energy",
+                (long) Math.floor(eu),
+                (long) Math.floor(maxEu),
+                tier,
+                limit
+        ).withStyle(ChatFormatting.AQUA));
+        String safeKey = (statusKey == null || statusKey.isBlank()) ? "status.lc2.ready" : statusKey;
+        lines.add(Component.translatable(
+                "probe.lc2.station.status",
+                Component.translatable(safeKey)
+        ).withStyle(ChatFormatting.GOLD));
+        if (chunkLoaderActive) {
+            lines.add(Component.translatable("gui.lc2.chunk_loader_active").withStyle(ChatFormatting.GREEN));
+        }
+        return lines;
     }
 }

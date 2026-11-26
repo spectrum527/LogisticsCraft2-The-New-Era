@@ -103,6 +103,18 @@ public final class TerminalLocator {
             return Optional.of(new LocatedTerminal(off, syncInventory));
         }
 
+        // 2b. Item currently carried on the player's cursor while rearranging inventory in a menu
+        if (player.containerMenu != null) {
+            ItemStack carried = player.containerMenu.getCarried();
+            if (!carried.isEmpty() && predicate.test(carried)) {
+                Runnable syncCarried = () -> {
+                    player.containerMenu.broadcastChanges();
+                    player.getInventory().setChanged();
+                };
+                return Optional.of(new LocatedTerminal(carried, syncCarried));
+            }
+        }
+
         // 3. Hotbar (0..8) & Main Inventory (9..35)
         Inventory inv = player.getInventory();
         int limit = Math.min(36, inv.getContainerSize());

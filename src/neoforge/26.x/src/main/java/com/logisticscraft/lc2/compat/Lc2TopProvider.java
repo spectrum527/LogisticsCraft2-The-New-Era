@@ -1,5 +1,6 @@
 package com.logisticscraft.lc2.compat;
 
+import com.logisticscraft.lc2.blockentity.AbstractLogisticsStationBlockEntity;
 import com.logisticscraft.lc2.blockentity.CommBaseStationBlockEntity;
 import com.logisticscraft.lc2.core.LogisticsConstants;
 import java.util.function.Function;
@@ -56,8 +57,12 @@ public final class Lc2TopProvider implements IProbeInfoProvider {
                     comm.isOnline(),
                     comm.getStoredEu(),
                     comm.getMaxEu(),
-                    comm.formatAdjacentSummary(serverLevel)
+                    comm.formatAdjacentComponent(serverLevel)
             )) {
+                info.mcText(line);
+            }
+        } else if (serverLevel.getBlockEntity(data.getPos()) instanceof AbstractLogisticsStationBlockEntity station) {
+            for (Component line : Lc2ProbeHelper.buildStationLines(serverLevel, station)) {
                 info.mcText(line);
             }
         }

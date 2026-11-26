@@ -14,6 +14,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
@@ -84,7 +85,7 @@ public record C2SStationActionPacket(
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> {
             ServerPlayer player = ctx.getSender();
-            if (player == null) {
+            if (player == null || player.isSpectator()) {
                 return;
             }
             ServerLevel level = player.getLevel();
@@ -110,9 +111,16 @@ public record C2SStationActionPacket(
             }
             switch (packet.action) {
                 case SET_NAME -> station.setStationName(packet.textArg);
-                case SET_TARGET -> station.setTargetPos(
-                        packet.boolArg ? new BlockPos(packet.xArg, packet.yArg, packet.zArg) : null
-                );
+                case SET_TARGET -> {
+                    if (packet.boolArg) {
+                        int cx = Mth.clamp(packet.xArg, -30_000_000, 30_000_000);
+                        int cy = Mth.clamp(packet.yArg, level.getMinBuildHeight(), level.getMaxBuildHeight() - 1);
+                        int cz = Mth.clamp(packet.zArg, -30_000_000, 30_000_000);
+                        station.setTargetPos(new BlockPos(cx, cy, cz));
+                    } else {
+                        station.setTargetPos(null);
+                    }
+                }
                 case CYCLE_TARGET -> station.cycleTarget(level, packet.xArg >= 0 ? 1 : -1);
                 case TOGGLE_AUTO_RETURN -> station.toggleAutoReturn();
                 case TOGGLE_ENERGY_PRIORITY -> station.toggleEnergyPriority();

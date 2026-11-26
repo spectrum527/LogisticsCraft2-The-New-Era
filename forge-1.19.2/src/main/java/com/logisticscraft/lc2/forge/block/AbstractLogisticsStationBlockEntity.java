@@ -232,10 +232,13 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
             if (!this.chunkTicketsHeld) {
                 LogisticsChunkTickets.holdArea(level, this.worldPosition);
                 this.chunkTicketsHeld = true;
+                LogisticsLevelManager.markChunkLoaderTakenOver(level, this.worldPosition);
             }
+            LogisticsLevelManager.data(level).setChunkLoaderStation(Lc2Coords.toCore(this.worldPosition), true);
             setChanged();
         } else {
             releaseChunkTickets(level);
+            LogisticsLevelManager.data(level).setChunkLoaderStation(Lc2Coords.toCore(this.worldPosition), false);
         }
 
         // Periodic strict 2-zone upgrade automation:
@@ -264,6 +267,22 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
         this.wasRedstoneTriggered = triggered;
 
         tickStation(level, gameTime, triggered);
+    }
+
+    /**
+     * Handles immediate block neighbor updates so 1-tick redstone pulses trigger a rising-edge
+     * dispatch without waiting for the next server tick.
+     */
+    public void onNeighborRedstoneChanged(ServerLevel level) {
+        refreshUpgradesIfNeeded();
+        boolean triggered = this.upgrades.isRedstoneTriggered(level.hasNeighborSignal(this.worldPosition));
+        if (triggered && !this.wasRedstoneTriggered) {
+            this.wasRedstoneTriggered = true;
+            this.dispatchCooldown = 0;
+            tryDispatch(level, false);
+        } else if (!triggered) {
+            this.wasRedstoneTriggered = false;
+        }
     }
 
     private void releaseChunkTickets(ServerLevel level) {
@@ -421,8 +440,9 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
         }
         refreshUpgradesIfNeeded();
         boolean hasEjector = this.upgrades.hasEjector();
+        List<ItemStack> upgradeStacks = hasEjector ? getUpgradeStacks() : List.of();
         List<Direction> pushFaces = hasEjector
-                ? ContainerIoHelper.resolvePushFaces(getUpgradeStacks())
+                ? ContainerIoHelper.resolvePushFaces(upgradeStacks)
                 : List.of();
         boolean ejectorBlocked = pushFaces.isEmpty();
         List<ItemStack> remaining = new ArrayList<>();
@@ -435,7 +455,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
                     this, STORAGE_START, STORAGE_END, raw.copy()
             );
             if (!leftover.isEmpty() && hasEjector && !ejectorBlocked) {
-                int freed = ejectStorageSlotsUnlimited(level, pushFaces);
+                int freed = ejectStorageSlotsUnlimited(level, pushFaces, upgradeStacks);
                 if (freed > 0) {
                     leftover = ContainerIoHelper.insertIntoContainer(
                             this, STORAGE_START, STORAGE_END, leftover
@@ -443,7 +463,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
                 }
                 if (!leftover.isEmpty()) {
                     int before = leftover.getCount();
-                    leftover = ContainerIoHelper.pushToAdjacent(level, this.worldPosition, pushFaces, leftover);
+                    leftover = ContainerIoHelper.pushToAdjacent(level, this.worldPosition, pushFaces, leftover, upgradeStacks);
                     if (freed == 0 && leftover.getCount() == before) {
                         ejectorBlocked = true;
                     }
@@ -454,7 +474,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
             }
         }
         if (hasEjector && !ejectorBlocked) {
-            ejectStorageSlotsUnlimited(level, pushFaces);
+            ejectStorageSlotsUnlimited(level, pushFaces, upgradeStacks);
         }
         setChanged();
         return remaining;
@@ -483,10 +503,11 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
 
         // 2. If pulling upgrade is installed AND vehicle still has free space, pull from configured faces
         if (this.upgrades.hasPulling() && hasFreeSpace(destination, maxSlots)) {
-            List<Direction> pullFaces = ContainerIoHelper.resolvePullFaces(getUpgradeStacks());
+            List<ItemStack> upgradeStacks = getUpgradeStacks();
+            List<Direction> pullFaces = ContainerIoHelper.resolvePullFaces(upgradeStacks);
             if (!pullFaces.isEmpty()) {
                 Set<Direction> excluded = this.upgrades.hasEjector()
-                        ? copyToDirectionSet(ContainerIoHelper.resolvePushFaces(getUpgradeStacks()))
+                        ? copyToDirectionSet(ContainerIoHelper.resolvePushFaces(upgradeStacks))
                         : Set.of();
                 ContainerIoHelper.pullFromAdjacentInto(
                         level,
@@ -496,7 +517,8 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
                         destination,
                         0,
                         maxSlots,
-                        maxSlots * 64
+                        maxSlots * 64,
+                        upgradeStacks
                 );
             }
         }
@@ -523,7 +545,8 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
     }
 
     private void ejectStorageArea(ServerLevel level) {
-        List<Direction> pushFaces = ContainerIoHelper.resolvePushFaces(getUpgradeStacks());
+        List<ItemStack> upgradeStacks = getUpgradeStacks();
+        List<Direction> pushFaces = ContainerIoHelper.resolvePushFaces(upgradeStacks);
         if (pushFaces.isEmpty()) {
             return;
         }
@@ -538,7 +561,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
             int moveCount = Math.min(budget, stack.getCount());
             ItemStack probe = stack.copy();
             probe.setCount(moveCount);
-            ItemStack leftover = ContainerIoHelper.pushToAdjacent(level, this.worldPosition, pushFaces, probe);
+            ItemStack leftover = ContainerIoHelper.pushToAdjacent(level, this.worldPosition, pushFaces, probe, upgradeStacks);
             int pushed = moveCount - leftover.getCount();
             if (pushed > 0) {
                 stack.shrink(pushed);
@@ -554,7 +577,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
         }
     }
 
-    private int ejectStorageSlotsUnlimited(ServerLevel level, List<Direction> pushFaces) {
+    private int ejectStorageSlotsUnlimited(ServerLevel level, List<Direction> pushFaces, List<ItemStack> upgradeStacks) {
         if (pushFaces.isEmpty()) {
             return 0;
         }
@@ -565,7 +588,9 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
                 continue;
             }
             int before = stack.getCount();
-            ItemStack leftover = ContainerIoHelper.pushToAdjacent(level, this.worldPosition, pushFaces, stack.copy());
+            ItemStack leftover = ContainerIoHelper.pushToAdjacent(
+                    level, this.worldPosition, pushFaces, stack.copy(), upgradeStacks
+            );
             int pushed = before - leftover.getCount();
             if (pushed > 0) {
                 this.items.set(slot, leftover);
@@ -576,12 +601,13 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
     }
 
     private void pullIntoOutboundArea(ServerLevel level) {
-        List<Direction> pullFaces = ContainerIoHelper.resolvePullFaces(getUpgradeStacks());
+        List<ItemStack> upgradeStacks = getUpgradeStacks();
+        List<Direction> pullFaces = ContainerIoHelper.resolvePullFaces(upgradeStacks);
         if (pullFaces.isEmpty()) {
             return;
         }
         Set<Direction> excluded = this.upgrades.hasEjector()
-                ? copyToDirectionSet(ContainerIoHelper.resolvePushFaces(getUpgradeStacks()))
+                ? copyToDirectionSet(ContainerIoHelper.resolvePushFaces(upgradeStacks))
                 : Set.of();
         int budget = this.upgrades.transferRatePerTick();
         ContainerIoHelper.pullFromAdjacentInto(
@@ -592,7 +618,8 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
                 this,
                 OUTBOUND_START,
                 OUTBOUND_END,
-                budget
+                budget,
+                upgradeStacks
         );
     }
 
@@ -942,7 +969,8 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
         } else {
             migrateLegacyInventory(tag);
         }
-        this.storedEu = Math.max(0.0, tag.getDouble("StoredEu"));
+        double rawEu = tag.getDouble("StoredEu");
+        this.storedEu = (!Double.isFinite(rawEu) || rawEu <= 0.0) ? 0.0 : rawEu;
         this.stationName = tag.getString("StationName");
         this.autoReturn = tag.getBoolean("AutoReturn");
         this.energyPriority = EnergyPriority.fromOrdinal(tag.getInt("EnergyPriority"));

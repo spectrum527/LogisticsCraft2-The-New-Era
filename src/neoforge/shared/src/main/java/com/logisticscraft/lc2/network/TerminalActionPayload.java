@@ -13,6 +13,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 public record TerminalActionPayload(
         Action action,
         String terminalId,
+        String dimensionId,
         BlockPos commPos,
         BlockPos stationPos
 ) implements CustomPacketPayload {
@@ -41,12 +42,14 @@ public record TerminalActionPayload(
                     (buf, p) -> {
                         buf.writeVarInt(p.action.ordinal());
                         buf.writeUtf(p.terminalId == null ? "" : p.terminalId, 64);
+                        buf.writeUtf(p.dimensionId == null ? "" : p.dimensionId, 128);
                         buf.writeBlockPos(p.commPos == null ? BlockPos.ZERO : p.commPos);
                         buf.writeBlockPos(p.stationPos == null ? BlockPos.ZERO : p.stationPos);
                     },
                     buf -> new TerminalActionPayload(
                             Action.fromOrdinal(buf.readVarInt()),
                             buf.readUtf(64),
+                            buf.readUtf(128),
                             buf.readBlockPos(),
                             buf.readBlockPos()
                     )
@@ -59,12 +62,12 @@ public record TerminalActionPayload(
 
     /** Requests the server to locate an Operation Terminal in inventory/Curios and open it. */
     public static TerminalActionPayload openFromKeybind() {
-        return new TerminalActionPayload(Action.OPEN_FROM_KEYBIND, "", BlockPos.ZERO, BlockPos.ZERO);
+        return new TerminalActionPayload(Action.OPEN_FROM_KEYBIND, "", "", BlockPos.ZERO, BlockPos.ZERO);
     }
 
     /** Requests a live re-probe of all bound Communication Base Stations for {@code terminalId}. */
     public static TerminalActionPayload refresh(String terminalId) {
-        return new TerminalActionPayload(Action.REFRESH, terminalId == null ? "" : terminalId, BlockPos.ZERO, BlockPos.ZERO);
+        return new TerminalActionPayload(Action.REFRESH, terminalId == null ? "" : terminalId, "", BlockPos.ZERO, BlockPos.ZERO);
     }
 
     /** Requests opening a remote read-only station GUI via {@code commPos -> stationPos}. */
@@ -72,23 +75,30 @@ public record TerminalActionPayload(
         return new TerminalActionPayload(
                 Action.CONNECT,
                 terminalId == null ? "" : terminalId,
+                "",
                 commPos == null ? BlockPos.ZERO : commPos,
                 stationPos == null ? BlockPos.ZERO : stationPos
         );
     }
 
-    /** Requests unbinding {@code commPos} from {@code terminalId}. */
-    public static TerminalActionPayload unbind(String terminalId, BlockPos commPos) {
+    /** Requests unbinding {@code (dimensionId, commPos)} from {@code terminalId}. */
+    public static TerminalActionPayload unbind(String terminalId, String dimensionId, BlockPos commPos) {
         return new TerminalActionPayload(
                 Action.UNBIND,
                 terminalId == null ? "" : terminalId,
+                dimensionId == null ? "" : dimensionId,
                 commPos == null ? BlockPos.ZERO : commPos,
                 BlockPos.ZERO
         );
     }
 
+    /** Requests unbinding {@code commPos} from {@code terminalId} in the player's current dimension. */
+    public static TerminalActionPayload unbind(String terminalId, BlockPos commPos) {
+        return unbind(terminalId, "", commPos);
+    }
+
     /** Requests closing the current remote station menu and reopening the Terminal Selection GUI. */
     public static TerminalActionPayload returnToList(String terminalId) {
-        return new TerminalActionPayload(Action.RETURN_TO_LIST, terminalId == null ? "" : terminalId, BlockPos.ZERO, BlockPos.ZERO);
+        return new TerminalActionPayload(Action.RETURN_TO_LIST, terminalId == null ? "" : terminalId, "", BlockPos.ZERO, BlockPos.ZERO);
     }
 }

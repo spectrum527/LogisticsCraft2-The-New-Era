@@ -63,7 +63,7 @@ public record StationSyncPayload(
                         buf.writeBoolean(p.vehicleReady);
                         buf.writeVarInt(p.readyVehicleCount);
                         buf.writeVarInt(p.rfRange);
-                        int count = Math.min(p.targets.size(), 128);
+                        int count = Math.min(p.targets.size(), 256);
                         buf.writeVarInt(count);
                         for (int i = 0; i < count; i++) {
                             TargetInfo info = p.targets.get(i);
@@ -90,7 +90,7 @@ public record StationSyncPayload(
                         boolean vehicleReady = buf.readBoolean();
                         int readyVehicleCount = buf.readVarInt();
                         int rfRange = buf.readVarInt();
-                        int count = Math.min(Math.max(0, buf.readVarInt()), 128);
+                        int count = Math.min(Math.max(0, buf.readVarInt()), 256);
                         List<TargetInfo> targets = new ArrayList<>(count);
                         for (int i = 0; i < count; i++) {
                             targets.add(new TargetInfo(

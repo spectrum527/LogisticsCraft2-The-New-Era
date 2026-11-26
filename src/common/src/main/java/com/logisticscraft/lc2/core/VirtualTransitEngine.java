@@ -83,6 +83,19 @@ public final class VirtualTransitEngine {
         default AirspaceRouter.HeightSampler heightSampler() {
             return null;
         }
+
+        /**
+         * Returns {@code true} if a station block entity of {@code expectedType} still physically exists
+         * at {@code pos}. Only invoked when {@link #isChunkLoaded(int, int)} is {@code true} for {@code pos}.
+         * Defaults to {@code true} for pure simulation tests that do not destroy stations mid-flight.
+         *
+         * @param pos          station block position
+         * @param expectedType expected station type
+         * @return {@code true} if the station still exists in the world
+         */
+        default boolean isStationPresent(BlockPos3i pos, StationType expectedType) {
+            return true;
+        }
     }
 
     /**
@@ -420,13 +433,15 @@ public final class VirtualTransitEngine {
 
         int laneSlot = nextLaneSlot++;
         int maxObstacleY = AirspaceRouter.sampleMaxObstacleY(req.originPos(), req.targetPos(), req.heightSampler());
+        int ceilingY = req.heightSampler() != null ? req.heightSampler().ceilingY() : Integer.MAX_VALUE;
         AirspaceRoute route = AirspaceRouter.planRoute(
                 req.originPos(),
                 req.originBay(),
                 req.targetPos(),
                 reservedBay.getAsInt(),
                 maxObstacleY,
-                laneSlot
+                laneSlot,
+                ceilingY
         );
 
         UpgradeSummary upgrades = req.upgrades() == null ? UpgradeSummary.EMPTY : req.upgrades();
@@ -607,12 +622,18 @@ public final class VirtualTransitEngine {
                 }
                 case WAITING_RETURN_ENERGY -> {
                     boolean departed = processWaitingReturn(record, bridge, returnDeparted);
-                    if (departed) {
+                    if (record.phase() == TransitPhase.COMPLETED) {
                         dirty = true;
+                        completedIds.add(record.id());
+                        completed.add(record);
                     } else {
-                        record.incrementTicksWaiting();
+                        if (departed) {
+                            dirty = true;
+                        } else {
+                            record.incrementTicksWaiting();
+                        }
+                        updateChunkMaterialization(record, bridge, toMaterialize, toDematerialize, toSync);
                     }
-                    updateChunkMaterialization(record, bridge, toMaterialize, toDematerialize, toSync);
                 }
                 case COMPLETED -> {
                     completedIds.add(record.id());
@@ -811,11 +832,26 @@ public final class VirtualTransitEngine {
         }
 
         // Target-side payment required (standard & heavy drones, or non-prepaid return)
+        StationType expectedTargetType = record.vehicleKind().isDrone()
+                ? StationType.CARGO_STATION
+                : StationType.SMART_PORT;
+        if (!bridge.isStationPresent(targetPos, expectedTargetType)
+                || stationRegistry.get(targetPos).isEmpty()) {
+            // Target station was broken/destroyed while vehicle was en route: abort return cleanly so
+            // the vehicle never leaks or hovers forever waiting for a non-existent station to pay.
+            if (record.vehicleKind().isDrone()) {
+                stationRegistry.releaseBayReservation(targetPos, record.id());
+            }
+            record.markReturnAborted();
+            record.setPhase(TransitPhase.COMPLETED);
+            return true;
+        }
+
         record.setPhase(TransitPhase.WAITING_RETURN_ENERGY);
         record.setTicksWaiting(0);
         // Immediately check if target can pay & origin has free bay on arrival tick
         processWaitingReturn(record, bridge, returnDeparted);
-        return false;
+        return record.phase() == TransitPhase.COMPLETED;
     }
 
     private boolean processWaitingReturn(
@@ -828,7 +864,33 @@ public final class VirtualTransitEngine {
             return false;
         }
 
+        StationType expectedType = record.vehicleKind().isDrone()
+                ? StationType.CARGO_STATION
+                : StationType.SMART_PORT;
+        if (!bridge.isStationPresent(targetPos, expectedType)
+                || stationRegistry.get(targetPos).isEmpty()) {
+            // Target station was broken while vehicle was waiting for return energy
+            if (record.vehicleKind().isDrone()) {
+                stationRegistry.releaseBayReservation(targetPos, record.id());
+            }
+            record.markReturnAborted();
+            record.setPhase(TransitPhase.COMPLETED);
+            return false;
+        }
+
         if (record.vehicleKind().isDrone()) {
+            // If origin station was destroyed/unregistered, dock cleanly at target station instead of
+            // permanently locking a target bay in WAITING_RETURN_ENERGY.
+            boolean originGone = stationRegistry.get(record.originPos()).isEmpty()
+                    || (bridge.isChunkLoaded(record.originPos().chunkX(), record.originPos().chunkZ())
+                    && !bridge.isStationPresent(record.originPos(), StationType.CARGO_STATION));
+            if (originGone) {
+                stationRegistry.releaseBayReservation(targetPos, record.id());
+                record.markReturnAborted();
+                record.setPhase(TransitPhase.COMPLETED);
+                return false;
+            }
+
             // First atomically reserve a free bay at the origin station before debiting target energy
             OptionalInt originReturnBay = stationRegistry.tryReserveBay(record.originPos(), record.id());
             if (originReturnBay.isEmpty()) {
@@ -850,7 +912,9 @@ public final class VirtualTransitEngine {
             record.setOriginBay(returnBay);
 
             int maxObstacleY = record.maxObstacleY();
+            int ceilingY = Integer.MAX_VALUE;
             if (bridge.heightSampler() != null) {
+                ceilingY = bridge.heightSampler().ceilingY();
                 maxObstacleY = Math.max(
                         maxObstacleY,
                         AirspaceRouter.sampleMaxObstacleY(targetPos, record.originPos(), bridge.heightSampler())
@@ -862,7 +926,8 @@ public final class VirtualTransitEngine {
                     record.originPos(),
                     returnBay,
                     maxObstacleY,
-                    record.laneSlot()
+                    record.laneSlot(),
+                    ceilingY
             );
             record.setWaypoints(returnRoute.waypoints());
             record.setPhase(TransitPhase.EN_ROUTE_RETURN);

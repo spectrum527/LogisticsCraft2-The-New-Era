@@ -31,6 +31,7 @@ import java.util.UUID;
  * @param lateralStarboardOffset  active temporary starboard offset for wide-waterway boat lane-keeping
  * @param laneSlot                airspace lane slot assigned for drone flights
  * @param maxObstacleY            cached maximum corridor obstacle Y for drone return route planning
+ * @param entityGeneration        monotonically increasing generation stamped on the active physical entity
  */
 public record TransitSnapshot(
         UUID id,
@@ -55,7 +56,8 @@ public record TransitSnapshot(
         double verticalAvoidanceOffset,
         double lateralStarboardOffset,
         int laneSlot,
-        int maxObstacleY
+        int maxObstacleY,
+        int entityGeneration
 ) {
 
     /**
@@ -76,5 +78,62 @@ public record TransitSnapshot(
         if (baseSpeed <= 0.0) {
             throw new IllegalArgumentException("baseSpeed must be > 0");
         }
+        entityGeneration = Math.max(0, entityGeneration);
+    }
+
+    /**
+     * Legacy 23-argument constructor defaulting {@code entityGeneration} to {@code 0}.
+     */
+    public TransitSnapshot(
+            UUID id,
+            VehicleKind vehicleKind,
+            BlockPos3i originPos,
+            BlockPos3i targetPos,
+            int originBay,
+            int targetBay,
+            boolean autoReturn,
+            boolean returnPrepaid,
+            List<Vec3d> waypoints,
+            int waypointIndex,
+            double segmentProgress,
+            Vec3d nominalPos,
+            Vec3d currentPos,
+            float yaw,
+            double baseSpeed,
+            TransitPhase phase,
+            boolean hasRider,
+            boolean physicalEntityLoaded,
+            int ticksWaiting,
+            double verticalAvoidanceOffset,
+            double lateralStarboardOffset,
+            int laneSlot,
+            int maxObstacleY
+    ) {
+        this(
+                id,
+                vehicleKind,
+                originPos,
+                targetPos,
+                originBay,
+                targetBay,
+                autoReturn,
+                returnPrepaid,
+                waypoints,
+                waypointIndex,
+                segmentProgress,
+                nominalPos,
+                currentPos,
+                yaw,
+                baseSpeed,
+                phase,
+                hasRider,
+                physicalEntityLoaded,
+                ticksWaiting,
+                verticalAvoidanceOffset,
+                lateralStarboardOffset,
+                laneSlot,
+                maxObstacleY,
+                0
+        );
     }
 }

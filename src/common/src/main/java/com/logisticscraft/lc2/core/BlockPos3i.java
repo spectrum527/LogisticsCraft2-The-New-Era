@@ -104,25 +104,31 @@ public record BlockPos3i(int x, int y, int z) implements Comparable<BlockPos3i> 
     }
 
     /**
-     * Computes the 3D Manhattan distance {@code |dx| + |dy| + |dz|} to {@code other}.
+     * Computes the 3D Manhattan distance {@code |dx| + |dy| + |dz|} to {@code other},
+     * using {@code long} arithmetic saturated to {@link Integer#MAX_VALUE} to prevent overflow.
      *
      * @param other target block position
      * @return non-negative Manhattan distance
      */
     public int manhattanDistance(BlockPos3i other) {
         Objects.requireNonNull(other, "other");
-        return Math.abs(x - other.x) + Math.abs(y - other.y) + Math.abs(z - other.z);
+        long dist = Math.abs((long) x - other.x)
+                + Math.abs((long) y - other.y)
+                + Math.abs((long) z - other.z);
+        return (int) Math.min(Integer.MAX_VALUE, dist);
     }
 
     /**
-     * Computes the horizontal 2D Manhattan distance {@code |dx| + |dz|} to {@code other}.
+     * Computes the horizontal 2D Manhattan distance {@code |dx| + |dz|} to {@code other},
+     * using {@code long} arithmetic saturated to {@link Integer#MAX_VALUE} to prevent overflow.
      *
      * @param other target block position
      * @return non-negative horizontal Manhattan distance
      */
     public int horizontalManhattanDistance(BlockPos3i other) {
         Objects.requireNonNull(other, "other");
-        return Math.abs(x - other.x) + Math.abs(z - other.z);
+        long dist = Math.abs((long) x - other.x) + Math.abs((long) z - other.z);
+        return (int) Math.min(Integer.MAX_VALUE, dist);
     }
 
     /**

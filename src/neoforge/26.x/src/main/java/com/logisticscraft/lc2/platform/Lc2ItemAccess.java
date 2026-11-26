@@ -4,6 +4,8 @@ import com.logisticscraft.lc2.blockentity.AbstractLogisticsStationBlockEntity;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.WorldlyContainer;
@@ -78,19 +80,26 @@ public final class Lc2ItemAccess {
         }
         var handler = level.getCapability(Capabilities.Item.BLOCK, sourcePos, sourceFace);
         if (handler != null) {
-            try (var tx = Transaction.openRoot()) {
-                var extracted = ResourceHandlerUtil.extractFirst(
-                        handler,
-                        resource -> filter.test(resource.toStack(1)),
-                        maxCount,
-                        tx
-                );
-                if (extracted == null) {
-                    return ItemStack.EMPTY;
+            int slots = handler.size();
+            for (int slot = 0; slot < slots; slot++) {
+                ItemResource resource = handler.getResource(slot);
+                if (resource.isEmpty()) {
+                    continue;
                 }
-                tx.commit();
-                return extracted.resource().toStack(extracted.amount());
+                ItemStack sample = resource.toStack(1);
+                if (!filter.test(sample)) {
+                    continue;
+                }
+                int limit = Math.min(maxCount, Math.max(1, sample.getMaxStackSize()));
+                try (var tx = Transaction.openRoot()) {
+                    int taken = handler.extract(slot, resource, limit, tx);
+                    if (taken > 0) {
+                        tx.commit();
+                        return resource.toStack(taken);
+                    }
+                }
             }
+            return ItemStack.EMPTY;
         }
         Container container = resolveContainer(level, sourcePos, be);
         if (container == null) {
@@ -101,6 +110,11 @@ public final class Lc2ItemAccess {
 
     private static Container resolveContainer(ServerLevel level, BlockPos pos, BlockEntity be) {
         BlockState state = level.getBlockState(pos);
+        // Never bypass a modded BlockEntity's explicit null Capability (e.g. disabled faces or multiblock shells)
+        Identifier key = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        if (key == null || !"minecraft".equals(key.getNamespace())) {
+            return null;
+        }
         if (state.getBlock() instanceof ChestBlock chest) {
             return ChestBlock.getContainer(chest, state, level, pos, true);
         }

@@ -19,18 +19,38 @@ import java.util.Objects;
 public final class AirspaceRouter {
 
     /**
+     * Sentinel returned by {@link HeightSampler#highestSolidY(int, int)} when the queried column lies
+     * in an unloaded chunk so {@link #sampleMaxObstacleY} can apply a conservative clearance floor.
+     */
+    public static final int UNLOADED_COLUMN = Integer.MIN_VALUE;
+
+    /** Conservative extra height added above {@code max(originY, targetY)} when crossing unloaded chunks. */
+    private static final int UNLOADED_CORRIDOR_MARGIN = 16;
+
+    /**
      * Platform-agnostic terrain height query used to ensure cruise corridors clear obstacles.
      */
     @FunctionalInterface
     public interface HeightSampler {
         /**
-         * Returns the highest solid obstructing block Y coordinate at column {@code (x, z)}.
+         * Returns the highest solid obstructing block Y coordinate at column {@code (x, z)},
+         * or {@link #UNLOADED_COLUMN} if the chunk is currently unloaded.
          *
          * @param x block X
          * @param z block Z
-         * @return highest solid Y coordinate
+         * @return highest solid Y coordinate or {@link #UNLOADED_COLUMN}
          */
         int highestSolidY(int x, int z);
+
+        /**
+         * Returns the upper ceiling Y coordinate of this dimension (e.g. {@code 124} in the Nether so
+         * drones stay below the Y=127 bedrock roof), or {@link Integer#MAX_VALUE} when open-sky.
+         *
+         * @return exclusive ceiling Y bound, or {@link Integer#MAX_VALUE} for open sky
+         */
+        default int ceilingY() {
+            return Integer.MAX_VALUE;
+        }
     }
 
     private static final double PAD_ROOF_Y_OFFSET = 1.05;
@@ -124,13 +144,52 @@ public final class AirspaceRouter {
             int maxObstacleY,
             int laneSlot
     ) {
+        return computeCruiseY(origin, target, maxObstacleY, laneSlot, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Computes the stratified cruise altitude clamped beneath {@code ceilingY} when flying inside
+     * ceilinged dimensions such as the Nether.
+     *
+     * @param origin       origin station position
+     * @param target       target station position
+     * @param maxObstacleY highest known terrain/structure obstacle Y along corridor
+     * @param laneSlot     concurrent airspace lane slot
+     * @param ceilingY     exclusive upper ceiling Y bound ({@link Integer#MAX_VALUE} for open sky)
+     * @return stratified cruise altitude Y
+     */
+    public static double computeCruiseY(
+            BlockPos3i origin,
+            BlockPos3i target,
+            int maxObstacleY,
+            int laneSlot,
+            int ceilingY
+    ) {
         Objects.requireNonNull(origin, "origin");
         Objects.requireNonNull(target, "target");
         int baseMaxY = Math.max(Math.max(origin.y(), target.y()), maxObstacleY);
-        return baseMaxY
+        double dirBand = directionBand(origin, target);
+        double layer = laneLayer(laneSlot);
+        double rawCruiseY = baseMaxY
                 + LogisticsConstants.AIRSPACE_BASE_ALTITUDE_CLEARANCE
-                + directionBand(origin, target)
-                + laneLayer(laneSlot);
+                + dirBand
+                + layer;
+        if (ceilingY == Integer.MAX_VALUE) {
+            return rawCruiseY;
+        }
+        double maxAllowedY = ceilingY - 1.0;
+        double minSafeY = Math.max(origin.y(), target.y()) + 2.0;
+        if (rawCruiseY <= maxAllowedY) {
+            return rawCruiseY;
+        }
+        if (maxAllowedY <= minSafeY) {
+            return maxAllowedY;
+        }
+        // Compress band and lane separation cleanly inside [minSafeY, maxAllowedY]
+        double compactOffset = (dirBand > 0.0 ? 1.5 : 0.0)
+                + Math.floorMod(laneSlot, LogisticsConstants.AIRSPACE_LANE_LAYER_MODULO) * 1.0;
+        double candidate = Math.min(maxAllowedY, Math.max(minSafeY, maxAllowedY - 7.0 + compactOffset));
+        return Math.max(minSafeY, Math.min(maxAllowedY, candidate));
     }
 
     /**
@@ -145,10 +204,13 @@ public final class AirspaceRouter {
     public static int sampleMaxObstacleY(BlockPos3i origin, BlockPos3i target, HeightSampler sampler) {
         Objects.requireNonNull(origin, "origin");
         Objects.requireNonNull(target, "target");
-        int maxY = Math.max(origin.y(), target.y());
+        int stationMaxY = Math.max(origin.y(), target.y());
+        int maxY = stationMaxY;
         if (sampler == null) {
             return maxY;
         }
+        int ceilingY = sampler.ceilingY();
+        boolean sawUnloaded = false;
         double dx = target.x() - origin.x();
         double dz = target.z() - origin.z();
         double horizDist = Math.hypot(dx, dz);
@@ -157,7 +219,26 @@ public final class AirspaceRouter {
             double t = (double) i / samples;
             int sx = (int) Math.round(origin.x() + dx * t);
             int sz = (int) Math.round(origin.z() + dz * t);
-            maxY = Math.max(maxY, sampler.highestSolidY(sx, sz));
+            int sampled = sampler.highestSolidY(sx, sz);
+            if (sampled == UNLOADED_COLUMN) {
+                sawUnloaded = true;
+            } else {
+                if (ceilingY < Integer.MAX_VALUE) {
+                    // Ignore bedrock ceiling roof readings in Nether-like dimensions
+                    if (sampled < ceilingY) {
+                        maxY = Math.max(maxY, sampled);
+                    }
+                } else {
+                    maxY = Math.max(maxY, sampled);
+                }
+            }
+        }
+        if (sawUnloaded) {
+            int conservative = stationMaxY + UNLOADED_CORRIDOR_MARGIN;
+            if (ceilingY < Integer.MAX_VALUE) {
+                conservative = Math.min(conservative, ceilingY - 2);
+            }
+            maxY = Math.max(maxY, conservative);
         }
         return maxY;
     }
@@ -181,6 +262,30 @@ public final class AirspaceRouter {
             int maxObstacleY,
             int laneSlot
     ) {
+        return planRoute(origin, originBay, target, targetBay, maxObstacleY, laneSlot, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Plans a 3D VTOL drone route given an explicit {@code maxObstacleY} and optional {@code ceilingY}.
+     *
+     * @param origin       origin Cargo Station position
+     * @param originBay    origin pad index ({@code 0..5})
+     * @param target       target Cargo Station position
+     * @param targetBay    target pad index ({@code 0..5})
+     * @param maxObstacleY maximum obstacle Y along the horizontal corridor
+     * @param laneSlot     concurrent airspace lane slot
+     * @param ceilingY     exclusive upper ceiling Y bound ({@link Integer#MAX_VALUE} for open sky)
+     * @return planned {@link AirspaceRoute}
+     */
+    public static AirspaceRoute planRoute(
+            BlockPos3i origin,
+            int originBay,
+            BlockPos3i target,
+            int targetBay,
+            int maxObstacleY,
+            int laneSlot,
+            int ceilingY
+    ) {
         Objects.requireNonNull(origin, "origin");
         Objects.requireNonNull(target, "target");
         validateBayIndex(originBay);
@@ -188,11 +293,7 @@ public final class AirspaceRouter {
 
         double dirBand = directionBand(origin, target);
         double layer = laneLayer(laneSlot);
-        int baseMaxY = Math.max(Math.max(origin.y(), target.y()), maxObstacleY);
-        double cruiseY = baseMaxY
-                + LogisticsConstants.AIRSPACE_BASE_ALTITUDE_CLEARANCE
-                + dirBand
-                + layer;
+        double cruiseY = computeCruiseY(origin, target, maxObstacleY, laneSlot, ceilingY);
 
         Vec3d startPad = bayWorldPos(origin, originBay);
         Vec3d ascendTop = new Vec3d(startPad.x(), cruiseY, startPad.z());
@@ -223,7 +324,8 @@ public final class AirspaceRouter {
             int laneSlot
     ) {
         int maxObstacleY = sampleMaxObstacleY(origin, target, sampler);
-        return planRoute(origin, originBay, target, targetBay, maxObstacleY, laneSlot);
+        int ceilingY = sampler != null ? sampler.ceilingY() : Integer.MAX_VALUE;
+        return planRoute(origin, originBay, target, targetBay, maxObstacleY, laneSlot, ceilingY);
     }
 
     private static void validateBayIndex(int bayIndex) {

@@ -280,7 +280,16 @@ public class CargoStationBlockEntity extends AbstractLogisticsStationBlockEntity
             return RfChipTier.fromItemId(Lc2Coords.itemId(stack)).isInstalled();
         }
         if (slot >= SLOT_DRONE_BAY_START && slot < SLOT_DRONE_BAY_START + DRONE_BAY_COUNT) {
-            return isDroneItem(stack);
+            if (!isDroneItem(stack)) {
+                return false;
+            }
+            if (this.level instanceof ServerLevel serverLevel) {
+                int bayIndex = slot - SLOT_DRONE_BAY_START;
+                if (LogisticsLevelManager.stations(serverLevel).isBayReserved(Lc2Coords.toCore(this.worldPosition), bayIndex)) {
+                    return false;
+                }
+            }
+            return true;
         }
         return super.canPlaceItem(slot, stack);
     }

@@ -139,32 +139,29 @@ public final class WaterPathfinder {
                 int nx = pos.x() + d[0];
                 int nz = pos.z() + d[1];
                 int ny = pos.y();
-                double stepBase = 1.0;
-                boolean passable = false;
 
                 if (grid.isBoatPassable(nx, ny, nz)) {
-                    passable = true;
+                    BlockPos3i next = new BlockPos3i(nx, ny, nz);
+                    if (!closed.contains(next)) {
+                        double tentativeG = current.g() + 1.0 + bankClearancePenalty(grid, next);
+                        relaxNeighbor(next, pos, tentativeG, targetBerth, bestG, parent, open);
+                    }
                 } else if (allowVerticalSteps) {
                     if (grid.isBoatPassable(nx, ny + 1, nz) && grid.isPassableHeadroom(pos.x(), ny + 2, pos.z())) {
-                        ny = ny + 1;
-                        stepBase = 1.0 + VERTICAL_STEP_PENALTY;
-                        passable = true;
-                    } else if (grid.isBoatPassable(nx, ny - 1, nz) && grid.isPassableHeadroom(nx, ny + 1, nz)) {
-                        ny = ny - 1;
-                        stepBase = 1.0 + VERTICAL_STEP_PENALTY;
-                        passable = true;
+                        BlockPos3i upNext = new BlockPos3i(nx, ny + 1, nz);
+                        if (!closed.contains(upNext)) {
+                            double tentativeG = current.g() + 1.0 + VERTICAL_STEP_PENALTY + bankClearancePenalty(grid, upNext);
+                            relaxNeighbor(upNext, pos, tentativeG, targetBerth, bestG, parent, open);
+                        }
+                    }
+                    if (grid.isBoatPassable(nx, ny - 1, nz) && grid.isPassableHeadroom(nx, ny + 1, nz)) {
+                        BlockPos3i downNext = new BlockPos3i(nx, ny - 1, nz);
+                        if (!closed.contains(downNext)) {
+                            double tentativeG = current.g() + 1.0 + VERTICAL_STEP_PENALTY + bankClearancePenalty(grid, downNext);
+                            relaxNeighbor(downNext, pos, tentativeG, targetBerth, bestG, parent, open);
+                        }
                     }
                 }
-
-                if (!passable) {
-                    continue;
-                }
-                BlockPos3i next = new BlockPos3i(nx, ny, nz);
-                if (closed.contains(next)) {
-                    continue;
-                }
-                double tentativeG = current.g() + stepBase + bankClearancePenalty(grid, next);
-                relaxNeighbor(next, pos, tentativeG, targetBerth, bestG, parent, open);
             }
 
             // Expand 4 diagonal neighbors on the same surface Y without cutting solid corners

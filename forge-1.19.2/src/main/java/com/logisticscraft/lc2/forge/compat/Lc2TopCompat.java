@@ -1,5 +1,6 @@
 package com.logisticscraft.lc2.forge.compat;
 
+import com.logisticscraft.lc2.forge.block.AbstractLogisticsStationBlockEntity;
 import com.logisticscraft.lc2.forge.block.CommBaseStationBlockEntity;
 import com.logisticscraft.lc2.forge.util.Lc2Coords;
 import java.util.function.Function;
@@ -61,10 +62,16 @@ public final class Lc2TopCompat {
                         BlockState blockState,
                         IProbeHitData data
                 ) {
-                    if (level instanceof ServerLevel serverLevel
-                            && level.getBlockEntity(data.getPos()) instanceof CommBaseStationBlockEntity comm) {
-                        for (Component line : CommProbeHelper.buildProbeLines(serverLevel, comm)) {
-                            probeInfo.mcText(line);
+                    if (level instanceof ServerLevel serverLevel) {
+                        var be = level.getBlockEntity(data.getPos());
+                        if (be instanceof CommBaseStationBlockEntity comm) {
+                            for (Component line : CommProbeHelper.buildProbeLines(serverLevel, comm)) {
+                                probeInfo.mcText(line);
+                            }
+                        } else if (be instanceof AbstractLogisticsStationBlockEntity station) {
+                            for (Component line : CommProbeHelper.buildStationProbeLines(station)) {
+                                probeInfo.mcText(line);
+                            }
                         }
                     }
                 }
