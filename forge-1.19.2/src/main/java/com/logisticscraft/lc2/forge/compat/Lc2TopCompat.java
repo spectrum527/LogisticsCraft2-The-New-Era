@@ -69,7 +69,7 @@ public final class Lc2TopCompat {
                                 probeInfo.mcText(line);
                             }
                         } else if (be instanceof AbstractLogisticsStationBlockEntity station) {
-                            for (Component line : CommProbeHelper.buildStationProbeLines(station)) {
+                            for (Component line : CommProbeHelper.buildStationProbeLines(serverLevel, station)) {
                                 probeInfo.mcText(line);
                             }
                         }

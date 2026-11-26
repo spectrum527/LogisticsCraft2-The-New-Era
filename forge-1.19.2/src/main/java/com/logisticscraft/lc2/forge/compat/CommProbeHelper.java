@@ -1,14 +1,18 @@
 package com.logisticscraft.lc2.forge.compat;
 
 import com.logisticscraft.lc2.core.EnergyUnits;
+import com.logisticscraft.lc2.core.RfChipTier;
 import com.logisticscraft.lc2.core.StationType;
 import com.logisticscraft.lc2.core.TerminalTargetResolver;
 import com.logisticscraft.lc2.core.UpgradeSummary;
 import com.logisticscraft.lc2.forge.block.AbstractLogisticsStationBlockEntity;
+import com.logisticscraft.lc2.forge.block.CargoStationBlockEntity;
 import com.logisticscraft.lc2.forge.block.CommBaseStationBlock;
 import com.logisticscraft.lc2.forge.block.CommBaseStationBlockEntity;
+import com.logisticscraft.lc2.forge.block.SmartPortBlockEntity;
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.Nullable;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -19,7 +23,7 @@ import net.minecraft.server.level.ServerLevel;
 
 /**
  * Shared zero-dependency NBT serialization and localized tooltip builder for Communication Base
- * Station HUD probes (The One Probe, Jade, and WTHIT).
+ * Station, Smart Port, and Cargo Station HUD probes (The One Probe, Jade, and WTHIT).
  */
 public final class CommProbeHelper {
 
@@ -30,12 +34,17 @@ public final class CommProbeHelper {
     public static final String KEY_ADJACENT = "lc2Adj";
 
     public static final String KEY_STATION_PRESENT = "lc2StationProbe";
+    public static final String KEY_STATION_IS_PORT = "lc2StationIsPort";
     public static final String KEY_STATION_EU = "lc2StationEu";
     public static final String KEY_STATION_MAX_EU = "lc2StationMaxEu";
     public static final String KEY_STATION_TIER = "lc2StationTier";
     public static final String KEY_STATION_LIMIT = "lc2StationLimit";
     public static final String KEY_STATION_STATUS = "lc2StationStatus";
     public static final String KEY_STATION_CHUNK_LOADER = "lc2StationChunkLoader";
+    public static final String KEY_STATION_HAS_CHUNK_UPG = "lc2StationHasChunkUpg";
+    public static final String KEY_STATION_BOAT_DOCKED = "lc2StationBoatDocked";
+    public static final String KEY_STATION_DRONES_READY = "lc2StationDronesReady";
+    public static final String KEY_STATION_RF_RANGE = "lc2StationRfRange";
 
     private CommProbeHelper() {
     }
@@ -79,7 +88,7 @@ public final class CommProbeHelper {
             lines.add(Component.translatable(
                     "probe.lc2.comm.adjacent",
                     CommBaseStationBlock.formatAdjacentList(adjacent)
-            ).withStyle(ChatFormatting.GOLD));
+            ).withStyle(ChatFormatting.AQUA));
         }
         return lines;
     }
@@ -118,7 +127,7 @@ public final class CommProbeHelper {
                     ));
                 }
             }
-            lines.add(Component.translatable("probe.lc2.comm.adjacent", joined).withStyle(ChatFormatting.GOLD));
+            lines.add(Component.translatable("probe.lc2.comm.adjacent", joined).withStyle(ChatFormatting.AQUA));
         }
         return lines;
     }
@@ -131,23 +140,46 @@ public final class CommProbeHelper {
     private static Component energyLine(double eu, double maxEu) {
         return Component.translatable(
                 "probe.lc2.comm.energy",
-                (long) Math.floor(eu),
-                (long) Math.floor(maxEu),
+                Math.round(eu),
+                Math.round(maxEu),
                 EnergyUnits.euToFeFloor(eu),
                 EnergyUnits.euToFeFloor(maxEu)
-        ).withStyle(ChatFormatting.AQUA);
+        ).withStyle(ChatFormatting.YELLOW);
     }
 
     /** Writes server-authoritative Smart Port / Cargo Station probe fields into {@code tag}. */
-    public static void writeStationProbeData(CompoundTag tag, AbstractLogisticsStationBlockEntity station) {
+    public static void writeStationProbeData(
+            CompoundTag tag,
+            @Nullable ServerLevel level,
+            AbstractLogisticsStationBlockEntity station
+    ) {
         UpgradeSummary upg = station.getUpgrades();
+        boolean isPort = station instanceof SmartPortBlockEntity;
         tag.putBoolean(KEY_STATION_PRESENT, true);
+        tag.putBoolean(KEY_STATION_IS_PORT, isPort);
         tag.putDouble(KEY_STATION_EU, station.getStoredEu());
         tag.putDouble(KEY_STATION_MAX_EU, station.maxCapacityEu());
         tag.putInt(KEY_STATION_TIER, upg.inputTier());
         tag.putInt(KEY_STATION_LIMIT, upg.packetLimitEu());
         tag.putString(KEY_STATION_STATUS, station.getStatusKey());
         tag.putBoolean(KEY_STATION_CHUNK_LOADER, station.isChunkLoaderActive());
+        tag.putBoolean(KEY_STATION_HAS_CHUNK_UPG, upg.hasChunkLoader());
+        if (station instanceof SmartPortBlockEntity port) {
+            tag.putBoolean(KEY_STATION_BOAT_DOCKED, level != null && port.findDockedBoat(level) != null);
+        } else if (station instanceof CargoStationBlockEntity cargo) {
+            tag.putInt(KEY_STATION_DRONES_READY, Integer.bitCount(cargo.getDockedBayMask()));
+            RfChipTier chip = cargo.getRfChipTier();
+            tag.putInt(KEY_STATION_RF_RANGE, chip.isInstalled() ? chip.maxRange() : 0);
+        }
+    }
+
+    /** Overload kept for backwards compatibility when no level reference is supplied. */
+    public static void writeStationProbeData(CompoundTag tag, AbstractLogisticsStationBlockEntity station) {
+        writeStationProbeData(
+                tag,
+                station.getLevel() instanceof ServerLevel sl ? sl : null,
+                station
+        );
     }
 
     /** Returns {@code true} if {@code tag} carries serialized logistics station probe data. */
@@ -156,54 +188,108 @@ public final class CommProbeHelper {
     }
 
     /** Builds localized tooltip lines for a Smart Port or Cargo Station directly on the server (TOP). */
-    public static List<Component> buildStationProbeLines(AbstractLogisticsStationBlockEntity station) {
+    public static List<Component> buildStationProbeLines(
+            @Nullable ServerLevel level,
+            AbstractLogisticsStationBlockEntity station
+    ) {
         UpgradeSummary upg = station.getUpgrades();
+        boolean isPort = station instanceof SmartPortBlockEntity;
+        boolean boatDocked = station instanceof SmartPortBlockEntity port
+                && level != null
+                && port.findDockedBoat(level) != null;
+        int readyDrones = station instanceof CargoStationBlockEntity cargo
+                ? Integer.bitCount(cargo.getDockedBayMask())
+                : 0;
+        int rfRange = station instanceof CargoStationBlockEntity cargo && cargo.getRfChipTier().isInstalled()
+                ? cargo.getRfChipTier().maxRange()
+                : 0;
         return buildStationLines(
+                isPort,
                 station.getStoredEu(),
                 station.maxCapacityEu(),
                 upg.inputTier(),
                 upg.packetLimitEu(),
-                station.getStatusKey(),
-                station.isChunkLoaderActive()
+                upg.hasChunkLoader(),
+                station.isChunkLoaderActive(),
+                boatDocked,
+                readyDrones,
+                rfRange,
+                station.getStatusKey()
+        );
+    }
+
+    /** Overload kept for backwards compatibility when no level reference is supplied. */
+    public static List<Component> buildStationProbeLines(AbstractLogisticsStationBlockEntity station) {
+        return buildStationProbeLines(
+                station.getLevel() instanceof ServerLevel sl ? sl : null,
+                station
         );
     }
 
     /** Builds localized tooltip lines for a Smart Port or Cargo Station from synced NBT (Jade/WTHIT). */
     public static List<Component> buildStationProbeLines(CompoundTag tag) {
         return buildStationLines(
+                tag.getBoolean(KEY_STATION_IS_PORT),
                 tag.getDouble(KEY_STATION_EU),
                 tag.getDouble(KEY_STATION_MAX_EU),
                 tag.getInt(KEY_STATION_TIER),
                 tag.getInt(KEY_STATION_LIMIT),
-                tag.getString(KEY_STATION_STATUS),
-                tag.getBoolean(KEY_STATION_CHUNK_LOADER)
+                tag.getBoolean(KEY_STATION_HAS_CHUNK_UPG),
+                tag.getBoolean(KEY_STATION_CHUNK_LOADER),
+                tag.getBoolean(KEY_STATION_BOAT_DOCKED),
+                tag.getInt(KEY_STATION_DRONES_READY),
+                tag.getInt(KEY_STATION_RF_RANGE),
+                tag.getString(KEY_STATION_STATUS)
         );
     }
 
     private static List<Component> buildStationLines(
+            boolean isPort,
             double eu,
             double maxEu,
             int tier,
             int limit,
-            String statusKey,
-            boolean chunkLoaderActive
+            boolean hasChunkUpgrade,
+            boolean chunkLoaderActive,
+            boolean boatDocked,
+            int readyDrones,
+            int rfRange,
+            String statusKey
     ) {
-        List<Component> lines = new ArrayList<>(3);
+        List<Component> lines = new ArrayList<>(4);
         lines.add(Component.translatable(
                 "probe.lc2.station.energy",
-                (long) Math.floor(eu),
-                (long) Math.floor(maxEu),
+                Math.round(eu),
+                Math.round(maxEu),
                 tier,
                 limit
-        ).withStyle(ChatFormatting.AQUA));
+        ).withStyle(ChatFormatting.YELLOW));
+
+        if (isPort) {
+            lines.add(Component.translatable(
+                    boatDocked ? "gui.lc2.berth_docked" : "gui.lc2.berth_empty"
+            ).withStyle(boatDocked ? ChatFormatting.GREEN : ChatFormatting.GRAY));
+        } else {
+            Component rfComp = rfRange > 0
+                    ? Component.translatable("gui.lc2.rf_range", rfRange)
+                    : Component.translatable("gui.lc2.rf_none");
+            lines.add(Component.translatable("gui.lc2.flight_deck_ready", readyDrones)
+                    .append(Component.literal(" | "))
+                    .append(rfComp)
+                    .withStyle(readyDrones > 0 && rfRange > 0 ? ChatFormatting.AQUA : ChatFormatting.GOLD));
+        }
+
+        if (hasChunkUpgrade || chunkLoaderActive) {
+            lines.add(Component.translatable(
+                    chunkLoaderActive ? "gui.lc2.chunk_loader_active" : "gui.lc2.chunk_loader_inactive"
+            ).withStyle(chunkLoaderActive ? ChatFormatting.GREEN : ChatFormatting.RED));
+        }
+
         String safeKey = (statusKey == null || statusKey.isBlank()) ? "status.lc2.ready" : statusKey;
         lines.add(Component.translatable(
                 "probe.lc2.station.status",
                 Component.translatable(safeKey)
-        ).withStyle(ChatFormatting.GOLD));
-        if (chunkLoaderActive) {
-            lines.add(Component.translatable("gui.lc2.chunk_loader_active").withStyle(ChatFormatting.GREEN));
-        }
+        ).withStyle(safeKey.contains(".failure.") ? ChatFormatting.RED : ChatFormatting.GRAY));
         return lines;
     }
 }

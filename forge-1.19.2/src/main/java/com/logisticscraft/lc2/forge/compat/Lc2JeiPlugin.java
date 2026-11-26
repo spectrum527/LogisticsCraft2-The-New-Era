@@ -29,6 +29,16 @@ public final class Lc2JeiPlugin implements IModPlugin {
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
         registration.addIngredientInfo(
+                new ItemStack(Lc2Registries.SMART_PORT_ITEM.get()),
+                VanillaTypes.ITEM_STACK,
+                Component.translatable("info.lc2.smart_port")
+        );
+        registration.addIngredientInfo(
+                new ItemStack(Lc2Registries.CARGO_STATION_ITEM.get()),
+                VanillaTypes.ITEM_STACK,
+                Component.translatable("info.lc2.cargo_station")
+        );
+        registration.addIngredientInfo(
                 new ItemStack(Lc2Registries.COMM_BASE_STATION_ITEM.get()),
                 VanillaTypes.ITEM_STACK,
                 Component.translatable("info.lc2.comm_base_station")
@@ -40,6 +50,35 @@ public final class Lc2JeiPlugin implements IModPlugin {
                 ),
                 VanillaTypes.ITEM_STACK,
                 Component.translatable("info.lc2.operation_terminal")
+        );
+        registration.addIngredientInfo(
+                new ItemStack(Lc2Registries.ELECTRIC_CARGO_BOAT_ITEM.get()),
+                VanillaTypes.ITEM_STACK,
+                Component.translatable("info.lc2.electric_cargo_boat")
+        );
+        registration.addIngredientInfo(
+                new ItemStack(Lc2Registries.TRANSPORT_DRONE_ITEM.get()),
+                VanillaTypes.ITEM_STACK,
+                Component.translatable("info.lc2.transport_drone")
+        );
+        registration.addIngredientInfo(
+                new ItemStack(Lc2Registries.HEAVY_TRANSPORT_DRONE_ITEM.get()),
+                VanillaTypes.ITEM_STACK,
+                Component.translatable("info.lc2.heavy_transport_drone")
+        );
+        registration.addIngredientInfo(
+                List.of(
+                        new ItemStack(Lc2Registries.RF_CHIP_1_ITEM.get()),
+                        new ItemStack(Lc2Registries.RF_CHIP_2_ITEM.get()),
+                        new ItemStack(Lc2Registries.RF_CHIP_3_ITEM.get())
+                ),
+                VanillaTypes.ITEM_STACK,
+                Component.translatable("info.lc2.rf_chip")
+        );
+        registration.addIngredientInfo(
+                new ItemStack(Lc2Registries.CHUNK_LOADING_UPGRADE_ITEM.get()),
+                VanillaTypes.ITEM_STACK,
+                Component.translatable("info.lc2.chunk_loading_upgrade")
         );
     }
 }
