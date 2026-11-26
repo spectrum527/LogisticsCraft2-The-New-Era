@@ -122,12 +122,16 @@ public abstract class PortableGearMixin {
         if (!(other.getItem() instanceof OperationTerminalItem) || other.getCount() != 1) {
             return;
         }
-        if (stored(held) <= 0.0
-                || OperationTerminalItem.getStoredEu(other) >= LogisticsConstants.TERMINAL_CAPACITY_EU) {
+        double currentEu = OperationTerminalItem.getStoredEu(other);
+        if (stored(held) <= 0.0 || currentEu >= LogisticsConstants.TERMINAL_CAPACITY_EU) {
+            return;
+        }
+        if (src.kind == PortableEquipment.Kind.DISPOSABLE
+                && LogisticsConstants.TERMINAL_CAPACITY_EU - currentEu < (double) src.capacity) {
             return;
         }
         if (player.level() instanceof ServerLevel serverLevel) {
-            double before = OperationTerminalItem.getStoredEu(other);
+            double before = currentEu;
             lc2$transferIntoTerminal(src, held, other);
             if (OperationTerminalItem.getStoredEu(other) > before) {
                 IndustrialSounds.play(serverLevel, player.blockPosition(), "item.battery.use");
@@ -136,6 +140,34 @@ public abstract class PortableGearMixin {
         event.setCancellationResult(InteractionResult.SUCCESS);
         event.setCanceled(true);
         ci.cancel();
+    }
+
+    @Inject(method = "chargeComplete", at = @At("HEAD"), cancellable = true, require = 0)
+    private static void lc2$chargeCompleteTerminal(
+            ItemStack stack,
+            int tier,
+            CallbackInfoReturnable<Boolean> cir
+    ) {
+        if (stack.getItem() instanceof OperationTerminalItem) {
+            cir.setReturnValue(
+                    tier >= LogisticsConstants.TERMINAL_INPUT_TIER
+                            && OperationTerminalItem.getStoredEu(stack) >= LogisticsConstants.TERMINAL_CAPACITY_EU - 1e-6
+            );
+        }
+    }
+
+    @Inject(method = "electricalItem", at = @At("HEAD"), cancellable = true, require = 0)
+    private static void lc2$electricalItemTerminal(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
+        if (stack.getItem() instanceof OperationTerminalItem) {
+            cir.setReturnValue(true);
+        }
+    }
+
+    @Inject(method = "powerSlotLimit", at = @At("HEAD"), cancellable = true, require = 0)
+    private static void lc2$powerSlotLimitTerminal(ItemStack stack, CallbackInfoReturnable<Integer> cir) {
+        if (stack.getItem() instanceof OperationTerminalItem) {
+            cir.setReturnValue(1);
+        }
     }
 
     @Inject(method = "stored", at = @At("HEAD"), cancellable = true)

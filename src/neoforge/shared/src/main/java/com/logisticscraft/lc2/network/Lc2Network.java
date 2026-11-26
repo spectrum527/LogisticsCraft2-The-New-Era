@@ -118,7 +118,7 @@ public final class Lc2Network {
     }
 
     private static void handleTerminalAction(TerminalActionPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) {
+        if (!(context.player() instanceof ServerPlayer player) || player.isSpectator()) {
             return;
         }
         if (!(player.level() instanceof ServerLevel level)) {
@@ -151,21 +151,26 @@ public final class Lc2Network {
                     return;
                 }
                 BlockPos commPos = payload.commPos();
-                String dim = Lc2Native.dimensionId(level);
-                boolean removed = OperationTerminalItem.unbindCommStation(found.get().stack(), dim, commPos);
-                if (!removed) {
-                    // Fallback: allow unbinding a cross-dimension binding by position if present
-                    for (CommBinding b : OperationTerminalItem.getBindings(found.get().stack())) {
-                        if (b.pos().x() == commPos.getX()
-                                && b.pos().y() == commPos.getY()
-                                && b.pos().z() == commPos.getZ()) {
-                            removed = OperationTerminalItem.unbindCommStation(
-                                    found.get().stack(),
-                                    b.dimensionId(),
-                                    commPos
-                            );
-                            if (removed) {
-                                break;
+                String requestedDim = payload.dimensionId();
+                boolean removed;
+                if (requestedDim != null && !requestedDim.isBlank()) {
+                    removed = OperationTerminalItem.unbindCommStation(found.get().stack(), requestedDim, commPos);
+                } else {
+                    String dim = Lc2Native.dimensionId(level);
+                    removed = OperationTerminalItem.unbindCommStation(found.get().stack(), dim, commPos);
+                    if (!removed) {
+                        for (CommBinding b : OperationTerminalItem.getBindings(found.get().stack())) {
+                            if (b.pos().x() == commPos.getX()
+                                    && b.pos().y() == commPos.getY()
+                                    && b.pos().z() == commPos.getZ()) {
+                                removed = OperationTerminalItem.unbindCommStation(
+                                        found.get().stack(),
+                                        b.dimensionId(),
+                                        commPos
+                                );
+                                if (removed) {
+                                    break;
+                                }
                             }
                         }
                     }
@@ -295,8 +300,20 @@ public final class Lc2Network {
         }
     }
 
+    private static final int MAX_WORLD_HORIZONTAL = 30_000_000;
+
+    private static BlockPos clampTargetPos(ServerLevel level, BlockPos raw) {
+        if (raw == null) {
+            return null;
+        }
+        int cx = Math.clamp(raw.getX(), -MAX_WORLD_HORIZONTAL, MAX_WORLD_HORIZONTAL);
+        int cy = Math.clamp(raw.getY(), Lc2Native.minBuildY(level), Lc2Native.maxBuildY(level) - 1);
+        int cz = Math.clamp(raw.getZ(), -MAX_WORLD_HORIZONTAL, MAX_WORLD_HORIZONTAL);
+        return new BlockPos(cx, cy, cz);
+    }
+
     private static void handleServerAction(StationActionPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) {
+        if (!(context.player() instanceof ServerPlayer player) || player.isSpectator()) {
             return;
         }
         if (!(player.level() instanceof ServerLevel level)) {
@@ -327,7 +344,7 @@ public final class Lc2Network {
             case RENAME -> station.setStationName(payload.textArg());
             case PREV_TARGET -> station.cycleTarget(level, -1);
             case NEXT_TARGET -> station.cycleTarget(level, 1);
-            case SELECT_TARGET, SET_TARGET_COORDS -> station.setTargetPos(payload.targetArg());
+            case SELECT_TARGET, SET_TARGET_COORDS -> station.setTargetPos(clampTargetPos(level, payload.targetArg()));
             case TOGGLE_AUTO_RETURN -> station.setAutoReturn(!station.isAutoReturn());
             case TOGGLE_ENERGY_PRIORITY -> station.setEnergyPriority(station.getEnergyPriority().toggle());
             case MANUAL_DISPATCH -> {

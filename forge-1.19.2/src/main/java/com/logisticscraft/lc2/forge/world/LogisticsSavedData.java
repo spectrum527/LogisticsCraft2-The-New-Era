@@ -13,9 +13,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -46,6 +48,7 @@ public final class LogisticsSavedData extends SavedData {
     private final VirtualTransitEngine transitEngine;
     private final Map<UUID, List<ItemStack>> transitCargo = new HashMap<>();
     private final Map<WaterRouteKey, List<Vec3d>> cachedWaterRoutes = new LinkedHashMap<>();
+    private final Set<BlockPos3i> chunkLoadedStations = new LinkedHashSet<>();
 
     /**
      * Creates a fresh {@link LogisticsSavedData} bound to {@code dimensionId}.
@@ -182,6 +185,25 @@ public final class LogisticsSavedData extends SavedData {
         }
     }
 
+    /**
+     * Records or clears whether the station at {@code pos} has an active chunk-loading upgrade so
+     * its 3x3 region tickets can be restored on server restart.
+     */
+    public void setChunkLoaderStation(BlockPos3i pos, boolean active) {
+        if (pos == null) {
+            return;
+        }
+        boolean changed = active ? chunkLoadedStations.add(pos) : chunkLoadedStations.remove(pos);
+        if (changed) {
+            setDirty();
+        }
+    }
+
+    /** Returns an immutable snapshot of persisted chunk-loading station positions in this dimension. */
+    public Set<BlockPos3i> chunkLoaderStations() {
+        return Set.copyOf(chunkLoadedStations);
+    }
+
     @Override
     public CompoundTag save(CompoundTag root) {
         // 1. Stations
@@ -196,6 +218,7 @@ public final class LogisticsSavedData extends SavedData {
             }
             st.putInt("MaxBays", entry.maxDroneBays());
             st.putInt("DockedDrones", entry.dockedDrones());
+            st.putInt("DockedMask", entry.dockedBayMask());
             st.putInt("ReservedInbound", entry.reservedInboundDrones());
             stationList.add(st);
         }
@@ -227,6 +250,7 @@ public final class LogisticsSavedData extends SavedData {
             tr.putDouble("LatStarboard", snap.lateralStarboardOffset());
             tr.putInt("LaneSlot", snap.laneSlot());
             tr.putInt("MaxObstacleY", snap.maxObstacleY());
+            tr.putInt("EntityGen", snap.entityGeneration());
 
             List<ItemStack> cargo = transitCargo.get(snap.id());
             if (cargo != null && !cargo.isEmpty()) {
@@ -253,6 +277,17 @@ public final class LogisticsSavedData extends SavedData {
         }
         root.put("WaterRoutes", routeList);
 
+        // 4. Persisted chunk-loading stations
+        ListTag loaderList = new ListTag();
+        for (BlockPos3i pos : chunkLoadedStations) {
+            CompoundTag cl = new CompoundTag();
+            cl.putInt("X", pos.x());
+            cl.putInt("Y", pos.y());
+            cl.putInt("Z", pos.z());
+            loaderList.add(cl);
+        }
+        root.put("ChunkLoaders", loaderList);
+
         return root;
     }
 
@@ -272,7 +307,12 @@ public final class LogisticsSavedData extends SavedData {
                 int maxBays = st.contains("MaxBays") ? st.getInt("MaxBays") : type.maxDroneBays();
                 int docked = Math.max(0, st.getInt("DockedDrones"));
                 int reserved = Math.max(0, st.getInt("ReservedInbound"));
-                stations.add(new StationEntry(pos, type, name, berth, maxBays, docked, reserved));
+                if (st.contains("DockedMask", Tag.TAG_ANY_NUMERIC)) {
+                    int dockedMask = st.getInt("DockedMask");
+                    stations.add(new StationEntry(pos, type, name, berth, maxBays, docked, reserved, dockedMask));
+                } else {
+                    stations.add(new StationEntry(pos, type, name, berth, maxBays, docked, reserved));
+                }
             } catch (IllegalArgumentException ignored) {
                 // Skip malformed entry gracefully
             }
@@ -307,6 +347,7 @@ public final class LogisticsSavedData extends SavedData {
                 double latStarboard = tr.getDouble("LatStarboard");
                 int laneSlot = tr.getInt("LaneSlot");
                 int maxObstacleY = tr.getInt("MaxObstacleY");
+                int entityGen = Math.max(0, tr.getInt("EntityGen"));
 
                 // Always start physicalEntityLoaded = false on load so manager re-binds or spawns cleanly
                 TransitSnapshot snapshot = new TransitSnapshot(
@@ -332,7 +373,8 @@ public final class LogisticsSavedData extends SavedData {
                         vertAvoid,
                         latStarboard,
                         laneSlot,
-                        maxObstacleY
+                        maxObstacleY,
+                        entityGen
                 );
                 snapshots.add(snapshot);
 
@@ -363,6 +405,13 @@ public final class LogisticsSavedData extends SavedData {
             if (!waypoints.isEmpty()) {
                 data.cachedWaterRoutes.put(new WaterRouteKey(originBerth, targetBerth), List.copyOf(waypoints));
             }
+        }
+
+        // 4. Persisted chunk-loading stations
+        ListTag loaderList = root.getList("ChunkLoaders", Tag.TAG_COMPOUND);
+        for (int i = 0; i < loaderList.size(); i++) {
+            CompoundTag cl = loaderList.getCompound(i);
+            data.chunkLoadedStations.add(new BlockPos3i(cl.getInt("X"), cl.getInt("Y"), cl.getInt("Z")));
         }
 
         return data;

@@ -59,9 +59,10 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
     private static final int LEGACY_V1_UPGRADE_START = 28;
     private static final int LEGACY_V1_TOTAL_SLOTS = 32;
 
-    private static final int GUI_POSITIVE_REVALIDATE_TICKS = 20;
-    private static final int GUI_NEGATIVE_PROBE_COOLDOWN_TICKS = 60;
-    private static final int REQUEST_SYNC_RECHECK_TICKS = 5;
+    private static final int GUI_POSITIVE_REVALIDATE_TICKS = 40;
+    private static final int GUI_NEGATIVE_PROBE_COOLDOWN_TICKS = 100;
+    private static final int REQUEST_SYNC_RECHECK_TICKS = 40;
+    private static final int GUI_LOADED_PROBE_MAX_NODES = 4_096;
 
     private BlockPos3i waterBerthPos = null;
     private int berthRefreshTimer = 0;
@@ -404,7 +405,8 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
         totalCargo.addAll(loadedFromStation);
 
         data.setCargo(transitId, totalCargo);
-        boat.setAutonomousTransit(true, transitId);
+        int gen = result.transit().advanceEntityGeneration();
+        boat.setAutonomousTransit(true, transitId, gen);
         LogisticsLevelManager.bindLiveEntity(level, transitId, boat);
         data.setDirty();
 
@@ -457,9 +459,20 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
         if (!force && !lastWaterConnected && elapsed < GUI_NEGATIVE_PROBE_COOLDOWN_TICKS) {
             return false;
         }
+        if (force && !pairChanged && !lastWaterConnected && elapsed < REQUEST_SYNC_RECHECK_TICKS) {
+            this.forceNextWaterProbe = false;
+            return false;
+        }
 
-        LevelWaterGrid probingGrid = LevelWaterGrid.probing(level);
-        WaterPathResult pathResult = WaterPathfinder.findPath(probingGrid, originBerth, targetBerth);
+        // GUI preview strictly inspects already-loaded chunks with a tight node budget so GUI
+        // refreshes can never synchronously force-load unloaded chunks or freeze the server thread.
+        LevelWaterGrid loadedGrid = LevelWaterGrid.loadedOnly(level);
+        WaterPathResult pathResult = WaterPathfinder.findPath(
+                loadedGrid,
+                originBerth,
+                targetBerth,
+                GUI_LOADED_PROBE_MAX_NODES
+        );
         if (pathResult.connected()) {
             data.cacheWaterRoute(originBerth, targetBerth, pathResult.waypoints());
             recordWaterCheckResult(originBerth, targetBerth, true, now);

@@ -1,11 +1,14 @@
 package com.logisticscraft.lc2.entity;
 
 import com.logisticscraft.lc2.core.DispatchFailure;
+import com.logisticscraft.lc2.core.TransitRecord;
+import com.logisticscraft.lc2.core.Vec3d;
 import com.logisticscraft.lc2.platform.Lc2Native;
 import com.logisticscraft.lc2.platform.Lc2Nbt;
 import com.logisticscraft.lc2.world.LogisticsLevelManager;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -41,7 +44,10 @@ public final class ElectricCargoBoatEntity extends ElectricCargoBoatBase {
     private static final EntityDataAccessor<Boolean> DATA_AUTONOMOUS_TRANSIT =
             SynchedEntityData.defineId(ElectricCargoBoatEntity.class, EntityDataSerializers.BOOLEAN);
 
+    private static final double STALE_TRANSIT_MAX_DRIFT_SQ = 32.0 * 32.0;
+
     private UUID transitId;
+    private int transitGeneration = 0;
 
     public ElectricCargoBoatEntity(EntityType<ElectricCargoBoatEntity> type, Level level) {
         super(type, level);
@@ -63,10 +69,21 @@ public final class ElectricCargoBoatEntity extends ElectricCargoBoatBase {
         return transitId;
     }
 
-    /** Updates the autonomous transit state and associated transit UUID. */
+    /** Returns the generation counter stamped by {@link LogisticsLevelManager} when materialized. */
+    public int getTransitGeneration() {
+        return transitGeneration;
+    }
+
+    /** Updates the autonomous transit state and associated transit UUID (retaining current generation). */
     public void setAutonomousTransit(boolean autonomous, UUID transitId) {
+        setAutonomousTransit(autonomous, transitId, autonomous ? this.transitGeneration : 0);
+    }
+
+    /** Updates the autonomous transit state, transit UUID, and authoritative entity generation. */
+    public void setAutonomousTransit(boolean autonomous, UUID transitId, int generation) {
         entityData.set(DATA_AUTONOMOUS_TRANSIT, autonomous);
         this.transitId = autonomous ? transitId : null;
+        this.transitGeneration = autonomous ? Math.max(0, generation) : 0;
         if (autonomous) {
             setNoGravity(true);
         } else {
@@ -160,15 +177,38 @@ public final class ElectricCargoBoatEntity extends ElectricCargoBoatBase {
         if (!Lc2Native.isClientSide(level()) && isAutonomousTransit()) {
             tickAutonomousBase();
             resetFallDistance();
-            if (tickCount > 20 && level() instanceof ServerLevel serverLevel) {
-                if (transitId == null
-                        || LogisticsLevelManager.getData(serverLevel).engine().getTransit(transitId).isEmpty()) {
-                    setAutonomousTransit(false, null);
+            if (tickCount > 2 && level() instanceof ServerLevel serverLevel) {
+                if (isStaleAutonomousGhost(serverLevel)) {
+                    // Never promote a stale ghost boat reloaded from an unloaded chunk back into an idle boat!
+                    setDematerializing(true);
+                    discard();
                 }
             }
             return;
         }
         super.tick();
+    }
+
+    private boolean isStaleAutonomousGhost(ServerLevel serverLevel) {
+        if (transitId == null) {
+            return true;
+        }
+        Optional<TransitRecord> activeOpt = LogisticsLevelManager.getData(serverLevel).engine().getTransit(transitId);
+        if (activeOpt.isEmpty()) {
+            return true;
+        }
+        TransitRecord rec = activeOpt.get();
+        if (rec.entityGeneration() > 0 && transitGeneration != rec.entityGeneration()) {
+            return true;
+        }
+        Entity live = LogisticsLevelManager.findLiveEntity(serverLevel, transitId);
+        if (live != null && live != this) {
+            return true;
+        }
+        Vec3d simPos = rec.currentPos();
+        double dx = getX() - simPos.x();
+        double dz = getZ() - simPos.z();
+        return (dx * dx + dz * dz) > STALE_TRANSIT_MAX_DRIFT_SQ;
     }
 
     @Override
@@ -177,12 +217,14 @@ public final class ElectricCargoBoatEntity extends ElectricCargoBoatBase {
         if (transitId != null) {
             tag.putString("transitId", transitId.toString());
         }
+        tag.putInt("transitGen", transitGeneration);
     }
 
     @Override
     protected void readBoatMeta(CompoundTag tag) {
         boolean autonomous = Lc2Nbt.getBoolean(tag, "autonomous", false);
         String idStr = Lc2Nbt.getString(tag, "transitId", "");
+        int gen = Math.max(0, Lc2Nbt.getInt(tag, "transitGen", 0));
         UUID parsed = null;
         if (!idStr.isEmpty()) {
             try {
@@ -191,12 +233,18 @@ public final class ElectricCargoBoatEntity extends ElectricCargoBoatBase {
                 parsed = null;
             }
         }
-        setAutonomousTransit(autonomous && parsed != null, parsed);
+        setAutonomousTransit(autonomous && parsed != null, parsed, gen);
     }
 
     @Override
     protected void onBoatDestroyed(ServerLevel level) {
         if (transitId != null) {
+            if (isAutonomousTransit() && isStaleAutonomousGhost(level)) {
+                // Stale ghost boat from a previously unloaded chunk must not cancel the real active transit
+                setDematerializing(true);
+                transitId = null;
+                return;
+            }
             List<ItemStack> savedCargo = LogisticsLevelManager.cancelAndTakeCargo(level, transitId);
             for (ItemStack stack : savedCargo) {
                 if (!stack.isEmpty()) {

@@ -64,9 +64,10 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
     private static final int LEGACY_SLOT_UPGRADE_START = 28;
 
     private static final double BOAT_DOCK_RADIUS = 3.5;
-    private static final int GUI_POSITIVE_REVALIDATE_TICKS = 20;
-    private static final int GUI_NEGATIVE_PROBE_COOLDOWN_TICKS = 60;
-    private static final int REQUEST_SYNC_RECHECK_TICKS = 5;
+    private static final int GUI_POSITIVE_REVALIDATE_TICKS = 40;
+    private static final int GUI_NEGATIVE_PROBE_COOLDOWN_TICKS = 100;
+    private static final int REQUEST_SYNC_RECHECK_TICKS = 40;
+    private static final int GUI_LOADED_PROBE_MAX_NODES = 4_096;
 
     @Nullable
     private BlockPos3i waterBerthPos = null;
@@ -206,6 +207,10 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
                     true
             );
             setStatusKey(DispatchFailure.NO_WATER_BERTH.translationKey());
+            return false;
+        }
+        if (findDockedBoat(level) != null) {
+            player.displayClientMessage(Component.translatable("status.lc2.boat_docked"), true);
             return false;
         }
 
@@ -387,10 +392,12 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
             return false;
         }
 
-        // Debit energy, load outgoing cargo into the boat's 54-slot hold, and bind boat to transit
+        // Debit energy, load outgoing cargo into the boat's 54-slot hold, snapshot into SavedData,
+        // and clear the physical entity container while in autonomous transit to prevent chunk-reload dupes
         debitPayment(result.payment());
         loadOutgoingCargoInto(level, boat.getCargoContainer(), LogisticsConstants.BOAT_CARGO_SLOTS);
         List<ItemStack> loadedCargo = boat.snapshotCargoList();
+        boat.loadCargoList(List.of());
         LogisticsLevelManager.bindDispatchedBoat(level, result.transit(), boat, loadedCargo);
 
         this.dispatchCooldown = 20;
@@ -459,8 +466,17 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
             return false;
         }
 
-        WaterPathResult route = LogisticsLevelManager.resolveWaterRoute(level, originBerth, targetBerth);
+        // GUI status checks must never force unloaded chunks to load synchronously
+        WaterPathResult route = WaterPathfinder.findPath(
+                new LevelWaterGrid(level, false, 0),
+                originBerth,
+                targetBerth,
+                GUI_LOADED_PROBE_MAX_NODES
+        );
         boolean connected = route.connected();
+        if (connected) {
+            LogisticsLevelManager.data(level).cacheWaterRoute(originBerth, targetBerth, route.waypoints());
+        }
         recordWaterCheckResult(originBerth, targetBerth, connected, now);
         if (connected) {
             clearStaleWaterFailureStatus();

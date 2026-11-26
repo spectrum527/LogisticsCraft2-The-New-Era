@@ -54,15 +54,47 @@ public final class LevelWaterGrid implements WaterGrid {
         return new LevelWaterGrid(level, true, Math.max(0, maxProbedChunks));
     }
 
-    /** Returns an {@link AirspaceRouter.HeightSampler} backed by loaded chunk motion-blocking heightmaps. */
+    /**
+     * Returns an {@link AirspaceRouter.HeightSampler} backed by loaded chunk heightmaps,
+     * respecting ceilinged dimensions (such as the Nether) and returning
+     * {@link AirspaceRouter#UNLOADED_COLUMN} for unloaded chunks.
+     */
     public static AirspaceRouter.HeightSampler heightSampler(ServerLevel level) {
-        int seaLevel = level.getSeaLevel();
-        return (x, z) -> {
-            ChunkAccess chunk = Lc2Native.getLoadedChunk(level, x >> 4, z >> 4);
-            if (chunk == null) {
-                return seaLevel;
+        boolean hasCeiling = level.dimensionType().hasCeiling();
+        int minY = Lc2Native.minBuildY(level);
+        int maxY = Lc2Native.maxBuildY(level);
+        int ceilingY = hasCeiling ? Math.min(124, maxY - 4) : Integer.MAX_VALUE;
+        return new AirspaceRouter.HeightSampler() {
+            private final BlockPos.MutableBlockPos scanCursor = new BlockPos.MutableBlockPos();
+
+            @Override
+            public int highestSolidY(int x, int z) {
+                ChunkAccess chunk = Lc2Native.getLoadedChunk(level, x >> 4, z >> 4);
+                if (chunk == null) {
+                    return AirspaceRouter.UNLOADED_COLUMN;
+                }
+                if (!hasCeiling) {
+                    return chunk.getHeight(Heightmap.Types.MOTION_BLOCKING, x & 15, z & 15);
+                }
+                // In ceilinged dimensions (Nether), scan down below bedrock roof to find open cavern floor
+                boolean foundAir = false;
+                for (int y = ceilingY - 1; y >= minY; y--) {
+                    scanCursor.set(x, y, z);
+                    BlockState state = Lc2Native.getBlockStateFromChunk(chunk, scanCursor);
+                    boolean solid = !state.getCollisionShape(chunk, scanCursor).isEmpty();
+                    if (!solid) {
+                        foundAir = true;
+                    } else if (foundAir) {
+                        return y;
+                    }
+                }
+                return minY;
             }
-            return chunk.getHeight(Heightmap.Types.MOTION_BLOCKING, x & 15, z & 15);
+
+            @Override
+            public int ceilingY() {
+                return ceilingY;
+            }
         };
     }
 

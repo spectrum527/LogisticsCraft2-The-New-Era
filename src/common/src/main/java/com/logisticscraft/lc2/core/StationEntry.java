@@ -12,6 +12,7 @@ import java.util.Objects;
  * @param maxDroneBays          maximum drone landing bays (6 for Cargo Stations, 0 for Smart Ports)
  * @param dockedDrones          number of drones currently parked at this station
  * @param reservedInboundDrones number of bays atomically reserved for inbound drones
+ * @param dockedBayMask         6-bit mask of exact occupied drone bay slots ({@code bit i == 1} if bay {@code i} holds a drone)
  */
 public record StationEntry(
         BlockPos3i pos,
@@ -20,7 +21,8 @@ public record StationEntry(
         BlockPos3i waterBerthPos,
         int maxDroneBays,
         int dockedDrones,
-        int reservedInboundDrones
+        int reservedInboundDrones,
+        int dockedBayMask
 ) {
 
     /**
@@ -39,6 +41,45 @@ public record StationEntry(
         if (reservedInboundDrones < 0) {
             throw new IllegalArgumentException("reservedInboundDrones must be >= 0, got " + reservedInboundDrones);
         }
+        int validBits = maxDroneBays >= 31 ? Integer.MAX_VALUE : ((1 << maxDroneBays) - 1);
+        if (dockedBayMask < 0) {
+            dockedBayMask = defaultBayMask(maxDroneBays, dockedDrones);
+        } else {
+            dockedBayMask &= validBits;
+        }
+    }
+
+    /**
+     * Legacy 7-argument constructor computing a default low-bit {@code dockedBayMask} from {@code dockedDrones}.
+     */
+    public StationEntry(
+            BlockPos3i pos,
+            StationType type,
+            String customName,
+            BlockPos3i waterBerthPos,
+            int maxDroneBays,
+            int dockedDrones,
+            int reservedInboundDrones
+    ) {
+        this(
+                pos,
+                type,
+                customName,
+                waterBerthPos,
+                maxDroneBays,
+                dockedDrones,
+                reservedInboundDrones,
+                defaultBayMask(maxDroneBays, dockedDrones)
+        );
+    }
+
+    private static int defaultBayMask(int maxDroneBays, int dockedDrones) {
+        int clamped = Math.min(Math.max(0, maxDroneBays), Math.max(0, dockedDrones));
+        int mask = 0;
+        for (int i = 0; i < clamped; i++) {
+            mask |= (1 << i);
+        }
+        return mask;
     }
 
     /**

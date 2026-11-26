@@ -36,6 +36,7 @@ public abstract class Lc2StationMenuBase extends AbstractContainerMenu {
                 input == ContainerInput.QUICK_CRAFT,
                 player
         )) {
+            sendAllDataToRemote();
             return;
         }
         super.clicked(slotId, button, input, player);

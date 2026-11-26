@@ -11,6 +11,7 @@ import com.logisticscraft.lc2.core.EnergyUnits;
 import com.logisticscraft.lc2.core.LogisticsConstants;
 import com.logisticscraft.lc2.core.StationType;
 import com.logisticscraft.lc2.core.TerminalTargetResolver;
+import com.logisticscraft.lc2.platform.Lc2Native;
 import com.logisticscraft.lc2.platform.Lc2Nbt;
 import com.logisticscraft.lc2.platform.Lc2StationBlockEntityBase;
 import com.logisticscraft.lc2.world.LogisticsSavedData;
@@ -24,6 +25,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
@@ -193,12 +195,14 @@ public final class CommBaseStationBlockEntity extends Lc2StationBlockEntityBase
         return (T) platformEnergyHandler;
     }
 
-    /** Scans all 6 face-adjacent positions for live Smart Ports and Cargo Stations. */
+    /** Scans all 6 face-adjacent positions in entity-ticking chunks for live Smart Ports and Cargo Stations. */
     public List<TerminalTargetResolver.AdjacentStationInfo> findAdjacentStations(ServerLevel level) {
         List<TerminalTargetResolver.AdjacentStationInfo> result = new ArrayList<>();
         for (Direction dir : Direction.values()) {
             BlockPos adjPos = worldPosition.relative(dir);
-            if (!level.hasChunkAt(adjPos)) {
+            int cx = adjPos.getX() >> 4;
+            int cz = adjPos.getZ() >> 4;
+            if (!level.hasChunk(cx, cz) || !Lc2Native.isChunkEntityTicking(level, cx, cz)) {
                 continue;
             }
             if (level.getBlockEntity(adjPos) instanceof AbstractLogisticsStationBlockEntity station
@@ -211,6 +215,35 @@ public final class CommBaseStationBlockEntity extends Lc2StationBlockEntityBase
             }
         }
         return result;
+    }
+
+    /**
+     * Builds a client-localized {@link Component} summarizing all adjacent logistics stations,
+     * or {@code null} if none are adjacent.
+     */
+    public Component formatAdjacentComponent(ServerLevel level) {
+        List<TerminalTargetResolver.AdjacentStationInfo> stations = findAdjacentStations(level);
+        if (stations.isEmpty()) {
+            return null;
+        }
+        MutableComponent combined = Component.empty();
+        for (int i = 0; i < stations.size(); i++) {
+            TerminalTargetResolver.AdjacentStationInfo info = stations.get(i);
+            if (i > 0) {
+                combined.append(Component.literal(", "));
+            }
+            if (info.customName() != null && !info.customName().isBlank()) {
+                combined.append(Component.literal(info.customName()));
+            } else {
+                String key = info.type() == StationType.SMART_PORT
+                        ? "gui.lc2.terminal.unnamed_port"
+                        : "gui.lc2.terminal.unnamed_cargo";
+                combined.append(Component.translatable(
+                        key, info.pos().x(), info.pos().y(), info.pos().z()
+                ));
+            }
+        }
+        return combined;
     }
 
     /** Formats a comma-separated summary of adjacent logistics station names, or empty string if none. */

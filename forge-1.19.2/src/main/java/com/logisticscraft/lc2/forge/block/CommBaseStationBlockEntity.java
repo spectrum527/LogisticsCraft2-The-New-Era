@@ -11,6 +11,7 @@ import com.logisticscraft.lc2.core.StationType;
 import com.logisticscraft.lc2.core.TerminalTargetResolver;
 import com.logisticscraft.lc2.forge.Lc2Registries;
 import com.logisticscraft.lc2.forge.util.Lc2Coords;
+import com.logisticscraft.lc2.forge.util.TerminalSessionService;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -152,7 +153,7 @@ public class CommBaseStationBlockEntity extends BlockEntity implements WorldPowe
         List<TerminalTargetResolver.AdjacentStationInfo> found = new ArrayList<>(6);
         for (Direction dir : Direction.values()) {
             BlockPos neighborPos = this.worldPosition.relative(dir);
-            if (!level.isLoaded(neighborPos)) {
+            if (!TerminalSessionService.isChunkLoadedAndTicking(level, neighborPos)) {
                 continue;
             }
             BlockEntity be = level.getBlockEntity(neighborPos);

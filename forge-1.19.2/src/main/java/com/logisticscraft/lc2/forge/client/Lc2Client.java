@@ -3,12 +3,14 @@ package com.logisticscraft.lc2.forge.client;
 import com.logisticscraft.lc2.forge.Lc2Registries;
 import com.logisticscraft.lc2.forge.network.C2STerminalActionPacket;
 import com.logisticscraft.lc2.forge.network.Lc2Network;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.settings.KeyConflictContext;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -23,6 +25,8 @@ public final class Lc2Client {
 
     public static final KeyMapping OPEN_TERMINAL_KEY = new KeyMapping(
             "key.lc2.open_terminal",
+            KeyConflictContext.IN_GAME,
+            InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_G,
             "key.categories.lc2"
     );
@@ -76,6 +80,9 @@ public final class Lc2Client {
         }
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.screen != null) {
+            while (OPEN_TERMINAL_KEY.consumeClick()) {
+                // Discard buffered presses made while a GUI screen was open
+            }
             return;
         }
         while (OPEN_TERMINAL_KEY.consumeClick()) {

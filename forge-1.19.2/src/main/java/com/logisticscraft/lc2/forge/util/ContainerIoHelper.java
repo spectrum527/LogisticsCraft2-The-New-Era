@@ -3,12 +3,14 @@ package com.logisticscraft.lc2.forge.util;
 import com.industrialage.ia2.world.MachineAutomation;
 import com.logisticscraft.lc2.core.LogisticsConstants;
 import com.logisticscraft.lc2.forge.block.AbstractLogisticsStationBlockEntity;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.WorldlyContainer;
@@ -19,6 +21,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
+import net.minecraftforge.registries.ForgeRegistries;
 
 /**
  * Adjacent-container I/O helper supporting Forge {@link IItemHandler}, vanilla {@link ChestBlock}
@@ -27,7 +30,63 @@ import net.minecraftforge.items.ItemHandlerHelper;
  */
 public final class ContainerIoHelper {
 
+    private static final Method IC2_MATCHES_FILTER = resolveMatchesFilterMethod();
+
     private ContainerIoHelper() {
+    }
+
+    private static Method resolveMatchesFilterMethod() {
+        try {
+            return MachineAutomation.class.getMethod("matchesFilter", ItemStack.class, ItemStack.class);
+        } catch (ReflectiveOperationException ignored) {
+            return null;
+        }
+    }
+
+    private static boolean matchesAdvancedFilter(ItemStack upgrade, ItemStack candidate) {
+        if (IC2_MATCHES_FILTER == null) {
+            return true;
+        }
+        try {
+            return Boolean.TRUE.equals(IC2_MATCHES_FILTER.invoke(null, upgrade, candidate));
+        } catch (ReflectiveOperationException ignored) {
+            return true;
+        }
+    }
+
+    private static boolean permitsTransfer(
+            List<ItemStack> upgradeStacks,
+            Direction face,
+            ItemStack candidate,
+            boolean isPush
+    ) {
+        if (upgradeStacks == null || upgradeStacks.isEmpty() || IC2_MATCHES_FILTER == null) {
+            return true;
+        }
+        String basicId = isPush ? LogisticsConstants.UPGRADE_EJECTOR : LogisticsConstants.UPGRADE_PULLING;
+        String advId = isPush ? LogisticsConstants.UPGRADE_ADVANCED_EJECTOR : LogisticsConstants.UPGRADE_ADVANCED_PULLING;
+        boolean foundCoveringUpgrade = false;
+        for (ItemStack upg : upgradeStacks) {
+            String id = Lc2Coords.itemId(upg);
+            boolean isBasic = basicId.equals(id);
+            boolean isAdv = advId.equals(id);
+            if (!isBasic && !isAdv) {
+                continue;
+            }
+            if (!MachineAutomation.faces(upg).contains(face)) {
+                continue;
+            }
+            foundCoveringUpgrade = true;
+            if (isBasic || matchesAdvancedFilter(upg, candidate)) {
+                return true;
+            }
+        }
+        return !foundCoveringUpgrade;
+    }
+
+    private static boolean isVanillaContainerBlock(BlockState state) {
+        ResourceLocation key = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+        return key != null && "minecraft".equals(key.getNamespace());
     }
 
     /**
@@ -76,6 +135,20 @@ public final class ContainerIoHelper {
             List<Direction> faces,
             ItemStack stack
     ) {
+        return pushToAdjacent(level, stationPos, faces, stack, List.of());
+    }
+
+    /**
+     * Pushes as much of {@code stack} as possible into adjacent containers along {@code faces},
+     * honoring any installed IC2 advanced ejector item filters.
+     */
+    public static ItemStack pushToAdjacent(
+            ServerLevel level,
+            BlockPos stationPos,
+            List<Direction> faces,
+            ItemStack stack,
+            List<ItemStack> upgradeStacks
+    ) {
         if (stack.isEmpty()) {
             return ItemStack.EMPTY;
         }
@@ -83,6 +156,9 @@ public final class ContainerIoHelper {
         for (Direction face : faces) {
             if (remaining.isEmpty()) {
                 break;
+            }
+            if (!permitsTransfer(upgradeStacks, face, remaining, true)) {
+                continue;
             }
             BlockPos neighborPos = stationPos.relative(face);
             if (!level.hasChunkAt(neighborPos)) {
@@ -109,6 +185,26 @@ public final class ContainerIoHelper {
             int destEndExclusive,
             int maxItems
     ) {
+        return pullFromAdjacentInto(
+                level, stationPos, faces, excludedFaces, destination, destStartSlot, destEndExclusive, maxItems, List.of()
+        );
+    }
+
+    /**
+     * Pulls items from adjacent containers along {@code faces} up to {@code maxItems} total items,
+     * honoring any installed IC2 advanced pulling upgrade item filters.
+     */
+    public static int pullFromAdjacentInto(
+            ServerLevel level,
+            BlockPos stationPos,
+            List<Direction> faces,
+            Set<Direction> excludedFaces,
+            Container destination,
+            int destStartSlot,
+            int destEndExclusive,
+            int maxItems,
+            List<ItemStack> upgradeStacks
+    ) {
         if (maxItems <= 0) {
             return 0;
         }
@@ -127,11 +223,13 @@ public final class ContainerIoHelper {
             totalMoved += extractFromBlockInto(
                     level,
                     neighborPos,
+                    face,
                     face.getOpposite(),
                     destination,
                     destStartSlot,
                     destEndExclusive,
-                    maxItems - totalMoved
+                    maxItems - totalMoved,
+                    upgradeStacks
             );
         }
         return totalMoved;
@@ -240,7 +338,7 @@ public final class ContainerIoHelper {
             return ItemHandlerHelper.insertItemStacked(handler, stack, false);
         }
 
-        if (be instanceof Container container) {
+        if (isVanillaContainerBlock(state) && be instanceof Container container) {
             return insertIntoVanillaContainer(container, accessSide, stack);
         }
         return stack;
@@ -300,11 +398,13 @@ public final class ContainerIoHelper {
     private static int extractFromBlockInto(
             ServerLevel level,
             BlockPos pos,
+            Direction pullFace,
             Direction accessSide,
             Container destination,
             int destStartSlot,
             int destEndExclusive,
-            int maxItems
+            int maxItems,
+            List<ItemStack> upgradeStacks
     ) {
         BlockEntity be = level.getBlockEntity(pos);
         if (be == null || be instanceof AbstractLogisticsStationBlockEntity) {
@@ -316,7 +416,7 @@ public final class ContainerIoHelper {
             Container chestContainer = ChestBlock.getContainer(chestBlock, state, level, pos, true);
             if (chestContainer != null) {
                 return extractFromVanillaContainerInto(
-                        chestContainer, accessSide, destination, destStartSlot, destEndExclusive, maxItems
+                        chestContainer, pullFace, accessSide, destination, destStartSlot, destEndExclusive, maxItems, upgradeStacks
                 );
             }
         }
@@ -327,7 +427,7 @@ public final class ContainerIoHelper {
             for (int slot = 0; slot < handler.getSlots() && moved < maxItems; slot++) {
                 int budget = maxItems - moved;
                 ItemStack preview = handler.extractItem(slot, budget, true);
-                if (preview.isEmpty()) {
+                if (preview.isEmpty() || !permitsTransfer(upgradeStacks, pullFace, preview, false)) {
                     continue;
                 }
                 int fit = Math.min(preview.getCount(), capacityFor(destination, destStartSlot, destEndExclusive, preview));
@@ -349,9 +449,9 @@ public final class ContainerIoHelper {
             return moved;
         }
 
-        if (be instanceof Container container) {
+        if (isVanillaContainerBlock(state) && be instanceof Container container) {
             return extractFromVanillaContainerInto(
-                    container, accessSide, destination, destStartSlot, destEndExclusive, maxItems
+                    container, pullFace, accessSide, destination, destStartSlot, destEndExclusive, maxItems, upgradeStacks
             );
         }
         return 0;
@@ -359,11 +459,13 @@ public final class ContainerIoHelper {
 
     private static int extractFromVanillaContainerInto(
             Container source,
+            Direction pullFace,
             Direction accessSide,
             Container destination,
             int destStartSlot,
             int destEndExclusive,
-            int maxItems
+            int maxItems,
+            List<ItemStack> upgradeStacks
     ) {
         int[] slots = source instanceof WorldlyContainer wc
                 ? wc.getSlotsForFace(accessSide)
@@ -375,7 +477,7 @@ public final class ContainerIoHelper {
                 break;
             }
             ItemStack stack = source.getItem(slot);
-            if (stack.isEmpty()) {
+            if (stack.isEmpty() || !permitsTransfer(upgradeStacks, pullFace, stack, false)) {
                 continue;
             }
             if (source instanceof WorldlyContainer wc && !wc.canTakeItemThroughFace(slot, stack, accessSide)) {

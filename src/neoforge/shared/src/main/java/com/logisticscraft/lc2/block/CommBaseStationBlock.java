@@ -124,8 +124,8 @@ public final class CommBaseStationBlock extends Lc2StationBlockBase
                     comm.getStoredFe(),
                     comm.getMaxFe()
             );
-            String adjacentSummary = comm.formatAdjacentSummary(serverLevel);
-            Component adjacentLine = adjacentSummary.isEmpty()
+            Component adjacentSummary = comm.formatAdjacentComponent(serverLevel);
+            Component adjacentLine = adjacentSummary == null
                     ? Component.translatable("status.lc2.terminal.comm_adjacent_none")
                     : Component.translatable("status.lc2.terminal.comm_adjacent_list", adjacentSummary);
             Lc2Native.sendActionBar(player, statusLine.append(Component.literal(" | ")).append(adjacentLine));

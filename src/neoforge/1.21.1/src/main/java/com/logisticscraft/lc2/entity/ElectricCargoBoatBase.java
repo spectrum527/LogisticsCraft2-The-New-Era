@@ -1,8 +1,10 @@
 package com.logisticscraft.lc2.entity;
 
 import com.logisticscraft.lc2.Lc2Registries;
+import com.logisticscraft.lc2.core.DispatchFailure;
 import com.logisticscraft.lc2.core.LogisticsConstants;
 import com.logisticscraft.lc2.menu.ElectricCargoBoatMenu;
+import com.logisticscraft.lc2.platform.Lc2Native;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -101,7 +103,24 @@ public abstract class ElectricCargoBoatBase extends ChestBoat {
     }
 
     @Override
+    public void openCustomInventoryScreen(Player player) {
+        if (this instanceof ElectricCargoBoatEntity boat && boat.isAutonomousTransit()) {
+            if (!Lc2Native.isClientSide(level())) {
+                Lc2Native.sendActionBar(
+                        player,
+                        Component.translatable(DispatchFailure.VEHICLE_IN_TRANSIT.translationKey())
+                );
+            }
+            return;
+        }
+        super.openCustomInventoryScreen(player);
+    }
+
+    @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+        if (this instanceof ElectricCargoBoatEntity boat && boat.isAutonomousTransit()) {
+            return null;
+        }
         return new ElectricCargoBoatMenu(containerId, playerInventory, this);
     }
 

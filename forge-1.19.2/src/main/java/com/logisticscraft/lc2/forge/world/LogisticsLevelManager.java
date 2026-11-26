@@ -6,6 +6,7 @@ import com.logisticscraft.lc2.core.EnergyCost;
 import com.logisticscraft.lc2.core.EnergyCostCalculator;
 import com.logisticscraft.lc2.core.PaymentPlan;
 import com.logisticscraft.lc2.core.StationRegistry;
+import com.logisticscraft.lc2.core.StationType;
 import com.logisticscraft.lc2.core.TransitPhase;
 import com.logisticscraft.lc2.core.TransitRecord;
 import com.logisticscraft.lc2.core.Vec3d;
@@ -22,11 +23,16 @@ import com.logisticscraft.lc2.forge.entity.CargoDroneEntity;
 import com.logisticscraft.lc2.forge.entity.ElectricCargoBoatEntity;
 import com.logisticscraft.lc2.forge.util.Lc2Coords;
 import com.logisticscraft.lc2.forge.util.LogisticsChunkTickets;
+import com.logisticscraft.lc2.forge.util.TerminalSessionService;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import net.minecraft.core.BlockPos;
@@ -35,6 +41,7 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
@@ -51,8 +58,12 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 public final class LogisticsLevelManager {
 
     private static final int MAX_WATER_PROBED_CHUNKS = 256;
+    private static final int BOOTSTRAP_CHUNK_LOADER_TICKS = 40;
+    private static final double STALE_BOAT_DRIFT_SQ = 32.0 * 32.0;
 
     private static final Map<ServerLevel, Map<UUID, Entity>> LIVE_ENTITIES = new WeakHashMap<>();
+    private static final Map<ServerLevel, Map<BlockPos, Integer>> BOOTSTRAP_CHUNK_LOADERS = new WeakHashMap<>();
+    private static final Set<ServerLevel> BOOTSTRAPPED_LEVELS = Collections.newSetFromMap(new WeakHashMap<>());
 
     /**
      * Forge event bus handler ticking every {@link ServerLevel} at phase {@code END}.
@@ -72,7 +83,67 @@ public final class LogisticsLevelManager {
     public static void onLevelUnload(LevelEvent.Unload event) {
         if (event.getLevel() instanceof ServerLevel level) {
             LIVE_ENTITIES.remove(level);
+            BOOTSTRAP_CHUNK_LOADERS.remove(level);
+            BOOTSTRAPPED_LEVELS.remove(level);
             LogisticsChunkTickets.clearLevel(level);
+        }
+    }
+
+    /**
+     * Hands off a server-restart bootstrap chunk-loader ticket lease once the station block entity
+     * itself has ticked and acquired its own live ticket.
+     */
+    public static void markChunkLoaderTakenOver(ServerLevel level, BlockPos pos) {
+        Map<BlockPos, Integer> active = BOOTSTRAP_CHUNK_LOADERS.get(level);
+        if (active == null) {
+            return;
+        }
+        if (active.remove(pos) != null) {
+            LogisticsChunkTickets.releaseArea(level, pos);
+            if (active.isEmpty()) {
+                BOOTSTRAP_CHUNK_LOADERS.remove(level);
+            }
+        }
+    }
+
+    private static void tickBootstrapChunkLoaders(ServerLevel level, LogisticsSavedData data) {
+        if (BOOTSTRAPPED_LEVELS.add(level)) {
+            Set<BlockPos3i> persisted = data.chunkLoaderStations();
+            if (!persisted.isEmpty()) {
+                Map<BlockPos, Integer> leases = BOOTSTRAP_CHUNK_LOADERS.computeIfAbsent(level, ignored -> new HashMap<>());
+                for (BlockPos3i core : persisted) {
+                    BlockPos mcPos = Lc2Coords.toMc(core).immutable();
+                    if (!leases.containsKey(mcPos)) {
+                        LogisticsChunkTickets.holdArea(level, mcPos);
+                        leases.put(mcPos, BOOTSTRAP_CHUNK_LOADER_TICKS);
+                    }
+                }
+            }
+        }
+
+        Map<BlockPos, Integer> leases = BOOTSTRAP_CHUNK_LOADERS.get(level);
+        if (leases == null || leases.isEmpty()) {
+            return;
+        }
+        Iterator<Map.Entry<BlockPos, Integer>> it = leases.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<BlockPos, Integer> entry = it.next();
+            BlockPos pos = entry.getKey();
+            int remaining = entry.getValue() - 1;
+            boolean stationMissing = TerminalSessionService.isChunkLoadedAndTicking(level, pos)
+                    && !(level.getBlockEntity(pos) instanceof AbstractLogisticsStationBlockEntity);
+            if (stationMissing) {
+                data.setChunkLoaderStation(Lc2Coords.toCore(pos), false);
+            }
+            if (stationMissing || remaining <= 0) {
+                LogisticsChunkTickets.releaseArea(level, pos);
+                it.remove();
+            } else {
+                entry.setValue(remaining);
+            }
+        }
+        if (leases.isEmpty()) {
+            BOOTSTRAP_CHUNK_LOADERS.remove(level);
         }
     }
 
@@ -105,15 +176,39 @@ public final class LogisticsLevelManager {
     }
 
     /**
-     * Returns a loaded-chunk {@link AirspaceRouter.HeightSampler} for {@code level}.
+     * Returns a loaded-chunk, ceiling-aware {@link AirspaceRouter.HeightSampler} for {@code level}.
      */
     public static AirspaceRouter.HeightSampler heightSampler(ServerLevel level) {
-        return (x, z) -> {
-            ChunkAccess chunk = level.getChunkSource().getChunkNow(x >> 4, z >> 4);
-            if (chunk == null) {
-                return level.getMinBuildHeight();
+        boolean hasCeiling = level.dimensionType().hasCeiling();
+        int ceilingLimit = hasCeiling
+                ? Math.min(124, level.getMaxBuildHeight() - 4)
+                : Integer.MAX_VALUE;
+        return new AirspaceRouter.HeightSampler() {
+            @Override
+            public int highestSolidY(int x, int z) {
+                ChunkAccess chunk = level.getChunkSource().getChunkNow(x >> 4, z >> 4);
+                if (chunk == null) {
+                    return AirspaceRouter.UNLOADED_COLUMN;
+                }
+                if (!hasCeiling) {
+                    return chunk.getHeight(Heightmap.Types.MOTION_BLOCKING, x & 15, z & 15);
+                }
+                BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+                int minY = level.getMinBuildHeight();
+                for (int y = ceilingLimit - 1; y >= minY; y--) {
+                    cursor.set(x, y, z);
+                    BlockState state = chunk.getBlockState(cursor);
+                    if (!state.getCollisionShape(chunk, cursor).isEmpty()) {
+                        return y + 1;
+                    }
+                }
+                return minY;
             }
-            return chunk.getHeight(Heightmap.Types.MOTION_BLOCKING, x & 15, z & 15);
+
+            @Override
+            public int ceilingY() {
+                return ceilingLimit;
+            }
         };
     }
 
@@ -156,7 +251,9 @@ public final class LogisticsLevelManager {
     ) {
         LogisticsSavedData data = LogisticsSavedData.get(level);
         data.setTransitCargo(record.id(), cargo);
-        boat.bindToTransit(record.id(), true);
+        int gen = record.advanceEntityGeneration();
+        boat.loadCargoList(List.of());
+        boat.bindToTransit(record.id(), gen, true);
         liveMap(level).put(record.id(), boat);
         data.setDirty();
     }
@@ -201,6 +298,8 @@ public final class LogisticsLevelManager {
     public static void onStationRemoved(ServerLevel level, BlockPos pos) {
         LogisticsSavedData data = LogisticsSavedData.get(level);
         BlockPos3i corePos = Lc2Coords.toCore(pos);
+        data.setChunkLoaderStation(corePos, false);
+        markChunkLoaderTakenOver(level, pos);
         data.stationRegistry().get(corePos).ifPresent(entry -> {
             if (entry.waterBerthPos() != null) {
                 data.invalidateWaterRoutesForBerth(entry.waterBerthPos());
@@ -257,6 +356,34 @@ public final class LogisticsLevelManager {
     }
 
     /**
+     * Returns {@code true} if {@code boat} carries a transit ID that no longer matches the live
+     * authoritative entity for an active transit (completed transit, stale generation, duplicate
+     * entity, or drifted ghost reloaded from an unloaded chunk).
+     */
+    public static boolean isStaleAutonomousBoat(ServerLevel level, ElectricCargoBoatEntity boat) {
+        UUID transitId = boat.getTransitId();
+        if (transitId == null) {
+            return false;
+        }
+        Optional<TransitRecord> recOpt = LogisticsSavedData.get(level).transitEngine().getTransit(transitId);
+        if (recOpt.isEmpty()) {
+            return true;
+        }
+        TransitRecord rec = recOpt.get();
+        if (boat.getTransitGeneration() != rec.entityGeneration()) {
+            return true;
+        }
+        Entity live = liveMap(level).get(transitId);
+        if (live != null && live != boat && !live.isRemoved()) {
+            return true;
+        }
+        Vec3d expected = rec.currentPos();
+        double dx = boat.getX() - expected.x();
+        double dz = boat.getZ() - expected.z();
+        return (dx * dx + dz * dz) > STALE_BOAT_DRIFT_SQ;
+    }
+
+    /**
      * Returns the number of drones currently waiting in {@link TransitPhase#WAITING_RETURN_ENERGY}
      * at {@code targetStationPos}.
      */
@@ -277,6 +404,8 @@ public final class LogisticsLevelManager {
      */
     public static void tickLevel(ServerLevel level) {
         LogisticsSavedData data = LogisticsSavedData.get(level);
+        tickBootstrapChunkLoaders(level, data);
+
         VirtualTransitEngine engine = data.transitEngine();
         if (engine.activeTransits().isEmpty()) {
             return;
@@ -314,6 +443,21 @@ public final class LogisticsLevelManager {
             @Override
             public boolean tryPayReturnAtTarget(TransitRecord transit, EnergyCost returnCost) {
                 return handlePayReturnAtTarget(level, transit, returnCost);
+            }
+
+            @Override
+            public boolean isStationPresent(BlockPos3i pos, StationType expectedType) {
+                if (data.stationRegistry().get(pos).filter(e -> e.type() == expectedType).isEmpty()) {
+                    return false;
+                }
+                BlockPos mc = Lc2Coords.toMc(pos);
+                if (!level.isLoaded(mc)) {
+                    return true;
+                }
+                BlockEntity be = level.getBlockEntity(mc);
+                return expectedType == StationType.SMART_PORT
+                        ? be instanceof SmartPortBlockEntity
+                        : be instanceof CargoStationBlockEntity;
             }
 
             @Override
@@ -443,22 +587,32 @@ public final class LogisticsLevelManager {
         AABB search = AABB.ofSize(pos, 12.0, 12.0, 12.0);
 
         if (record.vehicleKind().isBoat()) {
+            ElectricCargoBoatEntity reused = null;
             for (ElectricCargoBoatEntity found : level.getEntitiesOfClass(ElectricCargoBoatEntity.class, search)) {
                 if (record.id().equals(found.getTransitId())) {
-                    found.bindToTransit(record.id(), record.phase().isMoving());
-                    found.loadCargoList(data.getTransitCargo(record.id()));
-                    live.put(record.id(), found);
-                    return;
+                    if (reused == null) {
+                        reused = found;
+                    } else {
+                        found.discardWithoutDropping();
+                    }
                 }
+            }
+            int gen = record.advanceEntityGeneration();
+            if (reused != null) {
+                reused.loadCargoList(List.of());
+                reused.bindToTransit(record.id(), gen, record.phase().isMoving());
+                live.put(record.id(), reused);
+                data.setDirty();
+                return;
             }
             ElectricCargoBoatEntity boat = new ElectricCargoBoatEntity(Lc2Registries.ELECTRIC_CARGO_BOAT_ENTITY.get(), level);
             boat.setPos(pos.x, pos.y, pos.z);
             boat.setYRot(record.yaw());
             boat.yRotO = record.yaw();
-            boat.loadCargoList(data.getTransitCargo(record.id()));
-            boat.bindToTransit(record.id(), record.phase().isMoving());
+            boat.bindToTransit(record.id(), gen, record.phase().isMoving());
             level.addFreshEntity(boat);
             live.put(record.id(), boat);
+            data.setDirty();
         } else {
             for (CargoDroneEntity found : level.getEntitiesOfClass(CargoDroneEntity.class, search)) {
                 if (record.id().equals(found.getTransitId())) {
@@ -483,7 +637,7 @@ public final class LogisticsLevelManager {
                 liveMap(level).put(record.id(), boat);
                 return;
             }
-            data.setTransitCargo(record.id(), boat.snapshotCargoList());
+            // Autonomous boats keep cargo solely in LogisticsSavedData until docking
             boat.discardWithoutDropping();
         } else {
             entity.discard();
@@ -521,8 +675,8 @@ public final class LogisticsLevelManager {
     }
 
     private static void handleCompleted(ServerLevel level, LogisticsSavedData data, TransitRecord record) {
-        BlockPos3i finalStationPos = record.autoReturn() ? record.originPos() : record.targetPos();
-        int finalBay = record.autoReturn() ? record.originBay() : record.targetBay();
+        BlockPos3i finalStationPos = record.finalStationPos();
+        int finalBay = record.finalBay();
         List<ItemStack> remainingCargo = data.removeTransitCargo(record.id());
         Entity entity = liveMap(level).remove(record.id());
 
@@ -543,6 +697,10 @@ public final class LogisticsLevelManager {
                 level.addFreshEntity(boat);
             }
             boat.loadCargoList(remainingCargo);
+            if (remainingCargo.size() > boat.getCargoContainer().getContainerSize()) {
+                dropItems(level, dockPos.add(0.0, 0.5, 0.0),
+                        remainingCargo.subList(boat.getCargoContainer().getContainerSize(), remainingCargo.size()));
+            }
             boat.setPos(dockPos.x, dockPos.y, dockPos.z);
             boat.setYRot(record.yaw());
             boat.setDeltaMovement(Vec3.ZERO);
@@ -587,10 +745,7 @@ public final class LogisticsLevelManager {
     }
 
     private static void syncBoatCargoIfLoaded(ServerLevel level, UUID transitId, List<ItemStack> cargo) {
-        Entity entity = liveMap(level).get(transitId);
-        if (entity instanceof ElectricCargoBoatEntity boat && !boat.isRemoved()) {
-            boat.loadCargoList(cargo);
-        }
+        // Autonomous boats keep cargo strictly in LogisticsSavedData until docking to prevent chunk-reload dupes
     }
 
     /**

@@ -60,6 +60,7 @@ public class ElectricCargoBoatEntity extends Boat implements MenuProvider {
     private final SimpleContainer cargo = new SimpleContainer(LogisticsConstants.BOAT_CARGO_SLOTS);
     @Nullable
     private UUID transitId;
+    private int transitGeneration = 0;
     private boolean suppressDropOnRemove = false;
     private boolean cargoDropped = false;
 
@@ -99,15 +100,27 @@ public class ElectricCargoBoatEntity extends Boat implements MenuProvider {
         return transitId;
     }
 
+    /** Returns the transit materialization generation stamped when this boat was bound. */
+    public int getTransitGeneration() {
+        return transitGeneration;
+    }
+
     /** Binds this boat entity to an active virtual transit. */
     public void bindToTransit(UUID id, boolean moving) {
+        bindToTransit(id, 0, moving);
+    }
+
+    /** Binds this boat entity to an active virtual transit with an authoritative generation token. */
+    public void bindToTransit(UUID id, int generation, boolean moving) {
         this.transitId = id;
+        this.transitGeneration = Math.max(0, generation);
         setAutonomousTransit(moving);
     }
 
     /** Detaches this boat from virtual transit and restores normal docked/idle behavior. */
     public void clearTransit() {
         this.transitId = null;
+        this.transitGeneration = 0;
         setAutonomousTransit(false);
         this.setPaddleState(false, false);
     }
@@ -222,8 +235,9 @@ public class ElectricCargoBoatEntity extends Boat implements MenuProvider {
     @Override
     public void tick() {
         if (this.level instanceof ServerLevel serverLevel && this.transitId != null) {
-            if (!LogisticsLevelManager.isTransitActive(serverLevel, this.transitId)) {
-                clearTransit();
+            if (this.tickCount > 2 && LogisticsLevelManager.isStaleAutonomousBoat(serverLevel, this)) {
+                discardWithoutDropping();
+                return;
             }
         }
 
@@ -271,12 +285,20 @@ public class ElectricCargoBoatEntity extends Boat implements MenuProvider {
     @Override
     public void destroy(DamageSource source) {
         if (!this.level.isClientSide) {
+            if (this.transitId != null && this.level instanceof ServerLevel serverLevel) {
+                if (LogisticsLevelManager.isStaleAutonomousBoat(serverLevel, this)) {
+                    this.suppressDropOnRemove = true;
+                    this.cargo.clearContent();
+                    this.transitId = null;
+                    return;
+                }
+            }
             if (this.level.getGameRules().getBoolean(GameRules.RULE_DOENTITYDROPS)) {
                 this.spawnAtLocation(getDropItem());
             }
             dropCargoOnce();
             if (this.transitId != null && this.level instanceof ServerLevel serverLevel) {
-                LogisticsLevelManager.cancelTransitAndDrop(serverLevel, this.transitId, this.position(), false);
+                LogisticsLevelManager.cancelTransitAndDrop(serverLevel, this.transitId, this.position(), true);
                 this.transitId = null;
             }
         }
@@ -285,9 +307,17 @@ public class ElectricCargoBoatEntity extends Boat implements MenuProvider {
     @Override
     public void remove(RemovalReason reason) {
         if (!this.level.isClientSide && reason.shouldDestroy() && !this.suppressDropOnRemove) {
-            dropCargoOnce();
-            if (this.transitId != null && this.level instanceof ServerLevel serverLevel) {
-                LogisticsLevelManager.cancelTransitAndDrop(serverLevel, this.transitId, this.position(), false);
+            boolean staleGhost = this.transitId != null
+                    && this.level instanceof ServerLevel serverLevel
+                    && LogisticsLevelManager.isStaleAutonomousBoat(serverLevel, this);
+            if (!staleGhost) {
+                dropCargoOnce();
+                if (this.transitId != null && this.level instanceof ServerLevel serverLevel) {
+                    LogisticsLevelManager.cancelTransitAndDrop(serverLevel, this.transitId, this.position(), true);
+                    this.transitId = null;
+                }
+            } else {
+                this.cargo.clearContent();
                 this.transitId = null;
             }
         }
@@ -309,6 +339,7 @@ public class ElectricCargoBoatEntity extends Boat implements MenuProvider {
         tag.putBoolean("AutonomousTransit", isAutonomousTransit());
         if (this.transitId != null) {
             tag.putUUID("TransitId", this.transitId);
+            tag.putInt("TransitGen", this.transitGeneration);
         }
         ListTag items = new ListTag();
         for (int i = 0; i < cargo.getContainerSize(); i++) {
@@ -328,6 +359,7 @@ public class ElectricCargoBoatEntity extends Boat implements MenuProvider {
         super.readAdditionalSaveData(tag);
         setAutonomousTransit(tag.getBoolean("AutonomousTransit"));
         this.transitId = tag.hasUUID("TransitId") ? tag.getUUID("TransitId") : null;
+        this.transitGeneration = Math.max(0, tag.getInt("TransitGen"));
         cargo.clearContent();
         ListTag items = tag.getList("CargoItems", Tag.TAG_COMPOUND);
         for (int i = 0; i < items.size(); i++) {
@@ -345,7 +377,11 @@ public class ElectricCargoBoatEntity extends Boat implements MenuProvider {
     }
 
     @Override
+    @Nullable
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+        if (isAutonomousTransit()) {
+            return null;
+        }
         return new ElectricCargoBoatMenu(containerId, playerInventory, this);
     }
 

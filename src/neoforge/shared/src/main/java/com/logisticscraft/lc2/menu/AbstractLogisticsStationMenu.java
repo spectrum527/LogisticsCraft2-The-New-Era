@@ -166,6 +166,14 @@ public abstract class AbstractLogisticsStationMenu extends Lc2StationMenuBase {
     }
 
     @Override
+    public boolean canTakeItemForPickAll(ItemStack stack, Slot slot) {
+        if (remoteMode && slot.index < machineSlotCount()) {
+            return false;
+        }
+        return super.canTakeItemForPickAll(stack, slot);
+    }
+
+    @Override
     protected boolean shouldBlockContainerClick(
             int slotId,
             int button,

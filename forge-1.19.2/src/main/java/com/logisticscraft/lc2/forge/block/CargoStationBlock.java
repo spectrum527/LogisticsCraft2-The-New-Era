@@ -107,6 +107,23 @@ public class CargoStationBlock extends Block implements EntityBlock, WrenchTarge
 
     @Override
     @SuppressWarnings("deprecation")
+    public void neighborChanged(
+            BlockState state,
+            Level level,
+            BlockPos pos,
+            Block neighborBlock,
+            BlockPos neighborPos,
+            boolean movedByPiston
+    ) {
+        super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);
+        if (level instanceof ServerLevel serverLevel
+                && level.getBlockEntity(pos) instanceof AbstractLogisticsStationBlockEntity station) {
+            station.onNeighborRedstoneChanged(serverLevel);
+        }
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
     public boolean hasAnalogOutputSignal(BlockState state) {
         return true;
     }

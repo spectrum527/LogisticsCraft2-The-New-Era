@@ -475,6 +475,12 @@ public final class CargoStationBlockEntity extends AbstractLogisticsStationBlock
             if (waitingReturnBays.containsKey(bay)) {
                 return false;
             }
+            if (level instanceof ServerLevel serverLevel
+                    && LogisticsLevelManager.getData(serverLevel)
+                            .stationRegistry()
+                            .isBayReserved(LogisticsSavedData.toPos3i(worldPosition), bay)) {
+                return false;
+            }
             return VehicleKind.fromItemId(Lc2Native.itemId(stack)).map(VehicleKind::isDrone).orElse(false);
         }
         return super.canPlaceItem(slot, stack);
