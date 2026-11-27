@@ -1,6 +1,7 @@
 package com.logisticscraft.lc2.world;
 
 import com.logisticscraft.lc2.Lc2Registries;
+import com.logisticscraft.lc2.block.Lc2WrenchHelper;
 import com.logisticscraft.lc2.blockentity.AbstractLogisticsStationBlockEntity;
 import com.logisticscraft.lc2.blockentity.CargoStationBlockEntity;
 import com.logisticscraft.lc2.blockentity.SmartPortBlockEntity;
@@ -36,7 +37,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
@@ -70,6 +73,12 @@ public final class LogisticsLevelManager {
                 LogisticsChunkTickets.clearLevel(serverLevel);
             }
         });
+        gameBus.addListener(
+                EventPriority.LOW,
+                false,
+                PlayerInteractEvent.RightClickBlock.class,
+                Lc2WrenchHelper::onRightClickBlock
+        );
     }
 
     /** Returns the persistent {@link LogisticsSavedData} for {@code level}. */

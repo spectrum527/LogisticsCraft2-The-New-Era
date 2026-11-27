@@ -94,6 +94,9 @@ public final class CommBaseStationBlock extends Lc2StationBlockBase
             InteractionHand hand,
             BlockHitResult hit
     ) {
+        if (Lc2WrenchHelper.tryHandleWrench(this, false, stack, state, level, pos, player, hand)) {
+            return true;
+        }
         if (stack.getItem() instanceof OperationTerminalItem) {
             if (level instanceof ServerLevel serverLevel) {
                 OperationTerminalItem.interactWithCommStation(stack, serverLevel, pos, player);

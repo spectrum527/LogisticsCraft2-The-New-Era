@@ -78,6 +78,9 @@ public class CommBaseStationBlock extends Block implements EntityBlock, WrenchTa
             BlockHitResult hit
     ) {
         ItemStack held = player.getItemInHand(hand);
+        if (Lc2WrenchHelper.tryHandleWrench(this, false, held, state, level, pos, player, hand)) {
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (held.getItem() instanceof OperationTerminalItem) {
             if (level instanceof ServerLevel serverLevel) {
                 OperationTerminalItem.interactWithCommStation(serverLevel, pos, player, held);

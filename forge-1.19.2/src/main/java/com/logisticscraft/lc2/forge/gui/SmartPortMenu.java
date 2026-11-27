@@ -152,7 +152,7 @@ public class SmartPortMenu extends AbstractStationMenu {
                     return true;
                 }
                 if (slot == SmartPortBlockEntity.SLOT_BATTERY) {
-                    return LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(Lc2Coords.itemId(stack));
+                    return Lc2Coords.isSingleUseBattery(stack);
                 }
                 if (slot >= SmartPortBlockEntity.SLOT_UPGRADE_START && slot < MACHINE_SLOTS) {
                     return UpgradeSummary.isSupportedUpgrade(Lc2Coords.itemId(stack));
@@ -181,7 +181,7 @@ public class SmartPortMenu extends AbstractStationMenu {
         } else {
             String id = Lc2Coords.itemId(stack);
             boolean moved = false;
-            if (LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(id)) {
+            if (Lc2Coords.isSingleUseBattery(stack)) {
                 moved = moveItemStackTo(stack, SmartPortBlockEntity.SLOT_BATTERY, SmartPortBlockEntity.SLOT_BATTERY + 1, false);
             } else if (UpgradeSummary.isSupportedUpgrade(id)) {
                 moved = moveItemStackTo(stack, SmartPortBlockEntity.SLOT_UPGRADE_START, MACHINE_SLOTS, false);

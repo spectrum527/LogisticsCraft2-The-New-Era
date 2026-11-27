@@ -75,6 +75,10 @@ public class CargoStationBlock extends Block implements EntityBlock, WrenchTarge
             InteractionHand hand,
             BlockHitResult hit
     ) {
+        ItemStack held = player.getItemInHand(hand);
+        if (Lc2WrenchHelper.tryHandleWrench(this, false, held, state, level, pos, player, hand)) {
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (level instanceof ServerLevel serverLevel
                 && player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos) instanceof CargoStationBlockEntity station) {

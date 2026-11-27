@@ -25,8 +25,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -66,7 +69,69 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  */
 public final class Lc2Native {
 
+    /** Common NeoForge wrench item tag ({@code #c:tools/wrench}). */
+    public static final TagKey<Item> TAG_C_TOOLS_WRENCH = itemTag("c", "tools/wrench");
+
+    /** Plural fallback wrench item tag ({@code #c:tools/wrenches}). */
+    public static final TagKey<Item> TAG_C_TOOLS_WRENCHES = itemTag("c", "tools/wrenches");
+
+    /** Legacy/alias common wrench item tag ({@code #c:wrenches}). */
+    public static final TagKey<Item> TAG_C_WRENCHES = itemTag("c", "wrenches");
+
+    /** Optional LC2 item tag extending the single-use battery slot ({@code #lc2:single_use_batteries}). */
+    public static final TagKey<Item> TAG_SINGLE_USE_BATTERIES =
+            itemTag(LogisticsConstants.MOD_ID, "single_use_batteries");
+
+    /** Common relocation-protection block tag ({@code #c:relocation_not_supported}). */
+    public static final TagKey<Block> TAG_C_RELOCATION_NOT_SUPPORTED =
+            blockTag("c", "relocation_not_supported");
+
     private Lc2Native() {
+    }
+
+    /** Creates an item {@link TagKey} for the given namespace and path. */
+    public static TagKey<Item> itemTag(String namespace, String path) {
+        return TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(namespace, path));
+    }
+
+    /** Creates a block {@link TagKey} for the given namespace and path. */
+    public static TagKey<Block> blockTag(String namespace, String path) {
+        return TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(namespace, path));
+    }
+
+    /** Returns {@code true} if {@code stack} is a supported single-use battery item. */
+    public static boolean isSingleUseBattery(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return false;
+        }
+        return stack.is(TAG_SINGLE_USE_BATTERIES)
+                || LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(itemId(stack));
+    }
+
+    /**
+     * Returns {@code true} if {@code stack} is a third-party wrench ({@code #c:tools/wrench},
+     * {@code #c:tools/wrenches}, or {@code #c:wrenches}), excluding IC2's own wrench items so
+     * IC2's {@code WrenchTarget} never double-triggers.
+     */
+    public static boolean isThirdPartyWrench(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return false;
+        }
+        String id = itemId(stack);
+        if (id.startsWith(LogisticsConstants.IC2_MOD_ID + ":")) {
+            return false;
+        }
+        return stack.is(TAG_C_TOOLS_WRENCH)
+                || stack.is(TAG_C_TOOLS_WRENCHES)
+                || stack.is(TAG_C_WRENCHES);
+    }
+
+    /** Damages a damageable wrench item by 1 point when used in survival mode. */
+    public static void damageWrenchItem(ItemStack stack, Player player, InteractionHand hand) {
+        if (player != null && !player.isCreative() && stack.isDamageableItem()) {
+            EquipmentSlot slot = hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;
+            stack.hurtAndBreak(1, player, slot);
+        }
     }
 
     /** Returns the canonical qualified registry ID of the given stack's item. */

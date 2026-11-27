@@ -126,7 +126,7 @@ public final class SmartPortMenu extends AbstractLogisticsStationMenu {
                 SmartPortBlockEntity.BATTERY_SLOT,
                 363,
                 76,
-                stack -> LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(Lc2Native.itemId(stack)),
+                Lc2Native::isSingleUseBattery,
                 -1
         ));
 
@@ -171,7 +171,7 @@ public final class SmartPortMenu extends AbstractLogisticsStationMenu {
             }
         } else {
             String id = Lc2Native.itemId(stack);
-            if (LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(id)) {
+            if (Lc2Native.isSingleUseBattery(stack)) {
                 if (!moveItemStackTo(stack, SmartPortBlockEntity.BATTERY_SLOT, SmartPortBlockEntity.BATTERY_SLOT + 1, false)
                         && !moveItemStackTo(stack, SmartPortBlockEntity.OUTBOUND_START, outboundEnd, false)) {
                     return ItemStack.EMPTY;

@@ -56,6 +56,9 @@ public final class LogisticsConstants {
     /** IC2 Single-Use Battery item registry ID accepted by both stations. */
     public static final String SINGLE_USE_BATTERY_ID = "ic2:single_use_battery";
 
+    /** Optional item tag allowing modpacks to extend the single-use battery slot. */
+    public static final String SINGLE_USE_BATTERIES_TAG = "lc2:single_use_batteries";
+
     // --- Supported Upgrade Item IDs ---
 
     /** IC2 Transformer Upgrade (+1 voltage tier). */

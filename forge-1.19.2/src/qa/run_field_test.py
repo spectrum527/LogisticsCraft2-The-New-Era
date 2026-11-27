@@ -121,7 +121,7 @@ def prepare_server_dir(manifest: dict, run_dir: Path, port: int, seed: str) -> N
         shutil.rmtree(run_dir)
     mods_dir = run_dir / "mods"
     mods_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(manifest["ic2ModJar"], mods_dir / "ic2-forge-1.19.2-1.0.5.jar")
+    shutil.copyfile(manifest["ic2ModJar"], mods_dir / Path(manifest["ic2ModJar"]).name)
     shutil.copyfile(manifest["lc2ModJar"], mods_dir / "lc2-forge-1.19.2-1.0.0.jar")
     (run_dir / "eula.txt").write_text("eula=true\n", encoding="utf-8")
     (run_dir / "server.properties").write_text(
@@ -158,7 +158,7 @@ def prepare_client_dir(manifest: dict, run_dir: Path) -> None:
         shutil.rmtree(run_dir)
     mods_dir = run_dir / "mods"
     mods_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(manifest["ic2ModJar"], mods_dir / "ic2-forge-1.19.2-1.0.5.jar")
+    shutil.copyfile(manifest["ic2ModJar"], mods_dir / Path(manifest["ic2ModJar"]).name)
     shutil.copyfile(manifest["lc2ModJar"], mods_dir / "lc2-forge-1.19.2-1.0.0.jar")
     (run_dir / "options.txt").write_text(
         "\n".join(
