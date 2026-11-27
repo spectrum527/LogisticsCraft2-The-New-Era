@@ -158,6 +158,12 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
         Direction facing = getBlockState().hasProperty(SmartPortBlock.FACING)
                 ? getBlockState().getValue(SmartPortBlock.FACING)
                 : Direction.NORTH;
+        return refreshWaterBerth(level, facing);
+    }
+
+    /** Re-detects the adjacent navigable water berth prioritizing {@code preferredFacing}. */
+    public Optional<BlockPos3i> refreshWaterBerth(ServerLevel level, Direction preferredFacing) {
+        Direction facing = preferredFacing != null ? preferredFacing : Direction.NORTH;
         BlockPos3i portPos = LogisticsSavedData.toPos3i(worldPosition);
         Optional<BlockPos3i> detected = WaterPathfinder.findWaterBerth(
                 LevelWaterGrid.loadedOnly(level),

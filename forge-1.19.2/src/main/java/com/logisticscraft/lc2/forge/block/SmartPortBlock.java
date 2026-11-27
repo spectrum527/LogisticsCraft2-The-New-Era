@@ -16,9 +16,12 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -84,6 +87,30 @@ public class SmartPortBlock extends Block implements EntityBlock, WrenchTarget, 
     }
 
     @Override
+    @SuppressWarnings("deprecation")
+    public BlockState rotate(BlockState state, Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    public BlockState rotate(BlockState state, LevelAccessor level, BlockPos pos, Rotation direction) {
+        BlockState rotated = rotate(state, direction);
+        if (!rotated.equals(state)
+                && level instanceof ServerLevel serverLevel
+                && serverLevel.getBlockEntity(pos) instanceof SmartPortBlockEntity port) {
+            port.refreshWaterBerth(serverLevel, rotated.getValue(FACING));
+            port.syncRegistry(serverLevel);
+        }
+        return rotated;
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public BlockState mirror(BlockState state, Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
+    }
+
+    @Override
     public boolean wrenchTurn(ServerLevel level, BlockPos pos, BlockState state, Direction side) {
         boolean turned = WrenchTarget.super.wrenchTurn(level, pos, state, side);
         if (turned && level.getBlockEntity(pos) instanceof SmartPortBlockEntity port) {
@@ -103,6 +130,9 @@ public class SmartPortBlock extends Block implements EntityBlock, WrenchTarget, 
             BlockHitResult hit
     ) {
         ItemStack held = player.getItemInHand(hand);
+        if (Lc2WrenchHelper.tryHandleWrench(this, true, held, state, level, pos, player, hand)) {
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
         if (held.is(Lc2Registries.ELECTRIC_CARGO_BOAT_ITEM.get())) {
             if (level instanceof ServerLevel serverLevel
                     && level.getBlockEntity(pos) instanceof SmartPortBlockEntity port) {

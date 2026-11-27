@@ -178,7 +178,7 @@ public class CargoStationMenu extends AbstractStationMenu {
                             || LogisticsConstants.HEAVY_TRANSPORT_DRONE_ID.equals(id);
                 }
                 if (slot == CargoStationBlockEntity.SLOT_BATTERY) {
-                    return LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(id);
+                    return Lc2Coords.isSingleUseBattery(stack);
                 }
                 if (slot >= CargoStationBlockEntity.SLOT_UPGRADE_START && slot < MACHINE_SLOTS) {
                     return UpgradeSummary.isSupportedUpgrade(id);
@@ -217,7 +217,7 @@ public class CargoStationMenu extends AbstractStationMenu {
                         CargoStationBlockEntity.SLOT_DRONE_BAY_START + CargoStationBlockEntity.DRONE_BAY_COUNT,
                         false
                 );
-            } else if (LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(id)) {
+            } else if (Lc2Coords.isSingleUseBattery(stack)) {
                 moved = moveItemStackTo(stack, CargoStationBlockEntity.SLOT_BATTERY, CargoStationBlockEntity.SLOT_BATTERY + 1, false);
             } else if (UpgradeSummary.isSupportedUpgrade(id)) {
                 moved = moveItemStackTo(stack, CargoStationBlockEntity.SLOT_UPGRADE_START, MACHINE_SLOTS, false);

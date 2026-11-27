@@ -18,6 +18,7 @@ import com.logisticscraft.lc2.core.WaterPathfinder;
 import com.logisticscraft.lc2.forge.Lc2Registries;
 import com.logisticscraft.lc2.forge.block.AbstractLogisticsStationBlockEntity;
 import com.logisticscraft.lc2.forge.block.CargoStationBlockEntity;
+import com.logisticscraft.lc2.forge.block.Lc2WrenchHelper;
 import com.logisticscraft.lc2.forge.block.SmartPortBlockEntity;
 import com.logisticscraft.lc2.forge.entity.CargoDroneEntity;
 import com.logisticscraft.lc2.forge.entity.ElectricCargoBoatEntity;
@@ -47,7 +48,9 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.LevelEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /**
@@ -87,6 +90,14 @@ public final class LogisticsLevelManager {
             BOOTSTRAPPED_LEVELS.remove(level);
             LogisticsChunkTickets.clearLevel(level);
         }
+    }
+
+    /**
+     * Low-priority fallback listener for third-party sneak-wrench dismantling on LC2 blocks.
+     */
+    @SubscribeEvent(priority = EventPriority.LOW)
+    public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+        Lc2WrenchHelper.onRightClickBlock(event);
     }
 
     /**

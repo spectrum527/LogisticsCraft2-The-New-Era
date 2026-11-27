@@ -371,10 +371,10 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
         return this.chunkTicketsHeld;
     }
 
-    /** Returns the number of {@code ic2:single_use_battery} items currently in the battery slot. */
+    /** Returns the number of supported single-use batteries ({@code #lc2:single_use_batteries}) currently in the battery slot. */
     public int getBatteryCount() {
         ItemStack stack = this.items.get(batterySlotIndex());
-        if (stack.isEmpty() || !LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(Lc2Coords.itemId(stack))) {
+        if (stack.isEmpty() || !Lc2Coords.isSingleUseBattery(stack)) {
             return 0;
         }
         return stack.getCount();
@@ -881,7 +881,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
             return true;
         }
         if (slot == batterySlotIndex()) {
-            return LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(Lc2Coords.itemId(stack));
+            return Lc2Coords.isSingleUseBattery(stack);
         }
         int upgStart = upgradeStartIndex();
         if (slot >= upgStart && slot < upgStart + LogisticsConstants.MACHINE_UPGRADE_SLOTS) {
@@ -901,7 +901,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
             return true;
         }
         if (slot == batterySlotIndex()) {
-            return LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(Lc2Coords.itemId(stack));
+            return Lc2Coords.isSingleUseBattery(stack);
         }
         return false;
     }

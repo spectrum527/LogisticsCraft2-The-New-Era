@@ -5,6 +5,7 @@ import com.logisticscraft.lc2.block.SmartPortBlock;
 import com.logisticscraft.lc2.blockentity.CargoStationBlockEntity;
 import com.logisticscraft.lc2.blockentity.SmartPortBlockEntity;
 import com.logisticscraft.lc2.core.LogisticsConstants;
+import com.logisticscraft.lc2.platform.Lc2Native;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -19,6 +20,8 @@ import net.minecraft.world.inventory.CraftingMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.neoforged.fml.ModList;
@@ -141,6 +144,78 @@ public final class Suite1RegistryPower {
                     !output.isEmpty() && output.is(QaChecks.item(spec.id())) && output.getCount() == 1,
                     "crafted=" + output);
         }
+
+        // 3b. Verify common relocation_not_supported tag, LC2 grouping tags, recipe common tags, and SmartPort rotation/mirror
+        for (String id : List.of("lc2:smart_port", "lc2:cargo_station", "lc2:comm_base_station")) {
+            BlockState defaultState = QaChecks.block(id).defaultBlockState();
+            checks.check("s1.tag.relocation_not_supported." + id,
+                    defaultState.is(Lc2Native.TAG_C_RELOCATION_NOT_SUPPORTED));
+            checks.check("s1.tag.power_blocks.block." + id,
+                    defaultState.is(Lc2Native.blockTag("lc2", "power_blocks")));
+            checks.check("s1.tag.power_blocks.item." + id,
+                    new ItemStack(QaChecks.item(id)).is(Lc2Native.itemTag("lc2", "power_blocks")));
+        }
+        for (String id : List.of("lc2:smart_port", "lc2:cargo_station")) {
+            checks.check("s1.tag.stations.block." + id,
+                    QaChecks.block(id).defaultBlockState().is(Lc2Native.blockTag("lc2", "stations")));
+            checks.check("s1.tag.stations.item." + id,
+                    new ItemStack(QaChecks.item(id)).is(Lc2Native.itemTag("lc2", "stations")));
+        }
+        for (String id : List.of("lc2:rf_chip_1", "lc2:rf_chip_2", "lc2:rf_chip_3")) {
+            checks.check("s1.tag.rf_chips." + id,
+                    new ItemStack(QaChecks.item(id)).is(Lc2Native.itemTag("lc2", "rf_chips")));
+        }
+        for (String id : List.of("lc2:transport_drone", "lc2:heavy_transport_drone")) {
+            checks.check("s1.tag.drones." + id,
+                    new ItemStack(QaChecks.item(id)).is(Lc2Native.itemTag("lc2", "drones")));
+        }
+        ItemStack singleUseBat = new ItemStack(QaChecks.item(LogisticsConstants.SINGLE_USE_BATTERY_ID));
+        checks.check("s1.tag.single_use_batteries",
+                singleUseBat.is(Lc2Native.TAG_SINGLE_USE_BATTERIES) && Lc2Native.isSingleUseBattery(singleUseBat));
+        checks.check("s1.tag.common_recipe_inputs",
+                new ItemStack(Items.CHEST).is(Lc2Native.itemTag("c", "chests/wooden"))
+                        && new ItemStack(Items.REDSTONE).is(Lc2Native.itemTag("c", "dusts/redstone"))
+                        && new ItemStack(Items.ENDER_PEARL).is(Lc2Native.itemTag("c", "ender_pearls"))
+                        && new ItemStack(QaChecks.item("minecraft:blue_stained_glass_pane")).is(Lc2Native.itemTag("c", "glass_panes"))
+                        && new ItemStack(QaChecks.item("ic2:iron_plate")).is(Lc2Native.itemTag("c", "plates/iron"))
+                        && new ItemStack(QaChecks.item("ic2:steel_plate")).is(Lc2Native.itemTag("c", "plates/steel"))
+                        && new ItemStack(QaChecks.item("ic2:copper_plate")).is(Lc2Native.itemTag("c", "plates/copper"))
+                        && new ItemStack(QaChecks.item("ic2:gold_plate")).is(Lc2Native.itemTag("c", "plates/gold"))
+                        && new ItemStack(QaChecks.item("ic2:circuit")).is(Lc2Native.itemTag("c", "circuits/basic"))
+                        && new ItemStack(QaChecks.item("ic2:advanced_circuit")).is(Lc2Native.itemTag("c", "circuits/advanced")));
+
+        // Verify recipe tag substitution works live (blue_stained_glass_pane satisfies #c:glass_panes for operation_terminal)
+        CraftingMenu tagSubMenu = new CraftingMenu(102, crafter.getInventory(),
+                ContainerLevelAccess.create(level, new BlockPos(8, 65, 8)));
+        Map<Character, ItemStack> subKey = Map.of(
+                'I', new ItemStack(QaChecks.item("ic2:iron_plate")),
+                'G', new ItemStack(QaChecks.item("minecraft:blue_stained_glass_pane")),
+                'C', new ItemStack(QaChecks.item("ic2:circuit")),
+                'F', new ItemStack(QaChecks.item("ic2:frequency_transmitter")),
+                'W', new ItemStack(QaChecks.item("ic2:insulated_copper_cable")),
+                'B', new ItemStack(QaChecks.item("ic2:re_battery"))
+        );
+        String[] termPattern = new String[]{"IGI", "CFC", "WBW"};
+        for (int r = 0; r < 3; r++) {
+            for (int c = 0; c < 3; c++) {
+                tagSubMenu.getSlot(1 + r * 3 + c).set(subKey.get(termPattern[r].charAt(c)).copy());
+            }
+        }
+        tagSubMenu.slotsChanged(tagSubMenu.getSlot(1).container);
+        ItemStack tagSubOut = tagSubMenu.getSlot(0).getItem();
+        checks.check("s1.recipe.tag_substitution.operation_terminal_stained_pane",
+                !tagSubOut.isEmpty() && tagSubOut.is(QaChecks.item("lc2:operation_terminal")),
+                "crafted=" + tagSubOut);
+
+        // Verify SmartPortBlock rotate/mirror and IC2 wrench exclusion from third-party wrench handler
+        BlockState spNorth = QaChecks.block("lc2:smart_port").defaultBlockState()
+                .setValue(SmartPortBlock.FACING, Direction.NORTH);
+        checks.check("s1.block.smart_port_rotate_and_mirror",
+                spNorth.rotate(Rotation.CLOCKWISE_90).getValue(SmartPortBlock.FACING) == Direction.EAST
+                        && spNorth.mirror(Mirror.LEFT_RIGHT).getValue(SmartPortBlock.FACING) == Direction.SOUTH);
+        checks.check("s1.wrench.ic2_wrench_excluded_from_third_party_handler",
+                !Lc2Native.isThirdPartyWrench(new ItemStack(QaChecks.item("ic2:wrench")))
+                        && !Lc2Native.isThirdPartyWrench(new ItemStack(QaChecks.item("ic2:electric_wrench"))));
 
         // 4. IC2 Generator + insulated_copper_cable + CableBlockMixin + EU flow (both placement orders!)
         // Order A: place cable FIRST, then place Smart Port adjacent -> triggers updateShape -> updateConnection

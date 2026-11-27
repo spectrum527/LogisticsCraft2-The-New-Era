@@ -18,6 +18,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -64,6 +65,11 @@ public final class SmartPortBlock extends Lc2StationBlockBase
     }
 
     @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
+    }
+
+    @Override
     public boolean wrenchTurn(ServerLevel level, BlockPos pos, BlockState state, Direction side) {
         boolean turned = WrenchTarget.super.wrenchTurn(level, pos, state, side);
         if (turned && level.getBlockEntity(pos) instanceof SmartPortBlockEntity port) {
@@ -99,6 +105,9 @@ public final class SmartPortBlock extends Lc2StationBlockBase
             InteractionHand hand,
             BlockHitResult hit
     ) {
+        if (Lc2WrenchHelper.tryHandleWrench(this, true, stack, state, level, pos, player, hand)) {
+            return true;
+        }
         if (LogisticsConstants.ELECTRIC_CARGO_BOAT_ID.equals(Lc2Native.itemId(stack))) {
             if (level instanceof ServerLevel serverLevel
                     && level.getBlockEntity(pos) instanceof SmartPortBlockEntity port) {

@@ -24,6 +24,7 @@ import com.logisticscraft.lc2.forge.block.CargoStationBlockEntity;
 import com.logisticscraft.lc2.forge.block.CommBaseStationBlock;
 import com.logisticscraft.lc2.forge.block.CommBaseStationBlockEntity;
 import com.logisticscraft.lc2.forge.block.LogisticsPowerBlock;
+import com.logisticscraft.lc2.forge.block.SmartPortBlock;
 import com.logisticscraft.lc2.forge.block.SmartPortBlockEntity;
 import com.logisticscraft.lc2.forge.entity.CargoDroneEntity;
 import com.logisticscraft.lc2.forge.entity.ElectricCargoBoatEntity;
@@ -74,6 +75,8 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HopperBlock;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -648,6 +651,67 @@ final class Lc2QaRunner {
             ResourceLocation rl = Lc2Coords.id(id);
             qa.check("s1.menu." + id, ForgeRegistries.MENU_TYPES.containsKey(rl), rl.toString());
         }
+
+        // Common relocation protection tag, LC2 grouping tags, recipe common tags, and SmartPort rotate/mirror
+        for (String id : List.of("smart_port", "cargo_station", "comm_base_station")) {
+            ResourceLocation rl = Lc2Coords.id(id);
+            BlockState defaultState = ForgeRegistries.BLOCKS.getValue(rl).defaultBlockState();
+            ItemStack itemStack = new ItemStack(ForgeRegistries.ITEMS.getValue(rl));
+            qa.check("s1.tag.relocation_not_supported." + id,
+                    defaultState.is(Lc2Coords.TAG_FORGE_RELOCATION_NOT_SUPPORTED), rl.toString());
+            qa.check("s1.tag.power_blocks.block." + id,
+                    defaultState.is(Lc2Coords.blockTag("lc2", "power_blocks")), rl.toString());
+            qa.check("s1.tag.power_blocks.item." + id,
+                    itemStack.is(Lc2Coords.itemTag("lc2", "power_blocks")), rl.toString());
+        }
+        for (String id : List.of("smart_port", "cargo_station")) {
+            ResourceLocation rl = Lc2Coords.id(id);
+            qa.check("s1.tag.stations.block." + id,
+                    ForgeRegistries.BLOCKS.getValue(rl).defaultBlockState().is(Lc2Coords.blockTag("lc2", "stations")),
+                    rl.toString());
+            qa.check("s1.tag.stations.item." + id,
+                    new ItemStack(ForgeRegistries.ITEMS.getValue(rl)).is(Lc2Coords.itemTag("lc2", "stations")),
+                    rl.toString());
+        }
+        for (String id : List.of("rf_chip_1", "rf_chip_2", "rf_chip_3")) {
+            ResourceLocation rl = Lc2Coords.id(id);
+            qa.check("s1.tag.rf_chips." + id,
+                    new ItemStack(ForgeRegistries.ITEMS.getValue(rl)).is(Lc2Coords.itemTag("lc2", "rf_chips")),
+                    rl.toString());
+        }
+        for (String id : List.of("transport_drone", "heavy_transport_drone")) {
+            ResourceLocation rl = Lc2Coords.id(id);
+            qa.check("s1.tag.drones." + id,
+                    new ItemStack(ForgeRegistries.ITEMS.getValue(rl)).is(Lc2Coords.itemTag("lc2", "drones")),
+                    rl.toString());
+        }
+        ItemStack singleUseBat = Lc2QaHelpers.itemStack(LogisticsConstants.SINGLE_USE_BATTERY_ID, 1);
+        qa.check("s1.tag.single_use_batteries",
+                singleUseBat.is(Lc2Coords.TAG_SINGLE_USE_BATTERIES) && Lc2Coords.isSingleUseBattery(singleUseBat),
+                "ic2:single_use_battery");
+        qa.check("s1.tag.common_recipe_inputs",
+                new ItemStack(Items.CHEST).is(Lc2Coords.itemTag("forge", "chests/wooden"))
+                        && new ItemStack(Items.REDSTONE).is(Lc2Coords.itemTag("forge", "dusts/redstone"))
+                        && new ItemStack(Items.ENDER_PEARL).is(Lc2Coords.itemTag("forge", "ender_pearls"))
+                        && new ItemStack(Items.BLUE_STAINED_GLASS_PANE).is(Lc2Coords.itemTag("forge", "glass_panes"))
+                        && Lc2QaHelpers.itemStack("ic2:iron_plate", 1).is(Lc2Coords.itemTag("forge", "plates/iron"))
+                        && Lc2QaHelpers.itemStack("ic2:steel_plate", 1).is(Lc2Coords.itemTag("forge", "plates/steel"))
+                        && Lc2QaHelpers.itemStack("ic2:copper_plate", 1).is(Lc2Coords.itemTag("forge", "plates/copper"))
+                        && Lc2QaHelpers.itemStack("ic2:gold_plate", 1).is(Lc2Coords.itemTag("forge", "plates/gold"))
+                        && Lc2QaHelpers.itemStack("ic2:circuit", 1).is(Lc2Coords.itemTag("forge", "circuits/basic"))
+                        && Lc2QaHelpers.itemStack("ic2:advanced_circuit", 1).is(Lc2Coords.itemTag("forge", "circuits/advanced")),
+                "forge common recipe tags populated");
+
+        BlockState spNorth = Lc2Registries.SMART_PORT_BLOCK.get().defaultBlockState()
+                .setValue(SmartPortBlock.FACING, Direction.NORTH);
+        qa.check("s1.block.smart_port_rotate_and_mirror",
+                spNorth.rotate(Rotation.CLOCKWISE_90).getValue(SmartPortBlock.FACING) == Direction.EAST
+                        && spNorth.mirror(Mirror.LEFT_RIGHT).getValue(SmartPortBlock.FACING) == Direction.SOUTH,
+                "rotate+mirror");
+        qa.check("s1.wrench.ic2_wrench_excluded",
+                !Lc2Coords.isThirdPartyWrench(Lc2QaHelpers.itemStack("ic2:wrench", 1))
+                        && !Lc2Coords.isThirdPartyWrench(Lc2QaHelpers.itemStack("ic2:electric_wrench", 1)),
+                "ic2 wrenches excluded");
 
         // Place IC2 Generator + 2 insulated_copper_cable + Smart Port & Cargo Station
         Block cableBlock = Lc2QaHelpers.requireBlock("ic2:insulated_copper_cable");

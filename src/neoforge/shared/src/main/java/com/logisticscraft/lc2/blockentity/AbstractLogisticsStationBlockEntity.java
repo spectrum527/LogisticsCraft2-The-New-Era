@@ -28,6 +28,7 @@ import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
@@ -45,6 +46,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Shared server/client block entity base for Smart Port and Cargo Station, implementing:
@@ -80,13 +83,21 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
     /** Current persistent inventory layout version (v2 = 2-zone Outbound/Storage). */
     public static final int LAYOUT_VERSION = 2;
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractLogisticsStationBlockEntity.class);
+    private static final AtomicBoolean FILTER_REFLECTION_WARNED = new AtomicBoolean(false);
     private static final Ports SINK_ALL_FACES = new Ports(EnumSet.allOf(Face.class), Set.of(), false);
     private static final Method IC2_MATCHES_FILTER = resolveIc2MatchesFilter();
 
     private static Method resolveIc2MatchesFilter() {
         try {
             return MachineAutomation.class.getMethod("matchesFilter", ItemStack.class, ItemStack.class);
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
+            if (FILTER_REFLECTION_WARNED.compareAndSet(false, true)) {
+                LOGGER.warn(
+                        "Failed to resolve IC2 MachineAutomation.matchesFilter; advanced upgrade filters will fall back to permissive matching",
+                        t
+                );
+            }
             return null;
         }
     }
@@ -97,7 +108,13 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         }
         try {
             return Boolean.TRUE.equals(IC2_MATCHES_FILTER.invoke(null, upgrade, candidate));
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
+            if (FILTER_REFLECTION_WARNED.compareAndSet(false, true)) {
+                LOGGER.warn(
+                        "Failed to invoke IC2 MachineAutomation.matchesFilter; advanced upgrade filters will fall back to permissive matching",
+                        t
+                );
+            }
             return true;
         }
     }
@@ -798,13 +815,13 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
 
     // --- Energy & Payment ---
 
-    /** Returns the current count of {@code ic2:single_use_battery} in the battery slot. */
+    /** Returns the current count of supported single-use batteries ({@code #lc2:single_use_batteries}) in the battery slot. */
     public final int availableSingleUseBatteries() {
         ItemStack stack = items.get(batterySlotIndex());
         if (stack.isEmpty()) {
             return 0;
         }
-        return LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(Lc2Native.itemId(stack)) ? stack.getCount() : 0;
+        return Lc2Native.isSingleUseBattery(stack) ? stack.getCount() : 0;
     }
 
     /** Commits a resolved {@link PaymentPlan} (strictly EU-only or battery-only). */
@@ -822,7 +839,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         }
         if (plan.isBattery()) {
             ItemStack stack = items.get(batterySlotIndex());
-            if (!LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(Lc2Native.itemId(stack))
+            if (!Lc2Native.isSingleUseBattery(stack)
                     || stack.getCount() < plan.batteriesToSpend()) {
                 return false;
             }
@@ -1161,7 +1178,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
             return true;
         }
         if (slot == batterySlotIndex()) {
-            return LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(Lc2Native.itemId(stack));
+            return Lc2Native.isSingleUseBattery(stack);
         }
         if (slot >= upgradeSlotStart() && slot < upgradeSlotStart() + LogisticsConstants.MACHINE_UPGRADE_SLOTS) {
             return UpgradeSummary.isSupportedUpgrade(Lc2Native.itemId(stack));
@@ -1185,7 +1202,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
             return true;
         }
         if (slot == batterySlotIndex()) {
-            return LogisticsConstants.SINGLE_USE_BATTERY_ID.equals(Lc2Native.itemId(stack));
+            return Lc2Native.isSingleUseBattery(stack);
         }
         return false;
     }

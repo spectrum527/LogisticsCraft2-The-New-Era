@@ -35,14 +35,15 @@ SPRITE_ITEMS = (
 )
 ALL_ITEMS = BLOCK_ITEMS + SPRITE_ITEMS
 
-# Canonical crafting recipes (v1.0-v1.1 + v1.2.0 Comm Base Station & Operation Terminal)
+# Canonical crafting recipes (v1.0-v1.1 + v1.2.0 Comm Base Station & Operation Terminal).
+# Entries prefixed with "#common:" are resolved to "#forge:" on Forge 1.19.2 and "#c:" on NeoForge 1.21.1/26.x.
 SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
     "smart_port": (
         ["CMC", "IHI", "CRC"],
         {
-            "C": "ic2:circuit",
+            "C": "#common:circuits/basic",
             "M": "ic2:machine",
-            "I": "ic2:iron_plate",
+            "I": "#common:plates/iron",
             "H": "minecraft:hopper",
             "R": "ic2:re_battery",
         },
@@ -51,9 +52,9 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
     "electric_cargo_boat": (
         ["XCX", "PBP", "PEP"],
         {
-            "X": "minecraft:chest",
-            "C": "ic2:circuit",
-            "P": "ic2:iron_plate",
+            "X": "#common:chests/wooden",
+            "C": "#common:circuits/basic",
+            "P": "#common:plates/iron",
             "B": "ic2:electric_boat",
             "E": "ic2:electric_motor",
         },
@@ -62,9 +63,9 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
     "cargo_station": (
         ["AFA", "PMP", "HCH"],
         {
-            "A": "ic2:advanced_circuit",
+            "A": "#common:circuits/advanced",
             "F": "ic2:frequency_transmitter",
-            "P": "ic2:steel_plate",
+            "P": "#common:plates/steel",
             "M": "ic2:advanced_machine",
             "H": "minecraft:hopper",
             "C": "ic2:energy_crystal",
@@ -75,9 +76,9 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
         ["BCB", "EXE", "BPB"],
         {
             "B": "ic2:iron_rotor_blade",
-            "C": "ic2:circuit",
+            "C": "#common:circuits/basic",
             "E": "ic2:electric_motor",
-            "X": "minecraft:chest",
+            "X": "#common:chests/wooden",
             "P": "ic2:carbon_plate",
         },
         1,
@@ -86,8 +87,8 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
         ["BAB", "XDX", "LEL"],
         {
             "B": "ic2:carbon_rotor_blade",
-            "A": "ic2:advanced_circuit",
-            "X": "minecraft:chest",
+            "A": "#common:circuits/advanced",
+            "X": "#common:chests/wooden",
             "D": "lc2:transport_drone",
             "L": "ic2:alloy",
             "E": "ic2:electric_motor",
@@ -99,9 +100,9 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
         {
             "W": "ic2:insulated_copper_cable",
             "F": "ic2:frequency_transmitter",
-            "C": "ic2:circuit",
-            "R": "minecraft:redstone",
-            "G": "ic2:copper_plate",
+            "C": "#common:circuits/basic",
+            "R": "#common:dusts/redstone",
+            "G": "#common:plates/copper",
         },
         1,
     ),
@@ -109,10 +110,10 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
         ["WAW", "GIG", "WEW"],
         {
             "W": "ic2:insulated_gold_cable",
-            "A": "ic2:advanced_circuit",
-            "G": "ic2:gold_plate",
+            "A": "#common:circuits/advanced",
+            "G": "#common:plates/gold",
             "I": "lc2:rf_chip_1",
-            "E": "minecraft:ender_pearl",
+            "E": "#common:ender_pearls",
         },
         1,
     ),
@@ -120,7 +121,7 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
         ["WAW", "CIC", "WLW"],
         {
             "W": "ic2:glass_fibre_cable",
-            "A": "ic2:advanced_circuit",
+            "A": "#common:circuits/advanced",
             "C": "ic2:carbon_plate",
             "I": "lc2:rf_chip_2",
             "L": "ic2:lapotron_crystal",
@@ -132,7 +133,7 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
         {
             "A": "ic2:alloy",
             "L": "ic2:insulated_gold_cable",
-            "C": "ic2:advanced_circuit",
+            "C": "#common:circuits/advanced",
             "K": "ic2:chunk_loader",
             "E": "minecraft:ender_eye",
         },
@@ -141,9 +142,9 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
     "comm_base_station": (
         ["CFC", "IMI", "WBW"],
         {
-            "C": "ic2:circuit",
+            "C": "#common:circuits/basic",
             "F": "ic2:frequency_transmitter",
-            "I": "ic2:iron_plate",
+            "I": "#common:plates/iron",
             "M": "ic2:machine",
             "W": "ic2:insulated_copper_cable",
             "B": "ic2:re_battery",
@@ -153,9 +154,9 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
     "operation_terminal": (
         ["IGI", "CFC", "WBW"],
         {
-            "I": "ic2:iron_plate",
-            "G": "minecraft:glass_pane",
-            "C": "ic2:circuit",
+            "I": "#common:plates/iron",
+            "G": "#common:glass_panes",
+            "C": "#common:circuits/basic",
             "F": "ic2:frequency_transmitter",
             "W": "ic2:insulated_copper_cable",
             "B": "ic2:re_battery",
@@ -429,17 +430,24 @@ def generate(target: str, destination: Path) -> int:
             item_definition(item_name)
 
         # ---------------------------------------------------------------------
-        # 3. Crafting Recipes (Version-Specific Schema)
+        # 3. Crafting Recipes (Version-Specific Schema & Common Tags)
         # ---------------------------------------------------------------------
         recipe_dir = "recipes/" if forge else "recipe/"
+        common_ns = "forge" if forge else "c"
+
+        def resolve_ingredient(item_id: str) -> str:
+            if item_id.startswith("#common:"):
+                return f"#{common_ns}:{item_id[len('#common:'):]}"
+            return item_id
 
         def format_ingredient(item_id: str):
+            resolved = resolve_ingredient(item_id)
             if newest:
                 # MC 1.21.2+ / 26.x: bare string item/tag identifier
-                return item_id
-            if item_id.startswith("#"):
-                return {"tag": item_id[1:]}
-            return {"item": item_id}
+                return resolved
+            if resolved.startswith("#"):
+                return {"tag": resolved[1:]}
+            return {"item": resolved}
 
         def format_result(item_name: str, count: int) -> dict:
             return {("item" if forge else "id"): mod(item_name), "count": count}
@@ -456,10 +464,11 @@ def generate(target: str, destination: Path) -> int:
             )
 
         # ---------------------------------------------------------------------
-        # 4. Block Loot Tables & Pickaxe Mineable Tag
+        # 4. Block Loot Tables, Common Tags, Curios Tags & Mod Grouping Tags
         # ---------------------------------------------------------------------
         loot_dir = "loot_tables/blocks/" if forge else "loot_table/blocks/"
-        tag_dir = "tags/blocks/" if forge else "tags/block/"
+        block_tag_dir = "tags/blocks/" if forge else "tags/block/"
+        item_tag_dir = "tags/items/" if forge else "tags/item/"
 
         for block_name in BLOCK_ITEMS:
             data(
@@ -477,17 +486,54 @@ def generate(target: str, destination: Path) -> int:
             )
 
         write_json(
-            f"data/minecraft/{tag_dir}mineable/pickaxe.json",
+            f"data/minecraft/{block_tag_dir}mineable/pickaxe.json",
+            {"replace": False, "values": [mod(b) for b in BLOCK_ITEMS]},
+        )
+
+        # Common relocation protection block tag (forge: on 1.19.2, c: on 1.21.1/26.x)
+        write_json(
+            f"data/{common_ns}/{block_tag_dir}relocation_not_supported.json",
             {"replace": False, "values": [mod(b) for b in BLOCK_ITEMS]},
         )
 
         # Curios API item tags (optional integration; version-specific tags/items vs tags/item)
-        item_tag_dir = "tags/items/" if forge else "tags/item/"
         for curio_slot in ("charm", "belt"):
             write_json(
                 f"data/curios/{item_tag_dir}{curio_slot}.json",
                 {"replace": False, "values": [mod("operation_terminal")]},
             )
+
+        # Mod-internal grouping tags (block + symmetric item tags where applicable)
+        station_ids = [mod("smart_port"), mod("cargo_station")]
+        power_block_ids = [mod(b) for b in BLOCK_ITEMS]
+        write_json(
+            f"data/{MOD_ID}/{block_tag_dir}stations.json",
+            {"replace": False, "values": station_ids},
+        )
+        write_json(
+            f"data/{MOD_ID}/{block_tag_dir}power_blocks.json",
+            {"replace": False, "values": power_block_ids},
+        )
+        write_json(
+            f"data/{MOD_ID}/{item_tag_dir}stations.json",
+            {"replace": False, "values": station_ids},
+        )
+        write_json(
+            f"data/{MOD_ID}/{item_tag_dir}power_blocks.json",
+            {"replace": False, "values": power_block_ids},
+        )
+        write_json(
+            f"data/{MOD_ID}/{item_tag_dir}rf_chips.json",
+            {"replace": False, "values": [mod("rf_chip_1"), mod("rf_chip_2"), mod("rf_chip_3")]},
+        )
+        write_json(
+            f"data/{MOD_ID}/{item_tag_dir}drones.json",
+            {"replace": False, "values": [mod("transport_drone"), mod("heavy_transport_drone")]},
+        )
+        write_json(
+            f"data/{MOD_ID}/{item_tag_dir}single_use_batteries.json",
+            {"replace": False, "values": ["ic2:single_use_battery"]},
+        )
 
         # ---------------------------------------------------------------------
         # 5. Forge 1.19.2 pack.mcmeta

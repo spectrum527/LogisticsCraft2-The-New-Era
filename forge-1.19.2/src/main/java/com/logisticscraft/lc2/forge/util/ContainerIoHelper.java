@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
@@ -22,6 +23,8 @@ import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.registries.ForgeRegistries;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Adjacent-container I/O helper supporting Forge {@link IItemHandler}, vanilla {@link ChestBlock}
@@ -30,6 +33,8 @@ import net.minecraftforge.registries.ForgeRegistries;
  */
 public final class ContainerIoHelper {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ContainerIoHelper.class);
+    private static final AtomicBoolean FILTER_REFLECTION_WARNED = new AtomicBoolean(false);
     private static final Method IC2_MATCHES_FILTER = resolveMatchesFilterMethod();
 
     private ContainerIoHelper() {
@@ -38,7 +43,13 @@ public final class ContainerIoHelper {
     private static Method resolveMatchesFilterMethod() {
         try {
             return MachineAutomation.class.getMethod("matchesFilter", ItemStack.class, ItemStack.class);
-        } catch (ReflectiveOperationException ignored) {
+        } catch (Throwable t) {
+            if (FILTER_REFLECTION_WARNED.compareAndSet(false, true)) {
+                LOGGER.warn(
+                        "Failed to resolve IC2 MachineAutomation.matchesFilter; advanced upgrade filters will fall back to permissive matching",
+                        t
+                );
+            }
             return null;
         }
     }
@@ -49,7 +60,13 @@ public final class ContainerIoHelper {
         }
         try {
             return Boolean.TRUE.equals(IC2_MATCHES_FILTER.invoke(null, upgrade, candidate));
-        } catch (ReflectiveOperationException ignored) {
+        } catch (Throwable t) {
+            if (FILTER_REFLECTION_WARNED.compareAndSet(false, true)) {
+                LOGGER.warn(
+                        "Failed to invoke IC2 MachineAutomation.matchesFilter; advanced upgrade filters will fall back to permissive matching",
+                        t
+                );
+            }
             return true;
         }
     }

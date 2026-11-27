@@ -9,8 +9,10 @@ import com.logisticscraft.lc2.platform.Lc2StationBlockBase;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -55,6 +57,19 @@ public final class CargoStationBlock extends Lc2StationBlockBase
             return null;
         }
         return (lvl, pos, st, be) -> ((CargoStationBlockEntity) be).serverTick((ServerLevel) lvl);
+    }
+
+    @Override
+    protected boolean handleUseWithItem(
+            ItemStack stack,
+            BlockState state,
+            Level level,
+            BlockPos pos,
+            Player player,
+            InteractionHand hand,
+            BlockHitResult hit
+    ) {
+        return Lc2WrenchHelper.tryHandleWrench(this, false, stack, state, level, pos, player, hand);
     }
 
     @Override
