@@ -1,10 +1,10 @@
-<h1><img src="assets/brand/icon.jpg" width="56" height="56" align="absmiddle" alt=""> 航运纪元 (Transitera)</h1>
+<h1><img src="assets/brand/icon.jpg" width="56" height="56" align="absmiddle" alt=""> 物流纪元 (Transitera)</h1>
 
 **简体中文** · [English](README.en.md)
 
-![航运纪元 (Transitera) 项目封面](assets/brand/cover.jpg)
+![物流纪元 (Transitera) 项目封面](assets/brand/cover.jpg)
 
-**航运纪元（`trera`）** 是 [机电纪元 (Machinera)](https://github.com/spectrum527/Machinera) 的独立物流附属模组，为主模组加入可跨未加载区块运行的电动智能运输船、货运无人机，以及通过通讯基站与操作终端实现的同维度远程调度系统。
+**物流纪元（`trera`）** 是 [机电纪元 (Machinera)](https://github.com/spectrum527/Machinera) 的独立物流附属模组，为主模组加入可跨未加载区块运行的电动智能运输船、货运无人机，以及通过通讯基站与操作终端实现的同维度远程调度系统。
 
 ## 下载与安装
 

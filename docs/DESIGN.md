@@ -51,7 +51,7 @@ Mod ID: `trera` · Root Package: `com.logisticscraft.lc2` · Version: `1.2.0`
 - *(The Operation Terminal Selection Screen is a client `Screen` driven by `TerminalSyncPayload` / `S2CTerminalSyncPacket` with no container `MenuType`.)*
 
 ### Creative Tab (1)
-- `trera:main` — `Transitera` / `航运纪元` (includes both empty `0 EU` and fully charged `10,000 EU` `trera:operation_terminal` entries)
+- `trera:main` — `Transitera` / `物流纪元` (includes both empty `0 EU` and fully charged `10,000 EU` `trera:operation_terminal` entries)
 
 ---
 
