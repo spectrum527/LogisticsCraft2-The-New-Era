@@ -34,7 +34,7 @@ public final class Lc2Mod {
         if (FMLEnvironment.dist == Dist.CLIENT) {
             Lc2Client.install(modBus);
         }
-        LOGGER.info("LogisticsCraft² (Forge 1.19.2) initialized.");
+        LOGGER.info("Transitera (Forge 1.19.2) initialized.");
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {

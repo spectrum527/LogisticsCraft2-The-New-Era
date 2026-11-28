@@ -507,7 +507,7 @@ public final class LogisticsLevelManager {
                 if (level.isLoaded(targetMc)
                         && level.getBlockEntity(targetMc) instanceof CargoStationBlockEntity targetStation) {
                     if (data.stationRegistry().freeBays(record.originPos()) <= 0) {
-                        targetStation.setStatusKey("status.lc2.waiting_return_bay");
+                        targetStation.setStatusKey("status.trera.waiting_return_bay");
                     }
                 }
             }
@@ -542,8 +542,8 @@ public final class LogisticsLevelManager {
 
         if (cargo.isEmpty()) {
             station.setStatusKey(transit.autoReturn() && transit.vehicleKind().isDrone()
-                    ? "status.lc2.waiting_return_energy"
-                    : "status.lc2.arrived");
+                    ? "status.trera.waiting_return_energy"
+                    : "status.trera.arrived");
             return true;
         }
 
@@ -553,11 +553,11 @@ public final class LogisticsLevelManager {
 
         if (remaining.isEmpty()) {
             station.setStatusKey(transit.autoReturn() && transit.vehicleKind().isDrone()
-                    ? "status.lc2.waiting_return_energy"
-                    : "status.lc2.arrived");
+                    ? "status.trera.waiting_return_energy"
+                    : "status.trera.arrived");
             return true;
         } else {
-            station.setStatusKey("status.lc2.unloading");
+            station.setStatusKey("status.trera.unloading");
             return false;
         }
     }
@@ -579,11 +579,11 @@ public final class LogisticsLevelManager {
                 station.getEnergyPriority()
         );
         if (!plan.isPayable()) {
-            station.setStatusKey("status.lc2.waiting_return_energy");
+            station.setStatusKey("status.trera.waiting_return_energy");
             return false;
         }
         station.debitPayment(plan);
-        station.setStatusKey("status.lc2.returning");
+        station.setStatusKey("status.trera.returning");
         return true;
     }
 

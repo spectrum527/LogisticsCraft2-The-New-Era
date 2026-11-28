@@ -3,10 +3,10 @@ import java.nio.file.Files
 import java.time.Duration
 
 def qaRoot = rootProject.layout.projectDirectory.dir('src/qa/neoforge')
-def ic2VersionProp = rootProject.property('ic2_version')
-def ic2DepJar = rootProject.file(".ic2-deps/ic2-neoforge-${minecraftVersion}-${ic2VersionProp}.jar")
-if (!ic2DepJar.isFile()) {
-    throw new GradleException("Missing IC2 dependency JAR for QA: ${ic2DepJar}")
+def mheraVersionProp = rootProject.property('mhera_version')
+def mheraDepJar = rootProject.file(".mhera-deps/mhera-neoforge-${minecraftVersion}-${mheraVersionProp}.jar")
+if (!mheraDepJar.isFile()) {
+    throw new GradleException("Missing MHERA dependency JAR for QA: ${mheraDepJar}")
 }
 
 sourceSets {
@@ -26,7 +26,7 @@ neoForge.addModdingDependenciesTo(sourceSets.qa)
 dependencies {
     qaCompileOnly sourceSets.main.output
     qaCompileOnly project(':common')
-    qaCompileOnly files(ic2DepJar)
+    qaCompileOnly files(mheraDepJar)
 }
 
 tasks.named('processQaResources') {
@@ -37,11 +37,11 @@ tasks.named('processQaResources') {
     }
 }
 
-def qaMod = neoForge.mods.create('lc2_qa') {
+def qaMod = neoForge.mods.create('trera_qa') {
     sourceSet sourceSets.qa
 }
 
-def productionLc2Jar = tasks.named('jar', Jar).flatMap { it.archiveFile }
+def productionTreraJar = tasks.named('jar', Jar).flatMap { it.archiveFile }
 
 def loadQaProperties = { File file ->
     if (!file.isFile()) {
@@ -65,26 +65,26 @@ def scanLatestLogForErrors = { File runDir, String phaseName ->
                 || line.contains('InvalidMixinException')
                 || line.contains('MixinTransformerError')
                 || line.contains('Critical injection failure')
-                || (lower.contains('mixin') && lower.contains('lc2') && lower.contains('error'))
-        boolean isLc2Error = (line.contains('/ERROR]') || line.contains('Exception') || line.contains('AssertionError'))
+                || (lower.contains('mixin') && (lower.contains('trera') || lower.contains('lc2')) && lower.contains('error'))
+        boolean isTreraError = (line.contains('/ERROR]') || line.contains('Exception') || line.contains('AssertionError'))
                 && (line.contains('com.logisticscraft.lc2')
-                    || line.contains('lc2:')
-                    || line.contains('lc2.mixins.json')
-                    || lower.contains('failed to load mod') && lower.contains('lc2')
-                    || lower.contains('error loading recipe') && lower.contains('lc2'))
-        if (isMixinError || isLc2Error) {
+                    || line.contains('trera:')
+                    || line.contains('trera.mixins.json')
+                    || lower.contains('failed to load mod') && lower.contains('trera')
+                    || lower.contains('error loading recipe') && lower.contains('trera'))
+        if (isMixinError || isTreraError) {
             badLines << "L${idx + 1}: ${line}"
         }
     }
     if (!badLines.isEmpty()) {
         throw new GradleException(
-                "LC2/Mixin errors detected in ${logFile} during QA ${phaseName}:\n" + badLines.take(20).join('\n')
+                "Transitera/Mixin errors detected in ${logFile} during QA ${phaseName}:\n" + badLines.take(20).join('\n')
         )
     }
 }
 
 ['write', 'read'].each { phase ->
-    def runDir = layout.buildDirectory.dir('run/lc2-qa')
+    def runDir = layout.buildDirectory.dir('run/trera-qa')
     def runName = "qa${phase.capitalize()}"
     neoForge.runs.create(runName) {
         server()
@@ -94,8 +94,8 @@ def scanLatestLogForErrors = { File runDir, String phaseName ->
         gameDirectory.set(runDir)
         systemProperty 'lc2.qa.phase', phase
         systemProperty 'lc2.qa.mcVersion', minecraftVersion
-        systemProperty 'lc2.qa.expectedLc2Jar', "lc2-neoforge-${minecraftVersion}-${project.version}.jar"
-        systemProperty 'lc2.qa.expectedIc2Jar', ic2DepJar.name
+        systemProperty 'lc2.qa.expectedLc2Jar', "trera-neoforge-${minecraftVersion}-${project.version}.jar"
+        systemProperty 'lc2.qa.expectedIc2Jar', mheraDepJar.name
     }
 
     tasks.named("run${runName.capitalize()}", JavaExec) {
@@ -106,15 +106,15 @@ def scanLatestLogForErrors = { File runDir, String phaseName ->
         }
         doFirst {
             def dir = runDir.get().asFile
-            def lc2Artifact = productionLc2Jar.get().asFile
+            def treraArtifact = productionTreraJar.get().asFile
             if (phase == 'write') {
                 delete dir
                 dir.mkdirs()
                 def modsDir = new File(dir, 'mods')
                 modsDir.mkdirs()
                 copy {
-                    from lc2Artifact
-                    from ic2DepJar
+                    from treraArtifact
+                    from mheraDepJar
                     into modsDir
                 }
                 new File(dir, 'eula.txt').text = 'eula=true\n'
@@ -131,18 +131,18 @@ level-type=minecraft:flat
 generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:stone","height":124},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains","structure_overrides":[]}
 '''
             }
-            def installedLc2 = new File(dir, "mods/${lc2Artifact.name}")
-            def installedIc2 = new File(dir, "mods/${ic2DepJar.name}")
-            if (!installedLc2.isFile() || Files.mismatch(installedLc2.toPath(), lc2Artifact.toPath()) != -1) {
-                throw new GradleException("QA must load the exact packaged LC2 JAR: ${lc2Artifact}")
+            def installedTrera = new File(dir, "mods/${treraArtifact.name}")
+            def installedMhera = new File(dir, "mods/${mheraDepJar.name}")
+            if (!installedTrera.isFile() || Files.mismatch(installedTrera.toPath(), treraArtifact.toPath()) != -1) {
+                throw new GradleException("QA must load the exact packaged Transitera JAR: ${treraArtifact}")
             }
-            if (!installedIc2.isFile() || Files.mismatch(installedIc2.toPath(), ic2DepJar.toPath()) != -1) {
-                throw new GradleException("QA must load the exact packaged IC2 JAR: ${ic2DepJar}")
+            if (!installedMhera.isFile() || Files.mismatch(installedMhera.toPath(), mheraDepJar.toPath()) != -1) {
+                throw new GradleException("QA must load the exact packaged Machinera JAR: ${mheraDepJar}")
             }
         }
         doLast {
             def dir = runDir.get().asFile
-            def lc2Artifact = productionLc2Jar.get().asFile
+            def treraArtifact = productionTreraJar.get().asFile
             def reportFile = new File(dir, "qa-report-${phase}.properties")
             def jsonFile = new File(dir, "qa-report-${phase}.json")
             def result = loadQaProperties(reportFile)
@@ -151,12 +151,12 @@ generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":
             }
             if (result.status != 'passed') {
                 throw new GradleException(
-                        "LC2 NeoForge ${minecraftVersion} QA ${phase} FAILED: ${result.problem}\n${result.getProperty('trace', '')}"
+                        "Transitera NeoForge ${minecraftVersion} QA ${phase} FAILED: ${result.problem}\n${result.getProperty('trace', '')}"
                 )
             }
-            if (result.lc2Artifact != lc2Artifact.name || result.ic2Artifact != ic2DepJar.name) {
+            if (result.lc2Artifact != treraArtifact.name || result.ic2Artifact != mheraDepJar.name) {
                 throw new GradleException(
-                        "QA loaded unexpected JARs: lc2=${result.lc2Artifact}, ic2=${result.ic2Artifact}"
+                        "QA loaded unexpected JARs: trera=${result.lc2Artifact}, mhera=${result.ic2Artifact}"
                 )
             }
             if (!new File(dir, 'world/level.dat').isFile()) {
@@ -169,18 +169,18 @@ generator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":
                 }
             }
             scanLatestLogForErrors(dir, phase)
-            logger.lifecycle("LC2 NeoForge ${minecraftVersion} QA [${phase}] PASSED (${result.passedCount} checks, ticks=${result.ticks}, pid=${result.pid})")
+            logger.lifecycle("Transitera NeoForge ${minecraftVersion} QA [${phase}] PASSED (${result.passedCount} checks, ticks=${result.ticks}, pid=${result.pid})")
         }
     }
 }
 
 tasks.register('lc2QaTest') {
     group = 'verification'
-    description = "Runs the full LC2 + IC2 live dedicated-server E2E QA suite (write + cold-restart read) on NeoForge ${minecraftVersion}."
+    description = "Runs the full Transitera + Machinera live dedicated-server E2E QA suite (write + cold-restart read) on NeoForge ${minecraftVersion}."
     dependsOn 'runQaRead'
 }
 
-def fieldRunDir = layout.buildDirectory.dir('run/lc2-field-test')
+def fieldRunDir = layout.buildDirectory.dir('run/trera-field-test')
 def fieldSeedProp = providers.gradleProperty('lc2.field.seed').orElse('20261121')
 
 neoForge.runs.create('fieldTest') {
@@ -192,25 +192,25 @@ neoForge.runs.create('fieldTest') {
     systemProperty 'lc2.qa.mode', 'field'
     systemProperty 'lc2.qa.phase', 'field'
     systemProperty 'lc2.qa.mcVersion', minecraftVersion
-    systemProperty 'lc2.qa.expectedLc2Jar', "lc2-neoforge-${minecraftVersion}-${project.version}.jar"
-    systemProperty 'lc2.qa.expectedIc2Jar', ic2DepJar.name
+    systemProperty 'lc2.qa.expectedLc2Jar', "trera-neoforge-${minecraftVersion}-${project.version}.jar"
+    systemProperty 'lc2.qa.expectedIc2Jar', mheraDepJar.name
 }
 
 tasks.named('runFieldTest', JavaExec) {
     group = 'verification'
-    description = "Runs the real-world natural-seed IC2+LC2 Mining & Refining Field Test on NeoForge ${minecraftVersion}."
+    description = "Runs the real-world natural-seed Machinera+Transitera Mining & Refining Field Test on NeoForge ${minecraftVersion}."
     timeout.set(Duration.ofMinutes(10))
     dependsOn 'jar'
     doFirst {
         def dir = fieldRunDir.get().asFile
-        def lc2Artifact = productionLc2Jar.get().asFile
+        def treraArtifact = productionTreraJar.get().asFile
         delete dir
         dir.mkdirs()
         def modsDir = new File(dir, 'mods')
         modsDir.mkdirs()
         copy {
-            from lc2Artifact
-            from ic2DepJar
+            from treraArtifact
+            from mheraDepJar
             into modsDir
         }
         new File(dir, 'eula.txt').text = 'eula=true\n'
@@ -229,7 +229,7 @@ level-type=minecraft:normal
     }
     doLast {
         def dir = fieldRunDir.get().asFile
-        def lc2Artifact = productionLc2Jar.get().asFile
+        def treraArtifact = productionTreraJar.get().asFile
         def reportFile = new File(dir, 'qa-report-field.properties')
         def jsonFile = new File(dir, 'qa-report-field.json')
         def result = loadQaProperties(reportFile)
@@ -238,19 +238,19 @@ level-type=minecraft:normal
         }
         if (result.status != 'passed') {
             throw new GradleException(
-                    "LC2 NeoForge ${minecraftVersion} Field Test FAILED: ${result.problem}\n${result.getProperty('trace', '')}"
+                    "Transitera NeoForge ${minecraftVersion} Field Test FAILED: ${result.problem}\n${result.getProperty('trace', '')}"
             )
         }
-        if (result.lc2Artifact != lc2Artifact.name || result.ic2Artifact != ic2DepJar.name) {
+        if (result.lc2Artifact != treraArtifact.name || result.ic2Artifact != mheraDepJar.name) {
             throw new GradleException(
-                    "Field Test loaded unexpected JARs: lc2=${result.lc2Artifact}, ic2=${result.ic2Artifact}"
+                    "Field Test loaded unexpected JARs: trera=${result.lc2Artifact}, mhera=${result.ic2Artifact}"
             )
         }
         if (!new File(dir, 'world/level.dat').isFile()) {
             throw new GradleException("Missing saved world/level.dat in ${dir}")
         }
         scanLatestLogForErrors(dir, 'field')
-        logger.lifecycle("LC2 NeoForge ${minecraftVersion} FIELD TEST PASSED (${result.passedCount} checks, ticks=${result.ticks}, seed=${result.seed}, dist=${result.waterwayDistance}, advMined=${result.advOresMined}, basicMined=${result.basicOresMined}, ingots=${result.finishedIngots})")
+        logger.lifecycle("Transitera NeoForge ${minecraftVersion} FIELD TEST PASSED (${result.passedCount} checks, ticks=${result.ticks}, seed=${result.seed}, dist=${result.waterwayDistance}, advMined=${result.advOresMined}, basicMined=${result.basicOresMined}, ingots=${result.finishedIngots})")
     }
 }
 
@@ -262,7 +262,7 @@ def fieldLiveRuns = [:]
     neoForge.runs.create(runName) {
         if (side == 'client') {
             client()
-            programArguments.addAll '--username', 'Lc2FieldTester', '--width', '1280', '--height', '720'
+            programArguments.addAll '--username', 'TreraFieldTester', '--width', '1280', '--height', '720'
             systemProperty 'lc2.qa.mode', 'client_only'
             systemProperty 'lc2.qa.clientDriver', 'true'
         } else {
@@ -274,8 +274,8 @@ def fieldLiveRuns = [:]
         loadedMods.set([qaMod])
         gameDirectory.set(runDir)
         systemProperty 'lc2.qa.mcVersion', minecraftVersion
-        systemProperty 'lc2.qa.expectedLc2Jar', "lc2-neoforge-${minecraftVersion}-${project.version}.jar"
-        systemProperty 'lc2.qa.expectedIc2Jar', ic2DepJar.name
+        systemProperty 'lc2.qa.expectedLc2Jar', "trera-neoforge-${minecraftVersion}-${project.version}.jar"
+        systemProperty 'lc2.qa.expectedIc2Jar', mheraDepJar.name
     }
     fieldLiveRuns[side] = tasks.named("run${runName.capitalize()}", JavaExec)
 }
@@ -306,8 +306,8 @@ tasks.register('prepareFieldClientPlay') {
             ]]
         }
         launch.minecraftVersion = minecraftVersion
-        launch.lc2Jar = productionLc2Jar.get().asFile.absolutePath
-        launch.ic2Jar = ic2DepJar.absolutePath
+        launch.lc2Jar = productionTreraJar.get().asFile.absolutePath
+        launch.ic2Jar = mheraDepJar.absolutePath
         launch.seed = fieldSeedProp.get()
         def outFile = manifest.get().asFile
         outFile.parentFile.mkdirs()

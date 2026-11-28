@@ -397,7 +397,7 @@ public final class FieldLiveServer {
         }
         if (level.getBlockEntity(factory.electricFurnacePos()) instanceof IndustrialMachine efur) {
             if (efur.getItem(0).isEmpty()) {
-                efur.setItem(0, new ItemStack(QaChecks.item("ic2:crushed_copper"), 16));
+                efur.setItem(0, new ItemStack(QaChecks.item("mhera:crushed_copper"), 16));
             }
         }
         if (level.getBlockEntity(factory.baseCargoPos()) instanceof CargoStationBlockEntity baseCargo) {

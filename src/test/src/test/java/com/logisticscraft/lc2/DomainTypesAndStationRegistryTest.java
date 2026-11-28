@@ -30,15 +30,15 @@ class DomainTypesAndStationRegistryTest {
         Set<String> keys = new HashSet<>();
         for (DispatchFailure failure : DispatchFailure.values()) {
             assertFalse(failure.translationKey().isBlank());
-            assertTrue(failure.translationKey().startsWith("status.lc2.failure."));
+            assertTrue(failure.translationKey().startsWith("status.trera.failure."));
             assertTrue(keys.add(failure.translationKey()), "Duplicate key: " + failure.translationKey());
         }
     }
 
     @Test
     void domainEnumsLookupAndMetadataMatchSpec() {
-        assertEquals(Optional.of(StationType.SMART_PORT), StationType.fromBlockId("lc2:smart_port"));
-        assertEquals(Optional.of(StationType.CARGO_STATION), StationType.fromBlockId("lc2:cargo_station"));
+        assertEquals(Optional.of(StationType.SMART_PORT), StationType.fromBlockId("trera:smart_port"));
+        assertEquals(Optional.of(StationType.CARGO_STATION), StationType.fromBlockId("trera:cargo_station"));
         assertEquals(6, StationType.CARGO_STATION.maxDroneBays());
         assertEquals(0, StationType.SMART_PORT.maxDroneBays());
 
@@ -50,9 +50,9 @@ class DomainTypesAndStationRegistryTest {
         assertEquals(Optional.of(VehicleKind.HEAVY_DRONE), VehicleKind.fromItemId(LogisticsConstants.HEAVY_TRANSPORT_DRONE_ID));
 
         assertEquals(RfChipTier.NONE, RfChipTier.fromItemId(null));
-        assertEquals(RfChipTier.TIER_1, RfChipTier.fromItemId("lc2:rf_chip_1"));
-        assertEquals(RfChipTier.TIER_2, RfChipTier.fromItemId("lc2:rf_chip_2"));
-        assertEquals(RfChipTier.TIER_3, RfChipTier.fromItemId("lc2:rf_chip_3"));
+        assertEquals(RfChipTier.TIER_1, RfChipTier.fromItemId("trera:rf_chip_1"));
+        assertEquals(RfChipTier.TIER_2, RfChipTier.fromItemId("trera:rf_chip_2"));
+        assertEquals(RfChipTier.TIER_3, RfChipTier.fromItemId("trera:rf_chip_3"));
         assertEquals(256, RfChipTier.TIER_1.maxRange());
         assertEquals(512, RfChipTier.TIER_2.maxRange());
         assertEquals(1024, RfChipTier.TIER_3.maxRange());

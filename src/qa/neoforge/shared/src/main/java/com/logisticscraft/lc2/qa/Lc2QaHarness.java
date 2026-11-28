@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
  *   <li>{@code lc2.qa.clientDriver=true}: physical graphical client QA driver & screenshot probe</li>
  * </ul>
  */
-@Mod("lc2_qa")
+@Mod("trera_qa")
 public final class Lc2QaHarness {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Lc2QaHarness.class);
@@ -100,9 +100,9 @@ public final class Lc2QaHarness {
     }
 
     private void verifyProductionJarsOnRead() throws IOException {
-        Path lc2Jar = ModList.get().getModContainerById("lc2").orElseThrow()
+        Path lc2Jar = ModList.get().getModContainerById("trera").orElseThrow()
                 .getModInfo().getOwningFile().getFile().getFilePath();
-        Path ic2Jar = ModList.get().getModContainerById("ic2").orElseThrow()
+        Path ic2Jar = ModList.get().getModContainerById("mhera").orElseThrow()
                 .getModInfo().getOwningFile().getFile().getFilePath();
         String expectedLc2 = System.getProperty("lc2.qa.expectedLc2Jar", lc2Jar.getFileName().toString());
         String expectedIc2 = System.getProperty("lc2.qa.expectedIc2Jar", ic2Jar.getFileName().toString());

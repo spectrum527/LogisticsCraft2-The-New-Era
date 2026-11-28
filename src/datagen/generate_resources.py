@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Version-aware resource, model, recipe, loot table, and tag generator for LogisticsCraft² (lc2).
+"""Version-aware resource, model, recipe, loot table, and tag generator for Transitera (trera).
 
 Supports four targets with exact Minecraft/loader JSON schemas:
   - forge-1.19.2
@@ -19,8 +19,8 @@ from pathlib import Path
 import tempfile
 
 TARGETS = ("forge-1.19.2", "neoforge-1.21.1", "neoforge-26.1.2", "neoforge-26.2")
-MOD_ID = "lc2"
-MARKER_NAME = ".lc2-generated-output"
+MOD_ID = "trera"
+MARKER_NAME = ".trera-generated-output"
 
 BLOCK_ITEMS = ("smart_port", "cargo_station", "comm_base_station")
 SPRITE_ITEMS = (
@@ -42,10 +42,10 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
         ["CMC", "IHI", "CRC"],
         {
             "C": "#common:circuits/basic",
-            "M": "ic2:machine",
+            "M": "mhera:machine",
             "I": "#common:plates/iron",
             "H": "minecraft:hopper",
-            "R": "ic2:re_battery",
+            "R": "mhera:re_battery",
         },
         1,
     ),
@@ -55,8 +55,8 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
             "X": "#common:chests/wooden",
             "C": "#common:circuits/basic",
             "P": "#common:plates/iron",
-            "B": "ic2:electric_boat",
-            "E": "ic2:electric_motor",
+            "B": "mhera:electric_boat",
+            "E": "mhera:electric_motor",
         },
         1,
     ),
@@ -64,42 +64,42 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
         ["AFA", "PMP", "HCH"],
         {
             "A": "#common:circuits/advanced",
-            "F": "ic2:frequency_transmitter",
+            "F": "mhera:frequency_transmitter",
             "P": "#common:plates/steel",
-            "M": "ic2:advanced_machine",
+            "M": "mhera:advanced_machine",
             "H": "minecraft:hopper",
-            "C": "ic2:energy_crystal",
+            "C": "mhera:energy_crystal",
         },
         1,
     ),
     "transport_drone": (
         ["BCB", "EXE", "BPB"],
         {
-            "B": "ic2:iron_rotor_blade",
+            "B": "mhera:iron_rotor_blade",
             "C": "#common:circuits/basic",
-            "E": "ic2:electric_motor",
+            "E": "mhera:electric_motor",
             "X": "#common:chests/wooden",
-            "P": "ic2:carbon_plate",
+            "P": "mhera:carbon_plate",
         },
         1,
     ),
     "heavy_transport_drone": (
         ["BAB", "XDX", "LEL"],
         {
-            "B": "ic2:carbon_rotor_blade",
+            "B": "mhera:carbon_rotor_blade",
             "A": "#common:circuits/advanced",
             "X": "#common:chests/wooden",
-            "D": "lc2:transport_drone",
-            "L": "ic2:alloy",
-            "E": "ic2:electric_motor",
+            "D": "trera:transport_drone",
+            "L": "mhera:alloy",
+            "E": "mhera:electric_motor",
         },
         1,
     ),
     "rf_chip_1": (
         ["WFW", "CRC", "WGW"],
         {
-            "W": "ic2:insulated_copper_cable",
-            "F": "ic2:frequency_transmitter",
+            "W": "mhera:insulated_copper_cable",
+            "F": "mhera:frequency_transmitter",
             "C": "#common:circuits/basic",
             "R": "#common:dusts/redstone",
             "G": "#common:plates/copper",
@@ -109,10 +109,10 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
     "rf_chip_2": (
         ["WAW", "GIG", "WEW"],
         {
-            "W": "ic2:insulated_gold_cable",
+            "W": "mhera:insulated_gold_cable",
             "A": "#common:circuits/advanced",
             "G": "#common:plates/gold",
-            "I": "lc2:rf_chip_1",
+            "I": "trera:rf_chip_1",
             "E": "#common:ender_pearls",
         },
         1,
@@ -120,21 +120,21 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
     "rf_chip_3": (
         ["WAW", "CIC", "WLW"],
         {
-            "W": "ic2:glass_fibre_cable",
+            "W": "mhera:glass_fibre_cable",
             "A": "#common:circuits/advanced",
-            "C": "ic2:carbon_plate",
-            "I": "lc2:rf_chip_2",
-            "L": "ic2:lapotron_crystal",
+            "C": "mhera:carbon_plate",
+            "I": "trera:rf_chip_2",
+            "L": "mhera:lapotron_crystal",
         },
         1,
     ),
     "chunk_loading_upgrade": (
         ["ALA", "CKC", "AEA"],
         {
-            "A": "ic2:alloy",
-            "L": "ic2:insulated_gold_cable",
+            "A": "mhera:alloy",
+            "L": "mhera:insulated_gold_cable",
             "C": "#common:circuits/advanced",
-            "K": "ic2:chunk_loader",
+            "K": "mhera:chunk_loader",
             "E": "minecraft:ender_eye",
         },
         1,
@@ -143,11 +143,11 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
         ["CFC", "IMI", "WBW"],
         {
             "C": "#common:circuits/basic",
-            "F": "ic2:frequency_transmitter",
+            "F": "mhera:frequency_transmitter",
             "I": "#common:plates/iron",
-            "M": "ic2:machine",
-            "W": "ic2:insulated_copper_cable",
-            "B": "ic2:re_battery",
+            "M": "mhera:machine",
+            "W": "mhera:insulated_copper_cable",
+            "B": "mhera:re_battery",
         },
         1,
     ),
@@ -157,9 +157,9 @@ SHAPED_RECIPES: dict[str, tuple[list[str], dict[str, str], int]] = {
             "I": "#common:plates/iron",
             "G": "#common:glass_panes",
             "C": "#common:circuits/basic",
-            "F": "ic2:frequency_transmitter",
-            "W": "ic2:insulated_copper_cable",
-            "B": "ic2:re_battery",
+            "F": "mhera:frequency_transmitter",
+            "W": "mhera:insulated_copper_cable",
+            "B": "mhera:re_battery",
         },
         1,
     ),
@@ -205,7 +205,7 @@ def publish(staged: Path, destination: Path):
         if marker.is_file():
             previous = set(marker.read_text(encoding="utf-8").splitlines()[1:])
         elif any(destination.iterdir()):
-            if not (destination.name == "lc2-resources" and destination.parent.name == "generated"):
+            if not (destination.name == "trera-resources" and destination.parent.name == "generated"):
                 raise SystemExit(f"Choose an empty directory for the generated pack: {destination}")
             previous = set()
         else:
@@ -219,7 +219,7 @@ def publish(staged: Path, destination: Path):
             if not rel.is_absolute() and ".." not in rel.parts and rel.suffix in (".json", ".mcmeta"):
                 (destination / rel).unlink(missing_ok=True)
         ready = staged / MARKER_NAME
-        ready.write_text("LC2 generated resources\n" + "\n".join(sorted(names)) + "\n", encoding="utf-8")
+        ready.write_text("TRERA generated resources\n" + "\n".join(sorted(names)) + "\n", encoding="utf-8")
         os.replace(ready, marker)
 
 
@@ -232,7 +232,7 @@ def generate(target: str, destination: Path) -> int:
         raise SystemExit("Choose a dedicated resource output directory")
     destination.parent.mkdir(parents=True, exist_ok=True)
 
-    with tempfile.TemporaryDirectory(prefix=".lc2-pack-", dir=destination.parent) as tmp_dir:
+    with tempfile.TemporaryDirectory(prefix=".trera-pack-", dir=destination.parent) as tmp_dir:
         out = Path(tmp_dir)
 
         def write_json(rel_path: str, value: dict):
@@ -532,7 +532,7 @@ def generate(target: str, destination: Path) -> int:
         )
         write_json(
             f"data/{MOD_ID}/{item_tag_dir}single_use_batteries.json",
-            {"replace": False, "values": ["ic2:single_use_battery"]},
+            {"replace": False, "values": ["mhera:single_use_battery"]},
         )
 
         # ---------------------------------------------------------------------
@@ -546,7 +546,7 @@ def generate(target: str, destination: Path) -> int:
                         "pack_format": 9,
                         "forge:resource_pack_format": 9,
                         "forge:data_pack_format": 10,
-                        "description": "LogisticsCraft² resources for Minecraft 1.19.2",
+                        "description": "Transitera resources for Minecraft 1.19.2",
                     }
                 },
             )
@@ -558,7 +558,7 @@ def generate(target: str, destination: Path) -> int:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate LC2 version-specific resources and data.")
+    parser = argparse.ArgumentParser(description="Generate Transitera (trera) version-specific resources and data.")
     parser.add_argument("--target", required=True, choices=TARGETS)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()

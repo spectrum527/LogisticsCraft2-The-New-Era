@@ -585,7 +585,7 @@ class VirtualTransitAndCollisionTest {
                 true,
                 true,
                 RfChipTier.TIER_1,
-                UpgradeSummary.builder().add("ic2:overclocker_upgrade", 2).build(),
+                UpgradeSummary.builder().add("mhera:overclocker_upgrade", 2).build(),
                 1_600.0,
                 0,
                 EnergyPriority.EU_FIRST,

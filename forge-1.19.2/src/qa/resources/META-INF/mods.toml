@@ -3,35 +3,35 @@ loaderVersion="[43,44)"
 license="GPL-3.0-only"
 
 [[mods]]
-modId="lc2_qa"
-version="1.0.0"
-displayName="LogisticsCraft 2 Forge 1.19.2 QA"
-description="Live dedicated-server end-to-end verification suite for LogisticsCraft 2 on Forge 1.19.2."
+modId="trera_qa"
+version="2.0.0"
+displayName="Transitera Forge 1.19.2 QA"
+description="Live dedicated-server end-to-end verification suite for Transitera on Forge 1.19.2."
 
-[[dependencies.lc2_qa]]
+[[dependencies.trera_qa]]
 modId="forge"
 mandatory=true
 versionRange="[43.5.0,44)"
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.lc2_qa]]
+[[dependencies.trera_qa]]
 modId="minecraft"
 mandatory=true
 versionRange="[1.19.2,1.19.3)"
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.lc2_qa]]
-modId="ic2"
+[[dependencies.trera_qa]]
+modId="mhera"
 mandatory=true
-versionRange="[1.0.0,)"
+versionRange="[2.0.0,)"
 ordering="AFTER"
 side="BOTH"
 
-[[dependencies.lc2_qa]]
-modId="lc2"
+[[dependencies.trera_qa]]
+modId="trera"
 mandatory=true
-versionRange="[1.0.0,)"
+versionRange="[2.0.0,)"
 ordering="AFTER"
 side="BOTH"

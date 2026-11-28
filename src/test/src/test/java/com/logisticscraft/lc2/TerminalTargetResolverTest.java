@@ -35,34 +35,34 @@ class TerminalTargetResolverTest {
 
     @Test
     void commStatusAndDisconnectReasonEnumsMatchSpecExactly() {
-        assertEquals("status.lc2.failure.terminal_insufficient_energy",
+        assertEquals("status.trera.failure.terminal_insufficient_energy",
                 DispatchFailure.TERMINAL_INSUFFICIENT_ENERGY.translationKey());
 
         assertEquals(6, CommStationStatus.values().length);
-        assertStatus(CommStationStatus.ONLINE, "status.lc2.comm.online", 0, true);
-        assertStatus(CommStationStatus.UNPOWERED, "status.lc2.comm.unpowered", 1, false);
-        assertStatus(CommStationStatus.NO_ADJACENT_STATION, "status.lc2.comm.no_station", 2, false);
-        assertStatus(CommStationStatus.CHUNK_UNLOADED, "status.lc2.comm.chunk_unloaded", 3, false);
-        assertStatus(CommStationStatus.WRONG_DIMENSION, "status.lc2.comm.wrong_dimension", 4, false);
-        assertStatus(CommStationStatus.COMM_MISSING, "status.lc2.comm.missing", 5, false);
+        assertStatus(CommStationStatus.ONLINE, "status.trera.comm.online", 0, true);
+        assertStatus(CommStationStatus.UNPOWERED, "status.trera.comm.unpowered", 1, false);
+        assertStatus(CommStationStatus.NO_ADJACENT_STATION, "status.trera.comm.no_station", 2, false);
+        assertStatus(CommStationStatus.CHUNK_UNLOADED, "status.trera.comm.chunk_unloaded", 3, false);
+        assertStatus(CommStationStatus.WRONG_DIMENSION, "status.trera.comm.wrong_dimension", 4, false);
+        assertStatus(CommStationStatus.COMM_MISSING, "status.trera.comm.missing", 5, false);
 
         assertEquals(CommStationStatus.ONLINE, CommStationStatus.fromOrdinal(0));
         assertEquals(CommStationStatus.COMM_MISSING, CommStationStatus.fromOrdinal(-1));
         assertEquals(CommStationStatus.COMM_MISSING, CommStationStatus.fromOrdinal(99));
 
         assertEquals(8, RemoteDisconnectReason.values().length);
-        assertEquals("status.lc2.ready", RemoteDisconnectReason.NONE.translationKey());
+        assertEquals("status.trera.ready", RemoteDisconnectReason.NONE.translationKey());
         assertFalse(RemoteDisconnectReason.NONE.isDisconnected());
 
         Set<String> disconnectKeys = new HashSet<>();
         disconnectKeys.add(RemoteDisconnectReason.NONE.translationKey());
-        assertDisconnect(RemoteDisconnectReason.WRONG_DIMENSION, "status.lc2.remote.disconnected.wrong_dimension", disconnectKeys);
-        assertDisconnect(RemoteDisconnectReason.CHUNK_UNLOADED, "status.lc2.remote.disconnected.chunk_unloaded", disconnectKeys);
-        assertDisconnect(RemoteDisconnectReason.COMM_MISSING, "status.lc2.remote.disconnected.comm_missing", disconnectKeys);
-        assertDisconnect(RemoteDisconnectReason.COMM_UNPOWERED, "status.lc2.remote.disconnected.comm_unpowered", disconnectKeys);
-        assertDisconnect(RemoteDisconnectReason.STATION_MISSING, "status.lc2.remote.disconnected.station_missing", disconnectKeys);
-        assertDisconnect(RemoteDisconnectReason.NOT_ADJACENT, "status.lc2.remote.disconnected.not_adjacent", disconnectKeys);
-        assertDisconnect(RemoteDisconnectReason.TERMINAL_MISSING, "status.lc2.remote.disconnected.terminal_missing", disconnectKeys);
+        assertDisconnect(RemoteDisconnectReason.WRONG_DIMENSION, "status.trera.remote.disconnected.wrong_dimension", disconnectKeys);
+        assertDisconnect(RemoteDisconnectReason.CHUNK_UNLOADED, "status.trera.remote.disconnected.chunk_unloaded", disconnectKeys);
+        assertDisconnect(RemoteDisconnectReason.COMM_MISSING, "status.trera.remote.disconnected.comm_missing", disconnectKeys);
+        assertDisconnect(RemoteDisconnectReason.COMM_UNPOWERED, "status.trera.remote.disconnected.comm_unpowered", disconnectKeys);
+        assertDisconnect(RemoteDisconnectReason.STATION_MISSING, "status.trera.remote.disconnected.station_missing", disconnectKeys);
+        assertDisconnect(RemoteDisconnectReason.NOT_ADJACENT, "status.trera.remote.disconnected.not_adjacent", disconnectKeys);
+        assertDisconnect(RemoteDisconnectReason.TERMINAL_MISSING, "status.trera.remote.disconnected.terminal_missing", disconnectKeys);
         assertEquals(8, disconnectKeys.size());
 
         assertEquals(RemoteDisconnectReason.TERMINAL_MISSING, RemoteDisconnectReason.fromOrdinal(7));
@@ -119,7 +119,7 @@ class TerminalTargetResolverTest {
         assertTrue(namedPort.matchesFilter("11 64 20"));
         assertTrue(namedPort.matchesFilter("smart_port"));
         assertTrue(namedPort.matchesFilter("SMART PORT"));
-        assertTrue(namedPort.matchesFilter("lc2:smart_port"));
+        assertTrue(namedPort.matchesFilter("trera:smart_port"));
         // Must not false-match "mine" from "minecraft:overworld"
         assertFalse(namedPort.matchesFilter("mine"));
         assertFalse(namedPort.matchesFilter("cargo"));

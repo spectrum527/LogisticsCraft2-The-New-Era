@@ -7,28 +7,28 @@ package com.logisticscraft.lc2.core;
 public enum RemoteDisconnectReason {
 
     /** Session is healthy and remains connected. */
-    NONE("status.lc2.ready"),
+    NONE("status.trera.ready"),
 
     /** Player changed to a different dimension than the remote station. */
-    WRONG_DIMENSION("status.lc2.remote.disconnected.wrong_dimension"),
+    WRONG_DIMENSION("status.trera.remote.disconnected.wrong_dimension"),
 
     /** Chunk containing either the Communication Base Station or target station unloaded. */
-    CHUNK_UNLOADED("status.lc2.remote.disconnected.chunk_unloaded"),
+    CHUNK_UNLOADED("status.trera.remote.disconnected.chunk_unloaded"),
 
     /** Communication Base Station block was broken or removed. */
-    COMM_MISSING("status.lc2.remote.disconnected.comm_missing"),
+    COMM_MISSING("status.trera.remote.disconnected.comm_missing"),
 
     /** Communication Base Station ran out of standby power. */
-    COMM_UNPOWERED("status.lc2.remote.disconnected.comm_unpowered"),
+    COMM_UNPOWERED("status.trera.remote.disconnected.comm_unpowered"),
 
     /** Target Smart Port or Cargo Station block was broken or removed. */
-    STATION_MISSING("status.lc2.remote.disconnected.station_missing"),
+    STATION_MISSING("status.trera.remote.disconnected.station_missing"),
 
     /** Communication Base Station and target station are no longer face-adjacent. */
-    NOT_ADJACENT("status.lc2.remote.disconnected.not_adjacent"),
+    NOT_ADJACENT("status.trera.remote.disconnected.not_adjacent"),
 
     /** Player no longer carries or equips an Operation Terminal. */
-    TERMINAL_MISSING("status.lc2.remote.disconnected.terminal_missing");
+    TERMINAL_MISSING("status.trera.remote.disconnected.terminal_missing");
 
     private final String translationKey;
 
@@ -37,7 +37,7 @@ public enum RemoteDisconnectReason {
     }
 
     /**
-     * Returns the localization key shown to the player upon disconnect (or {@code "status.lc2.ready"}
+     * Returns the localization key shown to the player upon disconnect (or {@code "status.trera.ready"}
      * for {@link #NONE}).
      *
      * @return translation key

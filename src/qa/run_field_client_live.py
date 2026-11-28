@@ -284,16 +284,16 @@ def scan_log_for_errors(log_path: Path, role: str) -> None:
             or "InvalidMixinException" in line
             or "MixinTransformerError" in line
             or "Critical injection failure" in line
-            or ("mixin" in lower and "lc2" in lower and "error" in lower)
+            or ("mixin" in lower and ("trera" in lower or "lc2" in lower) and "error" in lower)
         )
         is_lc2_err = (
             ("/ERROR]" in line or "Exception" in line or "AssertionError" in line)
             and (
                 "com.logisticscraft.lc2" in line
-                or "lc2:" in line
-                or "lc2.mixins.json" in line
-                or ("missing texture" in lower and "lc2" in lower)
-                or ("unable to load model" in lower and "lc2" in lower)
+                or "trera:" in line
+                or "trera.mixins.json" in line
+                or ("missing texture" in lower and "trera" in lower)
+                or ("unable to load model" in lower and "trera" in lower)
             )
         )
         if is_mixin or is_lc2_err:
@@ -323,7 +323,7 @@ def run_live_suite(mc_version: str, screenshot_out: Path) -> None:
         session.act("connect")
         session.wait_until("client_joined_server", lambda s: s.get("world") and not s.get("screen") and not s.get("overlay"), timeout=120)
         print(f"[{mc_version}] Client connected to Dedicated Server!", flush=True)
-        session.server_cmd("op Lc2FieldTester")
+        session.server_cmd("op TreraFieldTester")
         time.sleep(0.5)
 
         # 2. Verify ALL LC2 sprites & textures baked/present (ZERO missing textures!)
@@ -380,7 +380,7 @@ def run_live_suite(mc_version: str, screenshot_out: Path) -> None:
         session.act("gui_click", button="swap")
         sp_after = session.wait_until(
             "smart_port_swapped",
-            lambda s: s.get("syncStatusKey") == "status.lc2.swapped",
+            lambda s: s.get("syncStatusKey") == "status.trera.swapped",
             timeout=15,
         )
 
@@ -445,7 +445,7 @@ def run_live_suite(mc_version: str, screenshot_out: Path) -> None:
         session.act("gui_click", button="swap")
         cs_swapped = session.wait_until(
             "cargo_station_swapped",
-            lambda s: s.get("syncStatusKey") == "status.lc2.swapped",
+            lambda s: s.get("syncStatusKey") == "status.trera.swapped",
             timeout=15,
         )
         srv_cs_swapped = session.server_state()["hillCargo"]
@@ -502,7 +502,7 @@ def run_live_suite(mc_version: str, screenshot_out: Path) -> None:
         session.act("interact_boat")
         mounted = session.wait_until(
             "player_mounted_docked_boat",
-            lambda s: s.get("vehicle") == "lc2:electric_cargo_boat",
+            lambda s: s.get("vehicle") == "trera:electric_cargo_boat",
             timeout=20,
         )
         start_x, start_z = mounted["playerX"], mounted["playerZ"]
@@ -515,7 +515,7 @@ def run_live_suite(mc_version: str, screenshot_out: Path) -> None:
         session.server_cmd("lc2field trigger_boat_redstone")
         mid_ride = session.wait_until(
             "player_riding_boat_mid_river",
-            lambda s: s.get("vehicle") == "lc2:electric_cargo_boat"
+            lambda s: s.get("vehicle") == "trera:electric_cargo_boat"
             and math.hypot(s["playerX"] - start_x, s["playerZ"] - start_z) >= 24.0,
             timeout=45,
             interval=0.15,
@@ -535,7 +535,7 @@ def run_live_suite(mc_version: str, screenshot_out: Path) -> None:
         # Wait for arrival at Refining Base B!
         arrived = session.wait_until(
             "player_arrived_base_b_in_boat",
-            lambda s: s.get("vehicle") == "lc2:electric_cargo_boat"
+            lambda s: s.get("vehicle") == "trera:electric_cargo_boat"
             and math.hypot(s["playerX"] - (berth_b["x"] + 0.5), s["playerZ"] - (berth_b["z"] + 0.5)) <= 5.5
             and s.get("boatAutonomous") is False,
             timeout=60,
@@ -546,7 +546,7 @@ def run_live_suite(mc_version: str, screenshot_out: Path) -> None:
             "start": [round(start_x, 2), round(start_z, 2)],
             "end": [round(arrived["playerX"], 2), round(arrived["playerZ"], 2)],
             "euclideanDistance": round(traveled, 2),
-            "stillMounted": arrived["vehicle"] == "lc2:electric_cargo_boat",
+            "stillMounted": arrived["vehicle"] == "trera:electric_cargo_boat",
         }
         print(f"[{mc_version}] Real player rode boat {traveled:.1f}m across natural river to Base B!", flush=True)
 

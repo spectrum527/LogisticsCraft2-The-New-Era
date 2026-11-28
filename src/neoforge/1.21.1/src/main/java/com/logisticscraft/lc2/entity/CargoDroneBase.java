@@ -29,13 +29,13 @@ public abstract class CargoDroneBase extends Entity {
     protected void addAdditionalSaveData(CompoundTag tag) {
         CompoundTag meta = new CompoundTag();
         writeDroneMeta(meta);
-        tag.put("lc2_drone", meta);
+        tag.put("trera_drone", meta);
     }
 
     @Override
     protected void readAdditionalSaveData(CompoundTag tag) {
-        if (tag.contains("lc2_drone")) {
-            readDroneMeta(tag.getCompound("lc2_drone"));
+        if (tag.contains("trera_drone")) {
+            readDroneMeta(tag.getCompound("trera_drone"));
         }
     }
 

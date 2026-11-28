@@ -33,7 +33,7 @@ public final class Lc2Mod {
             ClientEntry.install(modBus);
         }
 
-        LOGGER.info("LogisticsCraft²: The New Era initialized (side={})", side);
+        LOGGER.info("Transitera initialized (side={})", side);
     }
 
     private static final class ClientEntry {

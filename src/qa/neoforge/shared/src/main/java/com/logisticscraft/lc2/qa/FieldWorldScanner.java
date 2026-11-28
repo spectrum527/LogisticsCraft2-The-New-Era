@@ -41,12 +41,12 @@ public final class FieldWorldScanner {
             "minecraft:deepslate_copper_ore",
             "minecraft:gold_ore",
             "minecraft:deepslate_gold_ore",
-            "ic2:tin_ore",
-            "ic2:deepslate_tin_ore",
-            "ic2:lead_ore",
-            "ic2:deepslate_lead_ore",
-            "ic2:silver_ore",
-            "ic2:deepslate_silver_ore"
+            "mhera:tin_ore",
+            "mhera:deepslate_tin_ore",
+            "mhera:lead_ore",
+            "mhera:deepslate_lead_ore",
+            "mhera:silver_ore",
+            "mhera:deepslate_silver_ore"
     );
 
     private static final Set<String> COAL_ORES = Set.of(

@@ -18,7 +18,7 @@ import net.minecraft.world.level.ChunkPos;
 public final class LogisticsChunkTickets {
 
     private static final TicketType<ChunkPos> CHUNK_LOADER_TICKET =
-            TicketType.create("lc2_chunk_loader", Comparator.comparingLong(ChunkPos::toLong));
+            TicketType.create("trera_chunk_loader", Comparator.comparingLong(ChunkPos::toLong));
 
     private static final int REGION_TICKET_RADIUS = 2;
 

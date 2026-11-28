@@ -96,12 +96,12 @@ public final class Suite7Persistence {
             QaChecks.buildCanal(level, 11, 49, -56, -56, WATER_Y);
 
             level.setBlockAndUpdate(PERSIST_PORT_A,
-                    QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.EAST));
+                    QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.EAST));
             level.setBlockAndUpdate(PERSIST_PORT_B,
-                    QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.WEST));
+                    QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.WEST));
             level.setBlockAndUpdate(PERSIST_PORT_B_CHEST, Blocks.CHEST.defaultBlockState());
 
-            var stBlock = QaChecks.block("lc2:cargo_station").defaultBlockState();
+            var stBlock = QaChecks.block("trera:cargo_station").defaultBlockState();
             level.setBlockAndUpdate(PERSIST_AIR_A, stBlock);
             level.setBlockAndUpdate(PERSIST_AIR_B, stBlock);
             level.setBlockAndUpdate(PERSIST_AIR_B_CHEST, Blocks.CHEST.defaultBlockState());

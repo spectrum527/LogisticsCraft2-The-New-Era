@@ -236,8 +236,8 @@ public final class CommBaseStationBlockEntity extends Lc2StationBlockEntityBase
                 combined.append(Component.literal(info.customName()));
             } else {
                 String key = info.type() == StationType.SMART_PORT
-                        ? "gui.lc2.terminal.unnamed_port"
-                        : "gui.lc2.terminal.unnamed_cargo";
+                        ? "gui.trera.terminal.unnamed_port"
+                        : "gui.trera.terminal.unnamed_cargo";
                 combined.append(Component.translatable(
                         key, info.pos().x(), info.pos().y(), info.pos().z()
                 ));
@@ -262,8 +262,8 @@ public final class CommBaseStationBlockEntity extends Lc2StationBlockEntityBase
                 sb.append(info.customName());
             } else {
                 String key = info.type() == StationType.SMART_PORT
-                        ? "gui.lc2.terminal.unnamed_port"
-                        : "gui.lc2.terminal.unnamed_cargo";
+                        ? "gui.trera.terminal.unnamed_port"
+                        : "gui.trera.terminal.unnamed_cargo";
                 sb.append(Component.translatable(
                         key, info.pos().x(), info.pos().y(), info.pos().z()
                 ).getString());

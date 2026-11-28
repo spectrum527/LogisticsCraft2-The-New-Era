@@ -1,23 +1,23 @@
-<h1><img src="assets/brand/icon.jpg" width="56" height="56" align="absmiddle" alt=""> 物流时代2：新纪元 (LogisticsCraft²: The New Era)</h1>
+<h1><img src="assets/brand/icon.jpg" width="56" height="56" align="absmiddle" alt=""> 航运纪元 (Transitera)</h1>
 
 **简体中文** · [English](README.en.md)
 
-![物流时代2：新纪元 (LogisticsCraft²: The New Era) 项目封面](assets/brand/cover.jpg)
+![航运纪元 (Transitera) 项目封面](assets/brand/cover.jpg)
 
-**物流时代2：新纪元（`lc2`）** 是 [工业时代2：新纪元 (IndustrialCraft²: The New Era)](https://github.com/spectrum527/IndustrialCraft2-The-New-Era) 的独立物流附属模组，为主模组加入可跨未加载区块运行的电动智能运输船、货运无人机，以及通过通讯基站与操作终端实现的同维度远程调度系统。
+**航运纪元（`trera`）** 是 [机电纪元 (Machinera)](https://github.com/spectrum527/Machinera) 的独立物流附属模组，为主模组加入可跨未加载区块运行的电动智能运输船、货运无人机，以及通过通讯基站与操作终端实现的同维度远程调度系统。
 
 ## 下载与安装
 
-请先安装对应 Minecraft 版本的 **IndustrialCraft²: The New Era (`ic2` v1.0.5+)**，再将下表中对应版本的 `lc2` JAR 放入 `mods/` 目录。联机时客户端和服务端都需要安装。
+请先安装对应 Minecraft 版本的 **Machinera (`mhera` v2.0.0+)**，再将下表中对应版本的 `trera` JAR 放入 `mods/` 目录。联机时客户端和服务端都需要安装。
 
-[v1.2.2 发行说明](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/tag/v1.2.2) · [SHA-256 校验](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.2/SHA256SUMS.txt)
+[v2.0.0 发行说明](https://github.com/spectrum527/Transitera/releases/tag/v2.0.0) · [SHA-256 校验](https://github.com/spectrum527/Transitera/releases/download/v2.0.0/SHA256SUMS.txt)
 
 | Minecraft | 加载器 | Java | 下载 |
 | --- | --- | ---: | --- |
-| 1.19.2 | Forge 43.5.0 | 17 | [Forge 1.19.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.2/lc2-forge-1.19.2-1.2.2.jar) |
-| 1.21.1 | NeoForge 21.1.265 | 21 | [NeoForge 1.21.1 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.2/lc2-neoforge-1.21.1-1.2.2.jar) |
-| 26.1.2 | NeoForge 26.1.2.128 | 25 | [NeoForge 26.1.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.2/lc2-neoforge-26.1.2-1.2.2.jar) |
-| 26.2 | NeoForge 26.2.0.95 | 25 | [NeoForge 26.2 JAR](https://github.com/spectrum527/LogisticsCraft2-The-New-Era/releases/download/v1.2.2/lc2-neoforge-26.2-1.2.2.jar) |
+| 1.19.2 | Forge 43.5.0 | 17 | [Forge 1.19.2 JAR](https://github.com/spectrum527/Transitera/releases/download/v2.0.0/trera-forge-1.19.2-2.0.0.jar) |
+| 1.21.1 | NeoForge 21.1.265 | 21 | [NeoForge 1.21.1 JAR](https://github.com/spectrum527/Transitera/releases/download/v2.0.0/trera-neoforge-1.21.1-2.0.0.jar) |
+| 26.1.2 | NeoForge 26.1.2.128 | 25 | [NeoForge 26.1.2 JAR](https://github.com/spectrum527/Transitera/releases/download/v2.0.0/trera-neoforge-26.1.2-2.0.0.jar) |
+| 26.2 | NeoForge 26.2.0.95 | 25 | [NeoForge 26.2 JAR](https://github.com/spectrum527/Transitera/releases/download/v2.0.0/trera-neoforge-26.2-2.0.0.jar) |
 
 ## 上手教程
 
@@ -27,21 +27,21 @@
 
 智能港口和货运基站内部都有 54 格货仓，左右分成两半，避免刚卸下的货又被装回载具。
 
-- **待发货区（左，27 格）**：放准备运走的货物。用漏斗、管道或 IC2 抽入升级送货，物品都会进这里；发船或放飞时只装这一区的货（货舱未满时会继续从相邻容器拉货）。原版红石比较器也只检测这一区的装满程度，方便接出“有货发车”或“满仓发车”的红石电路。
-- **存储区（右，27 格）**：接收入站卸载的货物。载具到站后会先往相邻容器里卸货，装不下的暂存在这里；漏斗、管道和 IC2 弹出升级只从这一区往外取货。
+- **待发货区（左，27 格）**：放准备运走的货物。用漏斗、管道或 MHERA 抽入升级送货，物品都会进这里；发船或放飞时只装这一区的货（货舱未满时会继续从相邻容器拉货）。原版红石比较器也只检测这一区的装满程度，方便接出“有货发车”或“满仓发车”的红石电路。
+- **存储区（右，27 格）**：接收入站卸载的货物。载具到站后会先往相邻容器里卸货，装不下的暂存在这里；漏斗、管道和 MHERA 弹出升级只从这一区往外取货。
 - **一键互换（`<->`）**：界面两区中间有互换按钮，点一下就能把待发货区和存储区的 27 格物品直接对调，中转或回运时不用一格一格搬。
 
 供电支持 EU 导线和一次性电池两种方式，界面右上角可切换 **EU 优先** 或 **电池优先**（优先项不够时会自动改用另一项，不会混扣）。
 
-- **EU 供电**：六个面都能直接连 IC2 导线，内置 **14,400 EU** 缓存，默认接受 **LV（32 EU/t）** 输入。
-- **一次性电池**：右侧电池槽只接收 IC2 的一次性电池（`ic2:single_use_battery`）。
+- **EU 供电**：六个面都能直接连 MHERA 导线，内置 **14,400 EU** 缓存，默认接受 **LV（32 EU/t）** 输入。
+- **一次性电池**：右侧电池槽只接收 MHERA 的一次性电池（`mhera:single_use_battery`）。
 
 ### 水路运输：智能港口与电动智能运输船
 
 水路适合跨海、沿河或挖运河运送大宗货物，单艘船有 **54 格**货舱（等同大箱子）。
 
-1. **建造两个港口**：在起点和终点水边各放一个**智能港口（`lc2:smart_port`）**，尽量让正面朝向水面（方向放歪可用 IC2 扳手旋转）。两个港口之间需要有连通的水道，1 格宽的运河也能通航。
-2. **停靠运输船**：手持**电动智能运输船（`lc2:electric_cargo_boat`）**右键智能港口，或直接把船放到港口旁的水里即可靠泊。停靠时，潜行右键可查看船舱，普通右键可登船。
+1. **建造两个港口**：在起点和终点水边各放一个**智能港口（`trera:smart_port`）**，尽量让正面朝向水面（方向放歪可用 MHERA 扳手旋转）。两个港口之间需要有连通的水道，1 格宽的运河也能通航。
+2. **停靠运输船**：手持**电动智能运输船（`trera:electric_cargo_boat`）**右键智能港口，或直接把船放到港口旁的水里即可靠泊。停靠时，潜行右键可查看船舱，普通右键可登船。
 3. **设定目标与供电**：打开起点港口界面，可以给站点命名方便识别，再用 `<` / `>` 选择同维度的目标港口（或手填 X/Y/Z 坐标后点设定），按需开启**自动返航**，并接好 EU 电源或放入一次性电池。
 4. **装货发船**：往待发货区放入货物（或在港口旁放箱子等容器），点界面里的**发车**按钮，或给港口输入红石信号即可出航。
 
@@ -53,10 +53,10 @@
 
 ### 空路运输：货运基站与运输无人机
 
-空路适合翻山越岭、跨基地直连，或用多台无人机同时跑不同航线。每座**货运基站（`lc2:cargo_station`）**顶部有 **6 个无人机停机位**。
+空路适合翻山越岭、跨基地直连，或用多台无人机同时跑不同航线。每座**货运基站（`trera:cargo_station`）**顶部有 **6 个无人机停机位**。
 
 1. **放置基站并装射频芯片**：在起点和终点各放一个货运基站，顶面留出垂直起降空间。打开基站界面，在中间左侧槽位装入一枚**射频芯片**（不装芯片无法工作），芯片等级决定最远航程。
-2. **放上无人机**：把**运输无人机（`lc2:transport_drone`）**或**重型运输无人机（`lc2:heavy_transport_drone`）**放入基站界面的 6 个停机位槽中，基站顶面会直接显示停靠的无人机。
+2. **放上无人机**：把**运输无人机（`trera:transport_drone`）**或**重型运输无人机（`trera:heavy_transport_drone`）**放入基站界面的 6 个停机位槽中，基站顶面会直接显示停靠的无人机。
 3. **选目标、供电并起飞**：选择同维度且在射频范围内的目标基站，接好电源或放入一次性电池，把货放进待发货区，点**发车**或输入红石信号即可放飞。目标基站 6 个机位全满时会拒绝起飞，起飞后会自动为这架无人机预留目标机位。
 
 无人机单程能耗按曼哈顿距离（`|dx| + |dy| + |dz|`）分三档计费，重型无人机耗能是普通型的两倍。
@@ -74,8 +74,8 @@
 
 如果想在基地另一头随时查看站点库存、改航线或手动发车，可以在站点旁部署**通讯基站**并随身携带**操作终端**，同维度内不限距离远程调度（前提是目标区块已加载且通讯基站正常供电）。
 
-1. **放置通讯基站并供电**：把**通讯基站（`lc2:comm_base_station`）**直接贴放在智能港口或货运基站的六个面之一，一台通讯基站最多可同时接入 **6 座**相邻站点。它没有独立 GUI，空手或手持其他物品右键即可在操作栏查看在线状态、电量与关联站点。通讯基站六面同时支持 **IC2 EU** 与 **FE** 供电（`1 EU = 4 FE`），最高输入 **LV 32 EU/t（128 FE/t）**，内置 **4,000 EU（16,000 FE）** 缓存，维持在线消耗 **2 EU/t（8 FE/t）**。
-2. **绑定终端与充电**：手持**操作终端（`lc2:operation_terminal`）**直接**右键**通讯基站即可绑定（未通电或尚未贴放站点也能先绑，单台终端最多绑定 **256** 座通讯基站）；**潜行右键**通讯基站或在终端列表里点 `×` 即可解绑。操作终端内置 **10,000 EU（40,000 FE）** 电池（LV **32 EU/t / 128 FE/t**），既可用 IC2 蓄电盒、CESU、MFE、MFSU、充电座、充电电池和电池背包充电，也支持各类 **FE 物品充电机**。
+1. **放置通讯基站并供电**：把**通讯基站（`trera:comm_base_station`）**直接贴放在智能港口或货运基站的六个面之一，一台通讯基站最多可同时接入 **6 座**相邻站点。它没有独立 GUI，空手或手持其他物品右键即可在操作栏查看在线状态、电量与关联站点。通讯基站六面同时支持 **MHERA EU** 与 **FE** 供电（`1 EU = 4 FE`），最高输入 **LV 32 EU/t（128 FE/t）**，内置 **4,000 EU（16,000 FE）** 缓存，维持在线消耗 **2 EU/t（8 FE/t）**。
+2. **绑定终端与充电**：手持**操作终端（`trera:operation_terminal`）**直接**右键**通讯基站即可绑定（未通电或尚未贴放站点也能先绑，单台终端最多绑定 **256** 座通讯基站）；**潜行右键**通讯基站或在终端列表里点 `×` 即可解绑。操作终端内置 **10,000 EU（40,000 FE）** 电池（LV **32 EU/t / 128 FE/t**），既可用 MHERA 蓄电盒、CESU、MFE、MFSU、充电座、充电电池和电池背包充电，也支持各类 **FE 物品充电机**。
 3. **打开站点选择界面**：手持操作终端**右键空气或其他方块**，或者直接按快捷键（默认 **`G`**，即使终端放在背包或 Curios 饰品栏中也能唤出）即可打开操作终端界面。列表会自动汇总同维度下所有已绑定基站关联的站点并去重，按**在线优先**排序，支持搜索名称/类型/坐标、手动刷新、状态指示灯查看与一键解绑。
 4. **远程只读调度与耗能**：点击在线站点的**连接**即可远程打开该智能港口或货运基站的界面，顶栏会显示**远程只读**标识与**返回列表**按钮。为避免变成无线跨图存物，远程模式下机器内所有物品/升级/电池/无人机槽位均锁定为**只读**，但重命名、切换目标、开关自动返航、切换能源优先、待发货区/存储区一键互换（`<->`）和手动**发车**均可正常使用。
    - **能耗规则**：打开列表、远程查看与修改配置全部**免费（0 EU）**，终端没电时也照常可看可配；仅在**远程手动发车成功**时扣除终端 **100 EU（400 FE）**（发车失败不扣电，创造模式免耗电）。
@@ -84,8 +84,8 @@
 ### 跨未加载区块、无人值守与模组联动
 
 - **跨未加载区块运行**：运输船和无人机离开已加载区块后，会自动转为服务端后台模拟，沿途不需要铺区块加载器，退出重进存档也能接着跑。
-- **区块加载升级（`lc2:chunk_loading_upgrade`）**：如果希望玩家不在基地时站点也能自动发车、收货并保持通讯基站在线，在起点和终点站右侧升级槽放一张区块加载升级即可。通电时消耗 **2 EU/t** 维持自身周围 **3×3 区块**加载，断电或取下会立刻释放。
-- **容器与 IC2 联动**：站点紧贴原版箱子（含大箱子）、木桶或潜影盒就能互通，也支持 IC2 储物箱。右侧 4 个升级槽兼容 IC2 常用机器升级（变压器、储能、超频、弹出/抽入含高级版、红石信号反转升级）；智能港口、货运基站与通讯基站均支持 IC2 导线连接与 IC2 扳手，操作终端完整融入 IC2 充电生态。
+- **区块加载升级（`trera:chunk_loading_upgrade`）**：如果希望玩家不在基地时站点也能自动发车、收货并保持通讯基站在线，在起点和终点站右侧升级槽放一张区块加载升级即可。通电时消耗 **2 EU/t** 维持自身周围 **3×3 区块**加载，断电或取下会立刻释放。
+- **容器与 MHERA 联动**：站点紧贴原版箱子（含大箱子）、木桶或潜影盒就能互通，也支持 MHERA 储物箱。右侧 4 个升级槽兼容 MHERA 常用机器升级（变压器、储能、超频、弹出/抽入含高级版、红石信号反转升级）；智能港口、货运基站与通讯基站均支持 MHERA 导线连接与 MHERA 扳手，操作终端完整融入 MHERA 充电生态。
 - **可选模组联动（均无前置硬依赖）**：
   - **FE 能源生态**：通讯基站六面直接接收 FE，操作终端支持 FE 充电机（`1 EU = 4 FE`）。
   - **信息提示（The One Probe / Jade / WTHIT）**：准星对准通讯基站和物流站点时直接显示在线状态、EU/FE 电量与关联站点列表。
@@ -99,19 +99,19 @@
 - **JDK**：按构建目标准备对应 JDK。Forge 1.19.2 用 **Java 17**，核心单测与 NeoForge 1.21.1 用 **Java 21**，NeoForge 26.1.2 与 26.2 用 **Java 25**。
 - **Python 3**：构建时会自动调用 `src/datagen/generate_resources.py` 生成方块模型、配方和战利品表。
 
-### 放入 IC2 依赖 JAR
+### 放入 MHERA 依赖 JAR
 
-前往 [IndustrialCraft²: The New Era Releases](https://github.com/spectrum527/IndustrialCraft2-The-New-Era/releases) 下载对应版本的 `ic2` v1.0.5 JAR，在仓库根目录新建 `.ic2-deps/` 文件夹并按原文件名放入。
+前往 [Machinera Releases](https://github.com/spectrum527/Machinera/releases) 下载对应版本的 `mhera` v2.0.0 JAR，在仓库根目录新建 `.mhera-deps/` 文件夹并按原文件名放入。
 
 ```text
-.ic2-deps/
-├── ic2-forge-1.19.2-1.0.5.jar
-├── ic2-neoforge-1.21.1-1.0.5.jar
-├── ic2-neoforge-26.1.2-1.0.5.jar
-└── ic2-neoforge-26.2-1.0.5.jar
+.mhera-deps/
+├── mhera-forge-1.19.2-2.0.0.jar
+├── mhera-neoforge-1.21.1-2.0.0.jar
+├── mhera-neoforge-26.1.2-2.0.0.jar
+└── mhera-neoforge-26.2-2.0.0.jar
 ```
 
-> 根目录 Gradle 在配置阶段会检查全部三个 NeoForge 子项目，构建任一 NeoForge 版本时，三个 NeoForge 版 IC2 JAR 都需要放在 `.ic2-deps/` 中；只构建 Forge 1.19.2 时只需 `ic2-forge-1.19.2-1.0.5.jar`。
+> 根目录 Gradle 在配置阶段会检查全部三个 NeoForge 子项目，构建任一 NeoForge 版本时，三个 NeoForge 版 MHERA JAR 都需要放在 `.mhera-deps/` 中；只构建 Forge 1.19.2 时只需 `mhera-forge-1.19.2-2.0.0.jar`。
 
 ### 运行构建命令
 
@@ -132,10 +132,10 @@
 
 构建完成后，各版本 JAR 会输出到对应模块的 `build/libs/` 目录，直接放入游戏 `mods/` 即可使用。
 
-- NeoForge 1.21.1：`src/neoforge/1.21.1/build/libs/lc2-neoforge-1.21.1-1.2.2.jar`
-- NeoForge 26.1.2：`src/neoforge/26.1.2/build/libs/lc2-neoforge-26.1.2-1.2.2.jar`
-- NeoForge 26.2：`src/neoforge/26.2/build/libs/lc2-neoforge-26.2-1.2.2.jar`
-- Forge 1.19.2：`forge-1.19.2/build/libs/lc2-forge-1.19.2-1.2.2.jar`
+- NeoForge 1.21.1：`src/neoforge/1.21.1/build/libs/trera-neoforge-1.21.1-2.0.0.jar`
+- NeoForge 26.1.2：`src/neoforge/26.1.2/build/libs/trera-neoforge-26.1.2-2.0.0.jar`
+- NeoForge 26.2：`src/neoforge/26.2/build/libs/trera-neoforge-26.2-2.0.0.jar`
+- Forge 1.19.2：`forge-1.19.2/build/libs/trera-forge-1.19.2-2.0.0.jar`
 
 更多工程规格见 [设计文档](docs/DESIGN.md)、[GUI 布局](docs/GUI_LAYOUT.md) 与 [无人机模型 UV](docs/DRONE_MODEL_UV.md)。
 

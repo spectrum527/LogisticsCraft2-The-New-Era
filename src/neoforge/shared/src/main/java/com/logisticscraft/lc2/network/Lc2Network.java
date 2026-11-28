@@ -128,7 +128,7 @@ public final class Lc2Network {
             case OPEN_FROM_KEYBIND -> {
                 Optional<TerminalLocator.LocatedTerminal> found = TerminalLocator.findFirstTerminal(player);
                 if (found.isEmpty()) {
-                    Lc2Native.sendActionBar(player, Component.translatable("status.lc2.terminal.no_terminal_found"));
+                    Lc2Native.sendActionBar(player, Component.translatable("status.trera.terminal.no_terminal_found"));
                     return;
                 }
                 openTerminalSelection(player, found.get().stack(), true);
@@ -138,7 +138,7 @@ public final class Lc2Network {
                 Optional<TerminalLocator.LocatedTerminal> found =
                         TerminalLocator.findTerminalById(player, payload.terminalId());
                 if (found.isEmpty()) {
-                    Lc2Native.sendActionBar(player, Component.translatable("status.lc2.terminal.no_terminal_found"));
+                    Lc2Native.sendActionBar(player, Component.translatable("status.trera.terminal.no_terminal_found"));
                     return;
                 }
                 openTerminalSelection(player, found.get().stack(), false);
@@ -147,7 +147,7 @@ public final class Lc2Network {
                 Optional<TerminalLocator.LocatedTerminal> found =
                         TerminalLocator.findTerminalById(player, payload.terminalId());
                 if (found.isEmpty()) {
-                    Lc2Native.sendActionBar(player, Component.translatable("status.lc2.terminal.no_terminal_found"));
+                    Lc2Native.sendActionBar(player, Component.translatable("status.trera.terminal.no_terminal_found"));
                     return;
                 }
                 BlockPos commPos = payload.commPos();
@@ -180,7 +180,7 @@ public final class Lc2Network {
                     Lc2Native.sendActionBar(
                             player,
                             Component.translatable(
-                                    "status.lc2.terminal.unbound",
+                                    "status.trera.terminal.unbound",
                                     commPos.getX(),
                                     commPos.getY(),
                                     commPos.getZ()
@@ -200,7 +200,7 @@ public final class Lc2Network {
                     found = TerminalLocator.findFirstTerminal(player);
                 }
                 if (found.isEmpty()) {
-                    Lc2Native.sendActionBar(player, Component.translatable("status.lc2.terminal.no_terminal_found"));
+                    Lc2Native.sendActionBar(player, Component.translatable("status.trera.terminal.no_terminal_found"));
                     return;
                 }
                 openTerminalSelection(player, found.get().stack(), true);

@@ -95,7 +95,7 @@ public record C2STerminalActionPacket(
     private static void handleOpenFromKeybind(ServerPlayer player) {
         TerminalSessionService.FoundTerminal found = TerminalSessionService.findTerminal(player, null);
         if (found == null) {
-            player.displayClientMessage(Component.translatable("status.lc2.terminal.no_terminal_found"), true);
+            player.displayClientMessage(Component.translatable("status.trera.terminal.no_terminal_found"), true);
             return;
         }
         TerminalSessionService.sendTerminalSync(player, found.stack(), true);
@@ -104,7 +104,7 @@ public record C2STerminalActionPacket(
     private static void handleRefresh(ServerPlayer player, String terminalId) {
         TerminalSessionService.FoundTerminal found = TerminalSessionService.findTerminal(player, terminalId);
         if (found == null) {
-            player.displayClientMessage(Component.translatable("status.lc2.terminal.no_terminal_found"), true);
+            player.displayClientMessage(Component.translatable("status.trera.terminal.no_terminal_found"), true);
             return;
         }
         TerminalSessionService.sendTerminalSync(player, found.stack(), false);
@@ -150,7 +150,7 @@ public record C2STerminalActionPacket(
     ) {
         TerminalSessionService.FoundTerminal found = TerminalSessionService.findTerminal(player, terminalId);
         if (found == null) {
-            player.displayClientMessage(Component.translatable("status.lc2.terminal.no_terminal_found"), true);
+            player.displayClientMessage(Component.translatable("status.trera.terminal.no_terminal_found"), true);
             return;
         }
         String targetDim = dimensionId.isBlank()
@@ -160,7 +160,7 @@ public record C2STerminalActionPacket(
             found.markDirty();
             player.displayClientMessage(
                     Component.translatable(
-                            "status.lc2.terminal.unbound",
+                            "status.trera.terminal.unbound",
                             commPos.getX(),
                             commPos.getY(),
                             commPos.getZ()
@@ -178,7 +178,7 @@ public record C2STerminalActionPacket(
             found = TerminalSessionService.findTerminal(player, null);
         }
         if (found == null) {
-            player.displayClientMessage(Component.translatable("status.lc2.terminal.no_terminal_found"), true);
+            player.displayClientMessage(Component.translatable("status.trera.terminal.no_terminal_found"), true);
             return;
         }
         TerminalSessionService.sendTerminalSync(player, found.stack(), true);

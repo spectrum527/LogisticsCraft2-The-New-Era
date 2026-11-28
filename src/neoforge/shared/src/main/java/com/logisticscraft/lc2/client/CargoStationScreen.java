@@ -24,7 +24,7 @@ public final class CargoStationScreen extends AbstractLogisticsScreen<CargoStati
     @Override
     protected String formatTargetReadout(StationSyncPayload state) {
         if (!state.hasTarget()) {
-            return Component.translatable("gui.lc2.no_target").getString();
+            return Component.translatable("gui.trera.no_target").getString();
         }
         StationSyncPayload.TargetInfo info = state.selectedTargetInfo();
         if (info == null) {
@@ -40,15 +40,15 @@ public final class CargoStationScreen extends AbstractLogisticsScreen<CargoStati
         // 1. RF Range Mini-LCD at (26, 56, 42, 18) -> centered inside inner (27..66) at y = 61
         int range = state.rfRange();
         String rfText = range > 0
-                ? Component.translatable("gui.lc2.rf_range", range).getString()
-                : Component.translatable("gui.lc2.rf_none").getString();
+                ? Component.translatable("gui.trera.rf_range", range).getString()
+                : Component.translatable("gui.trera.rf_none").getString();
         int rfColor = range > 0 ? COLOR_LCD_CYAN : COLOR_LCD_AMBER;
         int rfWidth = Math.min(38, font.width(rfText));
         int rfX = 27 + Math.max(0, (40 - rfWidth) / 2);
         canvas.drawClippedString(rfText, rfX, 61, 38, rfColor);
 
         // 2. Flight Deck Status LCD at (186, 56, 161, 18) -> render at (189, 61), maxWidth = 156
-        String baysText = Component.translatable("gui.lc2.flight_deck_ready", state.readyVehicleCount()).getString();
+        String baysText = Component.translatable("gui.trera.flight_deck_ready", state.readyVehicleCount()).getString();
         int baysColor = state.readyVehicleCount() > 0 ? COLOR_LCD_CYAN : COLOR_LCD_AMBER;
 
         StationSyncPayload.TargetInfo info = state.selectedTargetInfo();
@@ -58,7 +58,7 @@ public final class CargoStationScreen extends AbstractLogisticsScreen<CargoStati
         }
 
         String rangeText = Component.translatable(
-                info.reachableFlag() ? "gui.lc2.in_range" : "gui.lc2.out_of_range"
+                info.reachableFlag() ? "gui.trera.in_range" : "gui.trera.out_of_range"
         ).getString();
         int baysW = font.width(baysText);
         int rangeW = font.width(rangeText);
@@ -83,14 +83,14 @@ public final class CargoStationScreen extends AbstractLogisticsScreen<CargoStati
         return List.of(
                 Component.literal(info.displayName()
                         + " (" + info.pos().getX() + ", " + info.pos().getY() + ", " + info.pos().getZ() + ")"),
-                Component.translatable("gui.lc2.distance", info.distance()),
-                Component.translatable("gui.lc2.bays", info.freeBays(), LogisticsConstants.CARGO_STATION_DRONE_BAYS),
-                Component.translatable(info.reachableFlag() ? "gui.lc2.in_range" : "gui.lc2.out_of_range")
+                Component.translatable("gui.trera.distance", info.distance()),
+                Component.translatable("gui.trera.bays", info.freeBays(), LogisticsConstants.CARGO_STATION_DRONE_BAYS),
+                Component.translatable(info.reachableFlag() ? "gui.trera.in_range" : "gui.trera.out_of_range")
         );
     }
 
     @Override
     protected List<Component> buildVehicleBadgeTooltip(StationSyncPayload state) {
-        return List.of(Component.translatable("gui.lc2.flight_deck_ready", state.readyVehicleCount()));
+        return List.of(Component.translatable("gui.trera.flight_deck_ready", state.readyVehicleCount()));
     }
 }

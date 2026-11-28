@@ -219,7 +219,7 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
             return false;
         }
         if (findDockedBoat(level) != null) {
-            player.displayClientMessage(Component.translatable("status.lc2.boat_docked"), true);
+            player.displayClientMessage(Component.translatable("status.trera.boat_docked"), true);
             return false;
         }
 
@@ -243,8 +243,8 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
         if (!player.getAbilities().instabuild) {
             boatStack.shrink(1);
         }
-        player.displayClientMessage(Component.translatable("status.lc2.boat_docked"), true);
-        setStatusKey("status.lc2.boat_docked");
+        player.displayClientMessage(Component.translatable("status.trera.boat_docked"), true);
+        setStatusKey("status.trera.boat_docked");
         this.dispatchCooldown = 0;
         return true;
     }
@@ -282,7 +282,7 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
     public void onBoatDocked() {
         this.hadDockedBoat = true;
         this.dispatchCooldown = 25;
-        setStatusKey("status.lc2.docked");
+        setStatusKey("status.trera.docked");
     }
 
     @Override
@@ -410,7 +410,7 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
         LogisticsLevelManager.bindDispatchedBoat(level, result.transit(), boat, loadedCargo);
 
         this.dispatchCooldown = 20;
-        setStatusKey("status.lc2.dispatched");
+        setStatusKey("status.trera.dispatched");
         setActiveBlockState(level, true);
         setChanged();
         return true;
@@ -509,7 +509,7 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
     private void clearStaleWaterFailureStatus() {
         if (DispatchFailure.WATER_DISCONNECTED.translationKey().equals(this.statusKey)
                 || DispatchFailure.NO_WATER_BERTH.translationKey().equals(this.statusKey)) {
-            setStatusKey("status.lc2.ready");
+            setStatusKey("status.trera.ready");
         }
     }
 
@@ -581,7 +581,7 @@ public class SmartPortBlockEntity extends AbstractLogisticsStationBlockEntity {
     @Override
     public Component getDisplayName() {
         return this.stationName.isBlank()
-                ? Component.translatable("container.lc2.smart_port")
+                ? Component.translatable("container.trera.smart_port")
                 : Component.literal(this.stationName);
     }
 

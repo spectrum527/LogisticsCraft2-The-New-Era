@@ -3,29 +3,29 @@ loaderVersion="[43,44)"
 license="GPL-3.0-only"
 
 [[mods]]
-modId="lc2"
+modId="trera"
 version="${version}"
-displayName="LogisticsCraft²: The New Era"
-displayURL="https://github.com/spectrum527/LogisticsCraft2-The-New-Era"
-description="Autonomous maritime and aerial industrial logistics addon for IndustrialCraft²: The New Era."
+displayName="Transitera"
+displayURL="https://github.com/spectrum527/Transitera"
+description="Autonomous maritime and aerial industrial logistics addon for Machinera."
 
-[[dependencies.lc2]]
+[[dependencies.trera]]
 modId="forge"
 mandatory=true
 versionRange="[${forgeVersion},44)"
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.lc2]]
+[[dependencies.trera]]
 modId="minecraft"
 mandatory=true
 versionRange="[${minecraftVersion}]"
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.lc2]]
-modId="ic2"
+[[dependencies.trera]]
+modId="mhera"
 mandatory=true
-versionRange="[1.0.11,)"
+versionRange="[${mheraVersion},)"
 ordering="AFTER"
 side="BOTH"

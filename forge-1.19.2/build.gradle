@@ -5,7 +5,7 @@ plugins {
 
 group = 'com.logisticscraft.lc2'
 version = project.property('mod_version')
-base.archivesName = "lc2-forge-${minecraft_version}"
+base.archivesName = "trera-forge-${minecraft_version}"
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
@@ -19,7 +19,7 @@ repositories {
         }
     }
     flatDir {
-        dirs '../.ic2-deps'
+        dirs '../.mhera-deps'
     }
 }
 
@@ -36,7 +36,7 @@ minecraft {
             workingDirectory layout.buildDirectory.dir("run/$name").get().asFile
             property 'forge.logging.console.level', 'info'
             mods {
-                lc2 {
+                trera {
                     source sourceSets.main
                 }
             }
@@ -48,7 +48,7 @@ minecraft {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    compileOnly fg.deobf("com.industrialage.ia2:ic2-forge-1.19.2:${ic2_version}")
+    compileOnly fg.deobf("com.industrialage.ia2:mhera-forge-1.19.2:${mhera_version}")
     compileOnly(fg.deobf("maven.modrinth:the-one-probe:KCnKC3d7")) { transitive = false }
     compileOnly(fg.deobf("maven.modrinth:curios:uUAY30IE")) { transitive = false }
     compileOnly(fg.deobf("maven.modrinth:jade:kp0HjPre")) { transitive = false }
@@ -66,19 +66,19 @@ tasks.withType(AbstractArchiveTask).configureEach {
     reproducibleFileOrder = true
 }
 
-def generatedLc2Resources = layout.buildDirectory.dir('generated/lc2-resources')
-def generateLc2Resources = tasks.register('generateLc2Resources', Exec) {
+def generatedTreraResources = layout.buildDirectory.dir('generated/trera-resources')
+def generateTreraResources = tasks.register('generateTreraResources', Exec) {
     def generator = file('../src/datagen/generate_resources.py')
     onlyIf { generator.isFile() }
     inputs.files(fileTree('../src/datagen') { include '*.py', '*.json', '*.tsv' })
-    inputs.files(fileTree('../assets/lc2/lang') { include '*.json' })
-    outputs.dir(generatedLc2Resources)
+    inputs.files(fileTree('../assets/trera/lang') { include '*.json' })
+    outputs.dir(generatedTreraResources)
     commandLine 'python3', generator, '--target', 'forge-1.19.2',
-            '--output', generatedLc2Resources.get().asFile
+            '--output', generatedTreraResources.get().asFile
 }
 
 tasks.named('processResources') {
-    dependsOn generateLc2Resources
+    dependsOn generateTreraResources
     filteringCharset = 'UTF-8'
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     includeEmptyDirs = false
@@ -87,24 +87,24 @@ tasks.named('processResources') {
             version: project.version,
             minecraftVersion: minecraft_version,
             forgeVersion: forge_version,
-            ic2Version: ic2_version
+            mheraVersion: mhera_version
     )
     filesMatching('META-INF/mods.toml') {
         expand version: project.version,
                 minecraftVersion: minecraft_version,
                 forgeVersion: forge_version,
-                ic2Version: ic2_version
+                mheraVersion: mhera_version
     }
     from(file('../assets')) {
         into 'assets'
         exclude '**/*.md', '**/*.csv', '**/.git*', '**/.DS_Store', 'preview/**', 'brand/**'
     }
-    from(generatedLc2Resources) { exclude '.lc2-generated-output' }
+    from(generatedTreraResources) { exclude '.trera-generated-output' }
 }
 
 tasks.named('jar') {
     manifest {
-        attributes 'MixinConfigs': 'lc2.mixins.json'
+        attributes 'MixinConfigs': 'trera.mixins.json'
     }
     from file('../LICENSE')
     finalizedBy 'reobfJar'

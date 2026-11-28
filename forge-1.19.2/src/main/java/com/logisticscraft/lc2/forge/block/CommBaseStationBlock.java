@@ -99,8 +99,8 @@ public class CommBaseStationBlock extends Block implements EntityBlock, WrenchTa
 
             Component statusPart = Component.translatable(
                     comm.isOnline()
-                            ? "status.lc2.terminal.comm_status_online"
-                            : "status.lc2.terminal.comm_status_offline",
+                            ? "status.trera.terminal.comm_status_online"
+                            : "status.trera.terminal.comm_status_offline",
                     euDisplay,
                     maxEuDisplay,
                     feDisplay,
@@ -109,9 +109,9 @@ public class CommBaseStationBlock extends Block implements EntityBlock, WrenchTa
 
             List<TerminalTargetResolver.AdjacentStationInfo> adjacent = comm.findAdjacentStations(serverLevel);
             Component adjPart = adjacent.isEmpty()
-                    ? Component.translatable("status.lc2.terminal.comm_adjacent_none")
+                    ? Component.translatable("status.trera.terminal.comm_adjacent_none")
                     : Component.translatable(
-                            "status.lc2.terminal.comm_adjacent_list",
+                            "status.trera.terminal.comm_adjacent_list",
                             formatAdjacentList(adjacent)
                     );
 
@@ -135,8 +135,8 @@ public class CommBaseStationBlock extends Block implements EntityBlock, WrenchTa
                 joined.append(Component.literal(info.customName()));
             } else {
                 String unnamedKey = info.type() == StationType.SMART_PORT
-                        ? "gui.lc2.terminal.unnamed_port"
-                        : "gui.lc2.terminal.unnamed_cargo";
+                        ? "gui.trera.terminal.unnamed_port"
+                        : "gui.trera.terminal.unnamed_cargo";
                 joined.append(Component.translatable(
                         unnamedKey,
                         info.pos().x(),

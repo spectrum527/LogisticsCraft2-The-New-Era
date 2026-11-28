@@ -31,14 +31,14 @@ public final class Lc2ClientSetup {
     );
 
     public static final KeyMapping OPEN_TERMINAL_KEY = new KeyMapping(
-            "key.lc2.open_terminal",
+            "key.trera.open_terminal",
             KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_G,
             LC2_KEY_CATEGORY
     );
 
-    // BoatRenderer maps layer "lc2:boat/electric_cargo_boat" -> "lc2:textures/entity/boat/electric_cargo_boat.png"
+    // BoatRenderer maps layer "trera:boat/electric_cargo_boat" -> "trera:textures/entity/boat/electric_cargo_boat.png"
     private static final ModelLayerLocation ELECTRIC_CARGO_BOAT_LAYER = new ModelLayerLocation(
             Identifier.fromNamespaceAndPath(LogisticsConstants.MOD_ID, "boat/electric_cargo_boat"),
             "main"

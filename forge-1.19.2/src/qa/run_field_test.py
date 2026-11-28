@@ -17,20 +17,20 @@ import time
 
 ERROR_PATTERNS = [
     re.compile(r"MixinApplyError|InvalidMixinException|MixinTransformerError|MixinPrepareError", re.IGNORECASE),
-    re.compile(r"Critical injection failure.*lc2", re.IGNORECASE),
-    re.compile(r"Failed to load mod.*lc2", re.IGNORECASE),
-    re.compile(r"\[lc2[^\]]*\]/\w*ERROR", re.IGNORECASE),
+    re.compile(r"Critical injection failure.*(trera|lc2)", re.IGNORECASE),
+    re.compile(r"Failed to load mod.*(trera|lc2)", re.IGNORECASE),
+    re.compile(r"\[(trera|lc2)[^\]]*\]/\w*ERROR", re.IGNORECASE),
     re.compile(r"ERROR.*com\.logisticscraft\.lc2", re.IGNORECASE),
     re.compile(r"ERROR.*CableBlockMixin", re.IGNORECASE),
-    re.compile(r"ERROR.*lc2\.mixins\.json", re.IGNORECASE),
+    re.compile(r"ERROR.*trera\.mixins\.json", re.IGNORECASE),
     re.compile(r"\[LC2-QA\] FAIL", re.IGNORECASE),
     re.compile(r"Encountered an unexpected exception", re.IGNORECASE),
     re.compile(r"Crash report saved to", re.IGNORECASE),
-    re.compile(r"Missing texture.*lc2", re.IGNORECASE),
-    re.compile(r"Unable to load model.*lc2", re.IGNORECASE),
-    re.compile(r"Missing model.*lc2", re.IGNORECASE),
-    re.compile(r"FileNotFoundException.*lc2", re.IGNORECASE),
-    re.compile(r"Using missing texture, unable to load lc2:", re.IGNORECASE),
+    re.compile(r"Missing texture.*trera", re.IGNORECASE),
+    re.compile(r"Unable to load model.*trera", re.IGNORECASE),
+    re.compile(r"Missing model.*trera", re.IGNORECASE),
+    re.compile(r"FileNotFoundException.*trera", re.IGNORECASE),
+    re.compile(r"Using missing texture, unable to load trera:", re.IGNORECASE),
     re.compile(r"java\.lang\.(NoSuchMethodError|NoSuchFieldError|NoClassDefFoundError|ClassNotFoundException|VerifyError|IncompatibleClassChangeError|AbstractMethodError)", re.IGNORECASE),
 ]
 
@@ -122,7 +122,7 @@ def prepare_server_dir(manifest: dict, run_dir: Path, port: int, seed: str) -> N
     mods_dir = run_dir / "mods"
     mods_dir.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(manifest["ic2ModJar"], mods_dir / Path(manifest["ic2ModJar"]).name)
-    shutil.copyfile(manifest["lc2ModJar"], mods_dir / "lc2-forge-1.19.2-1.0.0.jar")
+    shutil.copyfile(manifest["lc2ModJar"], mods_dir / Path(manifest["packagedLc2Jar"]).name)
     (run_dir / "eula.txt").write_text("eula=true\n", encoding="utf-8")
     (run_dir / "server.properties").write_text(
         "\n".join(
@@ -159,7 +159,7 @@ def prepare_client_dir(manifest: dict, run_dir: Path) -> None:
     mods_dir = run_dir / "mods"
     mods_dir.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(manifest["ic2ModJar"], mods_dir / Path(manifest["ic2ModJar"]).name)
-    shutil.copyfile(manifest["lc2ModJar"], mods_dir / "lc2-forge-1.19.2-1.0.0.jar")
+    shutil.copyfile(manifest["lc2ModJar"], mods_dir / Path(manifest["packagedLc2Jar"]).name)
     (run_dir / "options.txt").write_text(
         "\n".join(
             [

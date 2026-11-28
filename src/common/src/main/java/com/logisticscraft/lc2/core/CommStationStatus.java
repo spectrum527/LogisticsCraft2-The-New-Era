@@ -7,22 +7,22 @@ package com.logisticscraft.lc2.core;
 public enum CommStationStatus {
 
     /** Communication Base Station is powered and linked to an adjacent logistics station. */
-    ONLINE("status.lc2.comm.online", 0, true),
+    ONLINE("status.trera.comm.online", 0, true),
 
     /** Communication Base Station lacks sufficient standby power to maintain a remote link. */
-    UNPOWERED("status.lc2.comm.unpowered", 1, false),
+    UNPOWERED("status.trera.comm.unpowered", 1, false),
 
     /** Communication Base Station is powered but has no face-adjacent Smart Port or Cargo Station. */
-    NO_ADJACENT_STATION("status.lc2.comm.no_station", 2, false),
+    NO_ADJACENT_STATION("status.trera.comm.no_station", 2, false),
 
     /** Chunk containing the bound Communication Base Station is currently unloaded. */
-    CHUNK_UNLOADED("status.lc2.comm.chunk_unloaded", 3, false),
+    CHUNK_UNLOADED("status.trera.comm.chunk_unloaded", 3, false),
 
     /** Bound Communication Base Station resides in a different dimension than the player. */
-    WRONG_DIMENSION("status.lc2.comm.wrong_dimension", 4, false),
+    WRONG_DIMENSION("status.trera.comm.wrong_dimension", 4, false),
 
     /** Bound block coordinate no longer contains a Communication Base Station. */
-    COMM_MISSING("status.lc2.comm.missing", 5, false);
+    COMM_MISSING("status.trera.comm.missing", 5, false);
 
     private final String translationKey;
     private final int sortOrder;

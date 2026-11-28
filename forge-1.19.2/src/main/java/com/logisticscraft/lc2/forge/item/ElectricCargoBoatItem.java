@@ -24,9 +24,9 @@ public class ElectricCargoBoatItem extends Lc2TooltipItem {
     public ElectricCargoBoatItem(Properties properties) {
         super(
                 properties,
-                "tooltip.lc2.electric_cargo_boat.line1",
-                "tooltip.lc2.electric_cargo_boat.line2",
-                "tooltip.lc2.electric_cargo_boat.line3"
+                "tooltip.trera.electric_cargo_boat.line1",
+                "tooltip.trera.electric_cargo_boat.line2",
+                "tooltip.trera.electric_cargo_boat.line3"
         );
     }
 

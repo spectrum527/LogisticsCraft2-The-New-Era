@@ -45,10 +45,10 @@ final class Lc2FieldHelpers {
             "minecraft:deepslate_copper_ore",
             "minecraft:gold_ore",
             "minecraft:deepslate_gold_ore",
-            "ic2:tin_ore",
-            "ic2:deepslate_tin_ore",
-            "ic2:lead_ore",
-            "ic2:deepslate_lead_ore"
+            "mhera:tin_ore",
+            "mhera:deepslate_tin_ore",
+            "mhera:lead_ore",
+            "mhera:deepslate_lead_ore"
     );
 
     static final Set<String> NATURAL_ANY_ORE_BLOCKS = Set.of(
@@ -68,51 +68,51 @@ final class Lc2FieldHelpers {
             "minecraft:deepslate_diamond_ore",
             "minecraft:emerald_ore",
             "minecraft:deepslate_emerald_ore",
-            "ic2:tin_ore",
-            "ic2:deepslate_tin_ore",
-            "ic2:lead_ore",
-            "ic2:deepslate_lead_ore",
-            "ic2:uranium_ore",
-            "ic2:deepslate_uranium_ore"
+            "mhera:tin_ore",
+            "mhera:deepslate_tin_ore",
+            "mhera:lead_ore",
+            "mhera:deepslate_lead_ore",
+            "mhera:uranium_ore",
+            "mhera:deepslate_uranium_ore"
     );
 
     static final Set<String> RAW_METAL_ORE_ITEMS = Set.of(
             "minecraft:raw_iron",
             "minecraft:raw_copper",
             "minecraft:raw_gold",
-            "ic2:raw_tin",
-            "ic2:raw_lead",
-            "ic2:raw_uranium",
+            "mhera:raw_tin",
+            "mhera:raw_lead",
+            "mhera:raw_uranium",
             "minecraft:iron_ore",
             "minecraft:deepslate_iron_ore",
             "minecraft:copper_ore",
             "minecraft:deepslate_copper_ore",
             "minecraft:gold_ore",
             "minecraft:deepslate_gold_ore",
-            "ic2:tin_ore",
-            "ic2:deepslate_tin_ore",
-            "ic2:lead_ore",
-            "ic2:deepslate_lead_ore"
+            "mhera:tin_ore",
+            "mhera:deepslate_tin_ore",
+            "mhera:lead_ore",
+            "mhera:deepslate_lead_ore"
     );
 
     static final Set<String> CRUSHED_ORE_ITEMS = Set.of(
-            "ic2:crushed_iron",
-            "ic2:crushed_copper",
-            "ic2:crushed_gold",
-            "ic2:crushed_tin",
-            "ic2:crushed_lead",
-            "ic2:crushed_silver",
-            "ic2:crushed_uranium"
+            "mhera:crushed_iron",
+            "mhera:crushed_copper",
+            "mhera:crushed_gold",
+            "mhera:crushed_tin",
+            "mhera:crushed_lead",
+            "mhera:crushed_silver",
+            "mhera:crushed_uranium"
     );
 
     static final Set<String> FINISHED_INGOT_ITEMS = Set.of(
             "minecraft:iron_ingot",
             "minecraft:copper_ingot",
             "minecraft:gold_ingot",
-            "ic2:tin_ingot",
-            "ic2:lead_ingot",
-            "ic2:silver_ingot",
-            "ic2:uranium_ingot"
+            "mhera:tin_ingot",
+            "mhera:lead_ingot",
+            "mhera:silver_ingot",
+            "mhera:uranium_ingot"
     );
 
     private Lc2FieldHelpers() {

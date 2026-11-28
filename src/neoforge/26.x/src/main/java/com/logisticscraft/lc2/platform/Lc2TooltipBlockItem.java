@@ -11,7 +11,7 @@ import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.block.Block;
 
 /**
- * NeoForge 26.x BlockItem with localized {@code tooltip.lc2.*} hover text lines.
+ * NeoForge 26.x BlockItem with localized {@code tooltip.trera.*} hover text lines.
  */
 public class Lc2TooltipBlockItem extends BlockItem {
 

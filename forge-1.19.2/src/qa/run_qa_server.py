@@ -15,13 +15,13 @@ import time
 
 MIXIN_OR_LC2_ERROR_PATTERNS = [
     re.compile(r"MixinApplyError|InvalidMixinException|MixinTransformerError|MixinPrepareError", re.IGNORECASE),
-    re.compile(r"Critical injection failure.*lc2", re.IGNORECASE),
-    re.compile(r"Failed to load mod.*lc2", re.IGNORECASE),
-    re.compile(r"\[lc2[^\]]*\]/\w*ERROR", re.IGNORECASE),
+    re.compile(r"Critical injection failure.*(trera|lc2)", re.IGNORECASE),
+    re.compile(r"Failed to load mod.*(trera|lc2)", re.IGNORECASE),
+    re.compile(r"\[(trera|lc2)[^\]]*\]/\w*ERROR", re.IGNORECASE),
     re.compile(r"ERROR.*com\.logisticscraft\.lc2", re.IGNORECASE),
     re.compile(r"ERROR.*CableBlockMixin", re.IGNORECASE),
     re.compile(r"ERROR.*ForgeGearMixin", re.IGNORECASE),
-    re.compile(r"ERROR.*lc2\.mixins\.json", re.IGNORECASE),
+    re.compile(r"ERROR.*trera\.mixins\.json", re.IGNORECASE),
     re.compile(r"\[LC2-QA\] FAIL", re.IGNORECASE),
     re.compile(r"Encountered an unexpected exception", re.IGNORECASE),
     re.compile(r"Crash report saved to", re.IGNORECASE),

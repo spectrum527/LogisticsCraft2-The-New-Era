@@ -2,20 +2,20 @@ ${loaderMetadata}
 license="LGPL-3.0-only"
 
 [[mods]]
-modId="lc2_qa"
-version="1.0.0"
-displayName="LogisticsCraft 2 Live Server QA Harness"
+modId="trera_qa"
+version="2.0.0"
+displayName="Transitera Live Server QA Harness"
 
-[[dependencies.lc2_qa]]
-modId="ic2"
+[[dependencies.trera_qa]]
+modId="mhera"
 type="required"
-versionRange="[1.0.0,)"
+versionRange="[2.0.0,)"
 ordering="AFTER"
 side="BOTH"
 
-[[dependencies.lc2_qa]]
-modId="lc2"
+[[dependencies.trera_qa]]
+modId="trera"
 type="required"
-versionRange="[1.0.0,)"
+versionRange="[2.0.0,)"
 ordering="AFTER"
 side="BOTH"

@@ -1,6 +1,6 @@
-# LogisticsCraft² (`lc2` v1.2.0) — 2-Zone & Operation Terminal GUI Pixel Layout Specification
+# Transitera (`trera` v1.2.0) — 2-Zone & Operation Terminal GUI Pixel Layout Specification
 
-Both machine screens (`lc2:smart_port` and `lc2:cargo_station`) use an identical **`512 × 256`** RGBA PNG atlas with the main beveled IC2-style panel occupying `(0, 0)` to `(391, 233)` (**`imageWidth = 392`**, **`imageHeight = 234`** — fits cleanly inside `1280 × 720` at GUI Scale 3: `1176 × 702`). Dynamic overlay sprites live in the right margin (`u = 396..444`). The **Operation Terminal Selection Screen** (`assets/lc2/textures/gui/operation_terminal.png`, Section 6) also uses a **`512 × 256`** RGBA PNG atlas with a **`320 × 224`** main panel and right-margin sprites (`u = 328..452`).
+Both machine screens (`trera:smart_port` and `trera:cargo_station`) use an identical **`512 × 256`** RGBA PNG atlas with the main beveled MHERA-style panel occupying `(0, 0)` to `(391, 233)` (**`imageWidth = 392`**, **`imageHeight = 234`** — fits cleanly inside `1280 × 720` at GUI Scale 3: `1176 × 702`). Dynamic overlay sprites live in the right margin (`u = 396..444`). The **Operation Terminal Selection Screen** (`assets/trera/textures/gui/operation_terminal.png`, Section 6) also uses a **`512 × 256`** RGBA PNG atlas with a **`320 × 224`** main panel and right-margin sprites (`u = 328..452`).
 
 > **IMPORTANT (Atlas Dimensions):** Because all custom GUI texture atlases are **`512 × 256`** (not `256 × 256`), every `GuiGraphics.blit(...)` / `GuiComponent.blit(...)` call MUST explicitly pass **`textureWidth = 512, textureHeight = 256`** across all four targets (NeoForge 1.21.1, 26.1.2, 26.2, and Forge 1.19.2).
 
@@ -14,15 +14,15 @@ Both stations provide **54 internal cargo slots** (`LogisticsConstants.STATION_T
 
 1. **Outbound Area / 待发货区 (`0..26`, `STATION_OUTBOUND_SLOTS = 27`, left side, warm amber accent)**
    - External pipes, hoppers, and adjacent automation (`IItemHandler` / `WorldlyContainer`) **insert ONLY** into `0..26`.
-   - IC2 `pulling_upgrade` / `advanced_pulling_upgrade` **pulls ONLY** into `0..26`.
+   - MHERA `pulling_upgrade` / `advanced_pulling_upgrade` **pulls ONLY** into `0..26`.
    - Outgoing Electric Smart Cargo Boats and Transport / Heavy Drones **load ONLY** from `0..26`.
 2. **Storage Area / 存储区 (`27..53`, `STATION_STORAGE_SLOTS = 27`, right side, cool cyan accent)**
    - Incoming cargo unloaded from arriving boats and drones goes into `27..53` (and adjacent receiving containers).
    - External pipes, hoppers, and adjacent automation (`IItemHandler` / `WorldlyContainer`) **extract ONLY** from `27..53`.
-   - IC2 `ejector_upgrade` / `advanced_ejector_upgrade` **ejects ONLY** from `27..53`.
+   - MHERA `ejector_upgrade` / `advanced_ejector_upgrade` **ejects ONLY** from `27..53`.
 3. **Center Swap Button (`⇄`) at `(172, 104, 16, 20)`**
-   - Atomically swaps every slot pair `i <-> 27 + i` for `i ∈ 0..26` server-side, marks the station dirty, and reports `status.lc2.swapped`.
-   - Renders the crisp baked 12×10 dual-color swap arrows sprite from UV `(414, 64, 12, 10)` centered on the button at `(leftPos + 174, topPos + 109)` (zero Unicode glyph box issues across 1.19.2..26.2). Uses `gui.lc2.swap` (`"<->"`) as ASCII fallback, `gui.lc2.swap.title` as narration title, and `tooltip.lc2.swap` on hover.
+   - Atomically swaps every slot pair `i <-> 27 + i` for `i ∈ 0..26` server-side, marks the station dirty, and reports `status.trera.swapped`.
+   - Renders the crisp baked 12×10 dual-color swap arrows sprite from UV `(414, 64, 12, 10)` centered on the button at `(leftPos + 174, topPos + 109)` (zero Unicode glyph box issues across 1.19.2..26.2). Uses `gui.trera.swap` (`"<->"`) as ASCII fallback, `gui.trera.swap.title` as narration title, and `tooltip.trera.swap` on hover.
 
 ---
 
@@ -34,18 +34,18 @@ Both stations provide **54 internal cargo slots** (`LogisticsConstants.STATION_T
 |---|---|---|
 | Main Panel | `(0, 0, 392, 234)` | `imageWidth = 392`, `imageHeight = 234` |
 | Title Label | `titleLabelX = 8`, `titleLabelY = 4` | Rendered in dark charcoal `#2C3440` (or `#404040`); updates live on rename |
-| Row 1: Station Name `EditBox` | `(8, 13, 150, 12)` | Custom station name text input (`gui.lc2.station_name`) |
-| Row 1: Save `Button` | `(162, 13, 44, 12)` | `gui.lc2.save` |
-| Row 1: Auto-Return `Button` | `(210, 13, 66, 12)` | `gui.lc2.auto_return.on` / `gui.lc2.auto_return.off` |
-| Row 1: Energy Priority `Button` | `(279, 13, 68, 12)` | `gui.lc2.priority.eu_first` / `gui.lc2.priority.battery_first` |
+| Row 1: Station Name `EditBox` | `(8, 13, 150, 12)` | Custom station name text input (`gui.trera.station_name`) |
+| Row 1: Save `Button` | `(162, 13, 44, 12)` | `gui.trera.save` |
+| Row 1: Auto-Return `Button` | `(210, 13, 66, 12)` | `gui.trera.auto_return.on` / `gui.trera.auto_return.off` |
+| Row 1: Energy Priority `Button` | `(279, 13, 68, 12)` | `gui.trera.priority.eu_first` / `gui.trera.priority.battery_first` |
 | Row 2: Prev Target `Button` (`<`) | `(8, 27, 14, 12)` | Cycles same-dimension target stations backwards |
 | Row 2: Target Readout LCD | `(23, 27, 256, 12)` | Baked dark LCD; draw target name + distance/status text at `(26, 29)`, `maxWidth = 250` |
 | Row 2: Next Target `Button` (`>`) | `(280, 27, 14, 12)` | Cycles same-dimension target stations forwards |
-| Row 2: Launch `Button` | `(297, 27, 50, 12)` | `gui.lc2.dispatch` |
+| Row 2: Launch `Button` | `(297, 27, 50, 12)` | `gui.trera.dispatch` |
 | Row 3: Manual `X` `EditBox` | `(8, 41, 44, 12)` | Target X coordinate |
 | Row 3: Manual `Y` `EditBox` | `(54, 41, 36, 12)` | Target Y coordinate |
 | Row 3: Manual `Z` `EditBox` | `(92, 41, 44, 12)` | Target Z coordinate |
-| Row 3: Set Coords `Button` | `(138, 41, 36, 12)` | `gui.lc2.set_target` |
+| Row 3: Set Coords `Button` | `(138, 41, 36, 12)` | `gui.trera.set_target` |
 | Row 3: Status Readout LCD | `(176, 41, 171, 12)` | Baked dark LCD; draw live status / `DispatchFailure` text at `(179, 43)`, `maxWidth = 165` |
 
 ### Remote Mode Header Additions (only when opened via Operation Terminal)
@@ -54,18 +54,18 @@ When a Smart Port or Cargo Station is opened remotely (`menu.isRemoteMode() == t
 
 | Element | Coordinates `(x, y, w, h)` | Notes |
 |---|---|---|
-| Remote Read-Only Indicator Pill | Dynamic right of title, strictly `x + w <= 275`, `y = 1, h = 11` (NeoForge) / `y = 2, h = 10` (Forge 1.19.2) | Displays `gui.lc2.remote_readonly` in cyan on a dark pill (`0xFF142D3E` fill / `0xFF38A8CC` outline + `10×10` eye icon from `operation_terminal.png` UV `(370, 44, 10, 10)` on NeoForge; `0xFF1A2D40` fill / `0xFF38D9FF` outline on Forge 1.19.2). Hover displays `gui.lc2.remote_readonly.tooltip`. |
-| `"Back"` / `"返回列表"` `Button` | `(279, 1, 68, 11)` | `gui.lc2.back_to_terminal`; aligned directly above Energy Priority `(279, 13, 68, 12)` and added as Button 8 (preserving local button indices `0..7`). Clicking sends `RETURN_TO_LIST` to reopen the Operation Terminal Selection Screen. |
+| Remote Read-Only Indicator Pill | Dynamic right of title, strictly `x + w <= 275`, `y = 1, h = 11` (NeoForge) / `y = 2, h = 10` (Forge 1.19.2) | Displays `gui.trera.remote_readonly` in cyan on a dark pill (`0xFF142D3E` fill / `0xFF38A8CC` outline + `10×10` eye icon from `operation_terminal.png` UV `(370, 44, 10, 10)` on NeoForge; `0xFF1A2D40` fill / `0xFF38D9FF` outline on Forge 1.19.2). Hover displays `gui.trera.remote_readonly.tooltip`. |
+| `"Back"` / `"返回列表"` `Button` | `(279, 1, 68, 11)` | `gui.trera.back_to_terminal`; aligned directly above Energy Priority `(279, 13, 68, 12)` and added as Button 8 (preserving local button indices `0..7`). Clicking sends `RETURN_TO_LIST` to reopen the Operation Terminal Selection Screen. |
 
 ### 2-Zone Cargo Section (`y = 77..141`, IDENTICAL on both machines)
 
 | Element | Coordinates `(x, y, w, h)` | Notes |
 |---|---|---|
-| Outbound Header Label | `(8, 77)` | Draw `gui.lc2.zone.outbound` in warm dark-amber `#7A4200` (or `#404040`) |
+| Outbound Header Label | `(8, 77)` | Draw `gui.trera.zone.outbound` in warm dark-amber `#7A4200` (or `#404040`) |
 | Outbound Accent Bar | `(7, 85, 162, 1)` | Baked warm amber bar directly atop Outbound 3×9 recess (`7..168, 86..139`) |
 | **Outbound Slots `0..26` (3×9)** | `x = 8 + col * 18`, `y = 87 + row * 18` | `col ∈ 0..8` (`8..152`), `row ∈ 0..2` (`87, 105, 123`); subtle amber-tinted inner recess border |
 | **Center Swap `Button` (`⇄`)** | `(172, 104, 16, 20)` | Centered in channel `x = 170..188`; blit 12×10 sprite at `(174, 109)` from UV `(414, 64, 12, 10)` |
-| Storage Header Label | `(190, 77)` | Draw `gui.lc2.zone.storage` in cool dark-teal `#004D66` (or `#404040`) |
+| Storage Header Label | `(190, 77)` | Draw `gui.trera.zone.storage` in cool dark-teal `#004D66` (or `#404040`) |
 | Storage Accent Bar | `(189, 85, 162, 1)` | Baked cool cyan bar directly atop Storage 3×9 recess (`189..350, 86..139`) |
 | **Storage Slots `27..53` (3×9)** | `x = 190 + col * 18`, `y = 87 + row * 18` | `col ∈ 0..8` (`190..334`), `row ∈ 0..2` (`87, 105, 123`); subtle cyan-tinted inner recess border |
 
@@ -82,11 +82,11 @@ When a Smart Port or Cargo Station is opened remotely (`menu.isRemoteMode() == t
 | Element | Screen Rect `(x, y, w, h)` | Dynamic Sprite UV `(u, v, w, h)` | Notes |
 |---|---|---|---|
 | Vertical Bevel Divider | `x = 355` (`y = 13..227`) | Baked into background | 2px bevel seam (`355` shadow, `356` highlight) |
-| EU Gauge Frame | `(362, 13, 18, 42)` | Baked into background | Dark recessed gauge with 10% scale ticks; tooltip `gui.lc2.eu_stored` |
+| EU Gauge Frame | `(362, 13, 18, 42)` | Baked into background | Dark recessed gauge with 10% scale ticks; tooltip `gui.trera.eu_stored` |
 | EU Gauge Fill (bottom-up) | `(363, 14, 16, 40)` | `(396, 0, 16, 40)` | Let `h = round(40 * eu / maxEu)`; blit `(363, 14 + 40 - h)` from `(396, 40 - h)` size `(16, h)` |
 | EU Bolt Indicator | `(366, 57, 10, 14)` | `(414, 0, 10, 14)` | Unlit bolt baked; blit lit sprite when `eu > 0` |
-| Single-Use Battery Slot (1) | Slot `(363, 76)` (frame `362..379, 75..92`) | Battery watermark baked | Accepts only `ic2:single_use_battery` (max 64) |
-| Machine Upgrade Slots (4) | Slots `(363, 102)`, `(363, 120)`, `(363, 138)`, `(363, 156)` | Upgrade watermark baked | Accepts supported IC2 upgrades + `lc2:chunk_loading_upgrade` |
+| Single-Use Battery Slot (1) | Slot `(363, 76)` (frame `362..379, 75..92`) | Battery watermark baked | Accepts only `mhera:single_use_battery` (max 64) |
+| Machine Upgrade Slots (4) | Slots `(363, 102)`, `(363, 120)`, `(363, 138)`, `(363, 156)` | Upgrade watermark baked | Accepts supported MHERA upgrades + `trera:chunk_loading_upgrade` |
 | Chunk-Loader Active Badge | `(363, 180, 16, 16)` (well `362..379, 179..196`) | `(396, 64, 16, 16)` | Blit when `chunk_loading_upgrade` is actively keeping 3×3 chunks loaded |
 | Vehicle / Port Ready Badge | `(363, 200, 16, 16)` (well `362..379, 199..216`) | Active `(396, 44, 16, 16)` / Warn `(414, 44, 16, 16)` | Blit cyan anchor/drone when ready, amber warning when blocked/idle |
 
@@ -103,11 +103,11 @@ When a Smart Port or Cargo Station is opened remotely (`menu.isRemoteMode() == t
 
 ---
 
-## 3. Smart Port Specifics (`assets/lc2/textures/gui/smart_port.png`)
+## 3. Smart Port Specifics (`assets/trera/textures/gui/smart_port.png`)
 
 - **Middle Deck Harbor Telemetry LCD Strip**:
   - Baked dark LCD at `(7, 56, 340, 18)` with subtle 2px maritime cobalt/cyan left accent (`x = 8..9`).
-  - Render docked boat status & waterway berth info at `(12, 61)` using `gui.lc2.berth_docked` / `gui.lc2.berth_empty` and `gui.lc2.water_ok` / `gui.lc2.water_blocked`.
+  - Render docked boat status & waterway berth info at `(12, 61)` using `gui.trera.berth_docked` / `gui.trera.berth_empty` and `gui.trera.water_ok` / `gui.trera.water_blocked`.
 - **Canonical Menu Slot Index Contract** (`59` machine slots + `36` player slots = **`95` total**):
   - `0..26`: **Outbound Area** (`3×9` at `x = 8 + col * 18`, `y = 87 + row * 18`)
   - `27..53`: **Storage Area** (`3×9` at `x = 190 + col * 18`, `y = 87 + row * 18`)
@@ -118,13 +118,13 @@ When a Smart Port or Cargo Station is opened remotely (`menu.isRemoteMode() == t
 
 ---
 
-## 4. Cargo Station Specifics (`assets/lc2/textures/gui/cargo_station.png`)
+## 4. Cargo Station Specifics (`assets/trera/textures/gui/cargo_station.png`)
 
 - **Middle Deck Strip (`y = 56..73`)**:
-  - **RF Chip Slot (1 slot)**: Slot `(8, 57)` (frame `7..24, 56..73`) — recessed with cyan top highlight & antenna watermark. Accepts `lc2:rf_chip_1`, `lc2:rf_chip_2`, `lc2:rf_chip_3`.
-  - **RF Range Mini-LCD**: Baked dark LCD at `(26, 56, 42, 18)` — render current RF range string (`"256m"`, `"512m"`, `"1024m"`, or `gui.lc2.rf_none`) centered around `(29, 61)`.
-  - **Drone Bay Slots (6 slots, 1×6)**: `x = 74 + bay * 18`, `y = 57` (`bay ∈ 0..5`: `74, 92, 110, 128, 146, 164`; frames `73..180, 56..73`) — each slot has a subtle drone-pad watermark. Accepts `lc2:transport_drone` and `lc2:heavy_transport_drone` (max stack 1).
-  - **Flight Deck Status LCD**: Baked dark LCD at `(186, 56, 161, 18)` — render ready drone bay count (`gui.lc2.flight_deck_ready`) & RF range status (`gui.lc2.in_range` / `gui.lc2.out_of_range`) at `(190, 61)`.
+  - **RF Chip Slot (1 slot)**: Slot `(8, 57)` (frame `7..24, 56..73`) — recessed with cyan top highlight & antenna watermark. Accepts `trera:rf_chip_1`, `trera:rf_chip_2`, `trera:rf_chip_3`.
+  - **RF Range Mini-LCD**: Baked dark LCD at `(26, 56, 42, 18)` — render current RF range string (`"256m"`, `"512m"`, `"1024m"`, or `gui.trera.rf_none`) centered around `(29, 61)`.
+  - **Drone Bay Slots (6 slots, 1×6)**: `x = 74 + bay * 18`, `y = 57` (`bay ∈ 0..5`: `74, 92, 110, 128, 146, 164`; frames `73..180, 56..73`) — each slot has a subtle drone-pad watermark. Accepts `trera:transport_drone` and `trera:heavy_transport_drone` (max stack 1).
+  - **Flight Deck Status LCD**: Baked dark LCD at `(186, 56, 161, 18)` — render ready drone bay count (`gui.trera.flight_deck_ready`) & RF range status (`gui.trera.in_range` / `gui.trera.out_of_range`) at `(190, 61)`.
 - **Canonical Menu Slot Index Contract** (`66` machine slots + `36` player slots = **`102` total**):
   - `0..26`: **Outbound Area** (`3×9` at `x = 8 + col * 18`, `y = 87 + row * 18`)
   - `27..53`: **Storage Area** (`3×9` at `x = 190 + col * 18`, `y = 87 + row * 18`)
@@ -137,31 +137,31 @@ When a Smart Port or Cargo Station is opened remotely (`menu.isRemoteMode() == t
 
 ---
 
-## 5. Electric Smart Cargo Boat Menu (`lc2:electric_cargo_boat`)
+## 5. Electric Smart Cargo Boat Menu (`trera:electric_cargo_boat`)
 
 The Electric Smart Cargo Boat has a **54-slot** cargo hold (`6 rows × 9 cols`), matching vanilla Minecraft's standard `ChestMenu.sixRows` (`minecraft:textures/gui/container/generic_54.png`, `176×222`). No custom GUI PNG is required for the boat hold.
 
 ---
 
-## 6. Operation Terminal Selection Screen (`assets/lc2/textures/gui/operation_terminal.png`)
+## 6. Operation Terminal Selection Screen (`assets/trera/textures/gui/operation_terminal.png`)
 
-The Operation Terminal Selection Screen is a client-only `Screen` (no container slots; synced via `TerminalSyncPayload` / `S2CTerminalSyncPacket`) using a **`512 × 256`** RGBA PNG atlas with the main beveled IC2-style panel occupying `(0, 0)` to `(319, 223)` (**`imageWidth = 320`**, **`imageHeight = 224`**). Dynamic sprites live in the right margin (`u = 328..452`). Every `blit` call MUST explicitly pass **`textureWidth = 512, textureHeight = 256`**.
+The Operation Terminal Selection Screen is a client-only `Screen` (no container slots; synced via `TerminalSyncPayload` / `S2CTerminalSyncPacket`) using a **`512 × 256`** RGBA PNG atlas with the main beveled MHERA-style panel occupying `(0, 0)` to `(319, 223)` (**`imageWidth = 320`**, **`imageHeight = 224`**). Dynamic sprites live in the right margin (`u = 328..452`). Every `blit` call MUST explicitly pass **`textureWidth = 512, textureHeight = 256`**.
 
 ### Panel Regions (`320 × 224`)
 
 | Region / Element | Coordinates `(x, y, w, h)` | Notes |
 |---|---|---|
 | Main Panel | `(0, 0, 320, 224)` | `imageWidth = 320`, `imageHeight = 224` |
-| Header Title (`y = 0..16`) | `(8, 5)`, `maxWidth = 174` | `gui.lc2.terminal.title` in dark charcoal `#2C3440` (or `#404040`) |
-| Header Terminal EU/FE Mini-Bar Frame | `(186, 4, 126, 11)` | Baked dark recessed LCD frame; hover tooltip `gui.lc2.terminal.energy` (`EU` + `FE`) |
-| Header Terminal EU/FE Gauge Fill | `(187, 5, 124, 9)` | Left-to-right fill `fillW = round(124 * eu / maxEu)` blitted from UV `(328, 30, fillW, 9)`; centered `gui.lc2.terminal.energy_short` text at `y = 6`, `maxWidth = 120`, `0xFFEAFBFF` |
-| Toolbar Search `EditBox` (`y = 19..36`) | `(8, 20, 236, 14)` | Dark recessed well; placeholder `gui.lc2.terminal.search_placeholder`; live-filters by name, type, or coordinates |
-| Toolbar Refresh `Button` | `(248, 20, 64, 14)` | `gui.lc2.terminal.refresh`; sends `REFRESH` to re-probe bound stations |
-| Scrollable Station List Viewport | `(8, 38, 296, 166)` | Interior `(9..302, 39..202)`; displays `gui.lc2.terminal.empty` or `gui.lc2.terminal.no_matches` centered (`maxLineW = 280`, `0xFF8EA4BA`) when no rows match |
+| Header Title (`y = 0..16`) | `(8, 5)`, `maxWidth = 174` | `gui.trera.terminal.title` in dark charcoal `#2C3440` (or `#404040`) |
+| Header Terminal EU/FE Mini-Bar Frame | `(186, 4, 126, 11)` | Baked dark recessed LCD frame; hover tooltip `gui.trera.terminal.energy` (`EU` + `FE`) |
+| Header Terminal EU/FE Gauge Fill | `(187, 5, 124, 9)` | Left-to-right fill `fillW = round(124 * eu / maxEu)` blitted from UV `(328, 30, fillW, 9)`; centered `gui.trera.terminal.energy_short` text at `y = 6`, `maxWidth = 120`, `0xFFEAFBFF` |
+| Toolbar Search `EditBox` (`y = 19..36`) | `(8, 20, 236, 14)` | Dark recessed well; placeholder `gui.trera.terminal.search_placeholder`; live-filters by name, type, or coordinates |
+| Toolbar Refresh `Button` | `(248, 20, 64, 14)` | `gui.trera.terminal.refresh`; sends `REFRESH` to re-probe bound stations |
+| Scrollable Station List Viewport | `(8, 38, 296, 166)` | Interior `(9..302, 39..202)`; displays `gui.trera.terminal.empty` or `gui.trera.terminal.no_matches` centered (`maxLineW = 280`, `0xFF8EA4BA`) when no rows match |
 | Visible Row Cards (`6` rows, `i = 0..5`) | `(10, 40 + i * 27, 292, 25)` | `ROW_X = 10`, `ROW_Y_START = 40`, `ROW_STEP = 27`, `ROW_W = 292`, `ROW_H = 25` (2px vertical gap) |
 | Vertical Scrollbar Track | `(306, 38, 6, 166)` | Supports mouse-wheel scrolling over `(8..314, 38..204)` and click/drag on track |
 | Vertical Scrollbar Thumb | `(306, thumbY, 6, 24)` | `thumbY` travels `38..180` (`142px` travel); blitted from UV `(344, 44, 6, 24)` |
-| Footer Status LCD | `(8, 207, 304, 12)` | Baked dark LCD; draw `gui.lc2.terminal.footer` at `(12, 209)`, `maxWidth = 296`, cyan `0xFF4CE8FF` |
+| Footer Status LCD | `(8, 207, 304, 12)` | Baked dark LCD; draw `gui.trera.terminal.footer` at `(12, 209)`, `maxWidth = 296`, cyan `0xFF4CE8FF` |
 
 ### Row Card Styling & Sub-Layout (Relative to Row Top-Left `(rx, ry)`)
 
@@ -175,8 +175,8 @@ The Operation Terminal Selection Screen is a client-only `Screen` (no container 
 | Status LED (`8 × 8`) | `(rx + 22, ry + 8, 8, 8)` | Online green `(328, 18)`, Unpowered amber `(338, 18)`, Offline/Unloaded/No-Station/Other-Dim gray-blue `(348, 18)`, Missing/Error red `(358, 18)` |
 | Line 1 (Title + Distance) | `(rx + 34, ry + 3)`, `maxWidth = 184` | Station name (or fallback unnamed title) + `[<dist>m]`; `0xFFEAF6FF` online / `0xFFAAB8C8` offline |
 | Line 2 (Coordinates `·` Status) | `(rx + 34, ry + 14)`, `maxWidth = 184` | `(x, y, z) · <status>`; green `0xFF66FF99` online, amber `0xFFFFC845` unpowered, red `0xFFFF6E6E` missing, muted `0xFF8EA4BA` otherwise |
-| Connect `Button` | `(rx + 222, ry + 5, 48, 15)` | `gui.lc2.terminal.connect`; active only when `status.isConnectable()`, sends `CONNECT` |
-| Unbind `Button` | `(rx + 274, ry + 5, 14, 15)` | `gui.lc2.terminal.unbind`; hover tooltip `gui.lc2.terminal.unbind_tooltip`, sends `UNBIND`; `10 × 10` X icon centered at `(rx + 276, ry + 7)` from UV `(328, 44)` / hover `(328, 56)` |
+| Connect `Button` | `(rx + 222, ry + 5, 48, 15)` | `gui.trera.terminal.connect`; active only when `status.isConnectable()`, sends `CONNECT` |
+| Unbind `Button` | `(rx + 274, ry + 5, 14, 15)` | `gui.trera.terminal.unbind`; hover tooltip `gui.trera.terminal.unbind_tooltip`, sends `UNBIND`; `10 × 10` X icon centered at `(rx + 276, ry + 7)` from UV `(328, 44)` / hover `(328, 56)` |
 
 ### Right-Margin Dynamic Sprite Atlas Summary (`u = 328..452`, `512 × 256`)
 

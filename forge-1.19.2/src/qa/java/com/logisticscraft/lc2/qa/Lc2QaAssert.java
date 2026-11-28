@@ -80,7 +80,7 @@ final class Lc2QaAssert {
             }
         }
         try (Writer w = Files.newBufferedWriter(outFile)) {
-            props.store(w, "LogisticsCraft 2 Forge 1.19.2 QA Report (" + phase + ")");
+            props.store(w, "Transitera Forge 1.19.2 QA Report (" + phase + ")");
         }
     }
 
@@ -99,7 +99,7 @@ final class Lc2QaAssert {
                 props.setProperty("metric." + e.getKey(), e.getValue());
             }
             try (Writer w = Files.newBufferedWriter(reportFile)) {
-                props.store(w, "LogisticsCraft 2 Forge 1.19.2 QA Failure (" + phase + ")");
+                props.store(w, "Transitera Forge 1.19.2 QA Failure (" + phase + ")");
             }
             StringWriter sw = new StringWriter();
             error.printStackTrace(new PrintWriter(sw));

@@ -101,7 +101,7 @@ public final class Suite3Airway {
         level.getChunk(ST_MID.getX() >> 4, ST_MID.getZ() >> 4);
         level.getChunk(ST_FAR.getX() >> 4, ST_FAR.getZ() >> 4);
 
-        var stationBlock = QaChecks.block("lc2:cargo_station").defaultBlockState();
+        var stationBlock = QaChecks.block("trera:cargo_station").defaultBlockState();
         level.setBlockAndUpdate(ST_ORIGIN, stationBlock);
         level.setBlockAndUpdate(ST_NEAR, stationBlock);
         level.setBlockAndUpdate(ST_MID, stationBlock);

@@ -90,7 +90,7 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                 this.topPos + 13,
                 150,
                 12,
-                Component.translatable("gui.lc2.station_name")
+                Component.translatable("gui.trera.station_name")
         );
         this.nameBox.setMaxLength(32);
         this.nameBox.setBordered(true);
@@ -101,7 +101,7 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                 this.topPos + 13,
                 44,
                 12,
-                Component.translatable("gui.lc2.save"),
+                Component.translatable("gui.trera.save"),
                 btn -> Lc2Network.sendToServer(C2SStationActionPacket.setName(
                         this.menu.getStationPos(),
                         this.nameBox.getValue()
@@ -113,7 +113,7 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                 this.topPos + 13,
                 66,
                 12,
-                Component.translatable("gui.lc2.auto_return.off"),
+                Component.translatable("gui.trera.auto_return.off"),
                 btn -> Lc2Network.sendToServer(C2SStationActionPacket.simple(
                         this.menu.getStationPos(),
                         C2SStationActionPacket.Action.TOGGLE_AUTO_RETURN
@@ -155,7 +155,7 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                 this.topPos + 27,
                 50,
                 12,
-                Component.translatable("gui.lc2.dispatch"),
+                Component.translatable("gui.trera.dispatch"),
                 btn -> Lc2Network.sendToServer(C2SStationActionPacket.simple(
                         this.menu.getStationPos(),
                         C2SStationActionPacket.Action.DISPATCH
@@ -176,7 +176,7 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                 this.topPos + 41,
                 36,
                 12,
-                Component.translatable("gui.lc2.set_target"),
+                Component.translatable("gui.trera.set_target"),
                 btn -> applyManualCoords()
         ));
 
@@ -200,7 +200,7 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                     this.topPos + 1,
                     68,
                     11,
-                    Component.translatable("gui.lc2.back_to_terminal"),
+                    Component.translatable("gui.trera.back_to_terminal"),
                     btn -> Lc2Network.sendToServer(
                             C2STerminalActionPacket.returnToList(this.menu.getRemoteTerminalId())
                     )
@@ -218,7 +218,7 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
     }
 
     private EditBox createCoordBox(int x, int y, int width) {
-        EditBox box = new EditBox(this.font, x, y, width, 12, Component.translatable("gui.lc2.coords"));
+        EditBox box = new EditBox(this.font, x, y, width, 12, Component.translatable("gui.trera.coords"));
         box.setMaxLength(8);
         box.setBordered(true);
         box.setFilter(s -> s.isEmpty() || s.equals("-") || s.matches("-?\\d+"));
@@ -272,7 +272,7 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
         }
         if (this.autoReturnBtn != null) {
             this.autoReturnBtn.setMessage(Component.translatable(
-                    packet.autoReturn() ? "gui.lc2.auto_return.on" : "gui.lc2.auto_return.off"
+                    packet.autoReturn() ? "gui.trera.auto_return.on" : "gui.trera.auto_return.off"
             ));
         }
         if (this.energyPriorityBtn != null) {
@@ -397,7 +397,7 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                 ? Component.literal(this.sync.stationName())
                 : this.title;
         if (this.menu.isRemoteMode()) {
-            String badgeText = Component.translatable("gui.lc2.remote_readonly").getString();
+            String badgeText = Component.translatable("gui.trera.remote_readonly").getString();
             int badgeW = Math.min(110, this.font.width(badgeText) + 8);
             int maxTitleW = Math.max(40, 274 - this.titleLabelX - badgeW - 6);
             String titleStr = trimToWidth(headerTitle.getString(), maxTitleW);
@@ -419,8 +419,8 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
         this.font.draw(poseStack, this.playerInventoryTitle, this.inventoryLabelX, this.inventoryLabelY, TITLE_COLOR);
 
         // 2-Zone Cargo Headers: Outbound at (8, 77), Storage at (190, 77)
-        this.font.draw(poseStack, Component.translatable("gui.lc2.zone.outbound"), 8, 77, OUTBOUND_LABEL_COLOR);
-        this.font.draw(poseStack, Component.translatable("gui.lc2.zone.storage"), 190, 77, STORAGE_LABEL_COLOR);
+        this.font.draw(poseStack, Component.translatable("gui.trera.zone.outbound"), 8, 77, OUTBOUND_LABEL_COLOR);
+        this.font.draw(poseStack, Component.translatable("gui.trera.zone.storage"), 190, 77, STORAGE_LABEL_COLOR);
 
         // Target Readout LCD at (23, 27, 256, 12) -> text at (26, 29), maxWidth=250
         String targetLine = formatTargetReadout();
@@ -428,7 +428,7 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
         drawFittedLcdText(poseStack, targetLine, 26, 29, 250, targetColor);
 
         // Status Readout LCD at (176, 41, 171, 12) -> text at (179, 43), maxWidth=165
-        String statusKey = this.sync != null ? this.sync.statusKey() : "status.lc2.ready";
+        String statusKey = this.sync != null ? this.sync.statusKey() : "status.trera.ready";
         String statusText = Component.translatable(statusKey).getString();
         int statusColor = statusKey.contains(".failure.") ? LCD_TEXT_RED : LCD_TEXT_GREEN;
         drawFittedLcdText(poseStack, statusText, 179, 43, 165, statusColor);
@@ -444,13 +444,13 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
         if (this.menu.isRemoteMode()
                 && this.remoteBadgeW > 0
                 && inRect(relX, relY, this.remoteBadgeX, this.remoteBadgeY, this.remoteBadgeW, this.remoteBadgeH)) {
-            renderTooltip(poseStack, Component.translatable("gui.lc2.remote_readonly.tooltip"), mouseX, mouseY);
+            renderTooltip(poseStack, Component.translatable("gui.trera.remote_readonly.tooltip"), mouseX, mouseY);
             return;
         }
 
         // Center Swap Button tooltip (172, 104, 16, 20)
         if (inRect(relX, relY, 172, 104, 16, 20)) {
-            renderTooltip(poseStack, Component.translatable("tooltip.lc2.swap"), mouseX, mouseY);
+            renderTooltip(poseStack, Component.translatable("tooltip.trera.swap"), mouseX, mouseY);
             return;
         }
 
@@ -459,7 +459,7 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
             renderTooltip(
                     poseStack,
                     Component.translatable(
-                            "gui.lc2.eu_stored",
+                            "gui.trera.eu_stored",
                             (long) Math.floor(this.sync.storedEu()),
                             (long) Math.floor(this.sync.maxEu()),
                             this.sync.inputTier(),
@@ -477,8 +477,8 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                     poseStack,
                     Component.translatable(
                             this.sync.chunkLoaderActive()
-                                    ? "gui.lc2.chunk_loader_active"
-                                    : "gui.lc2.chunk_loader_inactive"
+                                    ? "gui.trera.chunk_loader_active"
+                                    : "gui.trera.chunk_loader_inactive"
                     ),
                     mouseX,
                     mouseY
@@ -640,7 +640,7 @@ public abstract class AbstractStationScreen<T extends AbstractStationMenu> exten
                 ResourceLocation atlasTexture,
                 OnPress onPress
         ) {
-            super(x, y, width, height, Component.translatable("gui.lc2.swap.title"), onPress);
+            super(x, y, width, height, Component.translatable("gui.trera.swap.title"), onPress);
             this.atlasTexture = atlasTexture;
         }
 

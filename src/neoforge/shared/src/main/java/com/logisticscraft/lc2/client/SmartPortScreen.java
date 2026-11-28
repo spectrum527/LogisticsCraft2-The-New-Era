@@ -23,7 +23,7 @@ public final class SmartPortScreen extends AbstractLogisticsScreen<SmartPortMenu
     @Override
     protected String formatTargetReadout(StationSyncPayload state) {
         if (!state.hasTarget()) {
-            return Component.translatable("gui.lc2.no_target").getString();
+            return Component.translatable("gui.trera.no_target").getString();
         }
         StationSyncPayload.TargetInfo info = state.selectedTargetInfo();
         if (info == null) {
@@ -37,7 +37,7 @@ public final class SmartPortScreen extends AbstractLogisticsScreen<SmartPortMenu
     protected void paintExtraPanel(ScreenCanvas canvas, StationSyncPayload state) {
         // Middle Deck Harbor Telemetry LCD at (7, 56, 340, 18) -> render at (12, 61), maxWidth = 330
         String berthText = Component.translatable(
-                state.vehicleReady() ? "gui.lc2.berth_docked" : "gui.lc2.berth_empty"
+                state.vehicleReady() ? "gui.trera.berth_docked" : "gui.trera.berth_empty"
         ).getString();
         int berthColor = state.vehicleReady() ? COLOR_LCD_CYAN : COLOR_LCD_AMBER;
 
@@ -49,7 +49,7 @@ public final class SmartPortScreen extends AbstractLogisticsScreen<SmartPortMenu
 
         String sep = "  |  ";
         String waterText = Component.translatable(
-                info.reachableFlag() ? "gui.lc2.water_ok" : "gui.lc2.water_blocked"
+                info.reachableFlag() ? "gui.trera.water_ok" : "gui.trera.water_blocked"
         ).getString();
         int berthW = Math.min(180, font.width(berthText));
         int sepW = font.width(sep);
@@ -70,15 +70,15 @@ public final class SmartPortScreen extends AbstractLogisticsScreen<SmartPortMenu
         return List.of(
                 Component.literal(info.displayName()
                         + " (" + info.pos().getX() + ", " + info.pos().getY() + ", " + info.pos().getZ() + ")"),
-                Component.translatable("gui.lc2.distance", info.distance()),
-                Component.translatable(info.reachableFlag() ? "gui.lc2.water_ok" : "gui.lc2.water_blocked")
+                Component.translatable("gui.trera.distance", info.distance()),
+                Component.translatable(info.reachableFlag() ? "gui.trera.water_ok" : "gui.trera.water_blocked")
         );
     }
 
     @Override
     protected List<Component> buildVehicleBadgeTooltip(StationSyncPayload state) {
         return List.of(Component.translatable(
-                state.vehicleReady() ? "gui.lc2.berth_docked" : "gui.lc2.berth_empty"
+                state.vehicleReady() ? "gui.trera.berth_docked" : "gui.trera.berth_empty"
         ));
     }
 }

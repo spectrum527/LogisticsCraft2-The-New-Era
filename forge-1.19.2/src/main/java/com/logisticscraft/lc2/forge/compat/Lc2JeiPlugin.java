@@ -31,17 +31,17 @@ public final class Lc2JeiPlugin implements IModPlugin {
         registration.addIngredientInfo(
                 new ItemStack(Lc2Registries.SMART_PORT_ITEM.get()),
                 VanillaTypes.ITEM_STACK,
-                Component.translatable("info.lc2.smart_port")
+                Component.translatable("info.trera.smart_port")
         );
         registration.addIngredientInfo(
                 new ItemStack(Lc2Registries.CARGO_STATION_ITEM.get()),
                 VanillaTypes.ITEM_STACK,
-                Component.translatable("info.lc2.cargo_station")
+                Component.translatable("info.trera.cargo_station")
         );
         registration.addIngredientInfo(
                 new ItemStack(Lc2Registries.COMM_BASE_STATION_ITEM.get()),
                 VanillaTypes.ITEM_STACK,
-                Component.translatable("info.lc2.comm_base_station")
+                Component.translatable("info.trera.comm_base_station")
         );
         registration.addIngredientInfo(
                 List.of(
@@ -49,22 +49,22 @@ public final class Lc2JeiPlugin implements IModPlugin {
                         OperationTerminalItem.createChargedStack()
                 ),
                 VanillaTypes.ITEM_STACK,
-                Component.translatable("info.lc2.operation_terminal")
+                Component.translatable("info.trera.operation_terminal")
         );
         registration.addIngredientInfo(
                 new ItemStack(Lc2Registries.ELECTRIC_CARGO_BOAT_ITEM.get()),
                 VanillaTypes.ITEM_STACK,
-                Component.translatable("info.lc2.electric_cargo_boat")
+                Component.translatable("info.trera.electric_cargo_boat")
         );
         registration.addIngredientInfo(
                 new ItemStack(Lc2Registries.TRANSPORT_DRONE_ITEM.get()),
                 VanillaTypes.ITEM_STACK,
-                Component.translatable("info.lc2.transport_drone")
+                Component.translatable("info.trera.transport_drone")
         );
         registration.addIngredientInfo(
                 new ItemStack(Lc2Registries.HEAVY_TRANSPORT_DRONE_ITEM.get()),
                 VanillaTypes.ITEM_STACK,
-                Component.translatable("info.lc2.heavy_transport_drone")
+                Component.translatable("info.trera.heavy_transport_drone")
         );
         registration.addIngredientInfo(
                 List.of(
@@ -73,12 +73,12 @@ public final class Lc2JeiPlugin implements IModPlugin {
                         new ItemStack(Lc2Registries.RF_CHIP_3_ITEM.get())
                 ),
                 VanillaTypes.ITEM_STACK,
-                Component.translatable("info.lc2.rf_chip")
+                Component.translatable("info.trera.rf_chip")
         );
         registration.addIngredientInfo(
                 new ItemStack(Lc2Registries.CHUNK_LOADING_UPGRADE_ITEM.get()),
                 VanillaTypes.ITEM_STACK,
-                Component.translatable("info.lc2.chunk_loading_upgrade")
+                Component.translatable("info.trera.chunk_loading_upgrade")
         );
     }
 }

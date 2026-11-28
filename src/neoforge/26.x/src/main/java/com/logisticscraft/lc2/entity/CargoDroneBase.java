@@ -31,12 +31,12 @@ public abstract class CargoDroneBase extends Entity {
     protected void addAdditionalSaveData(ValueOutput output) {
         CompoundTag meta = new CompoundTag();
         writeDroneMeta(meta);
-        output.store("lc2_drone", CompoundTag.CODEC, meta);
+        output.store("trera_drone", CompoundTag.CODEC, meta);
     }
 
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
-        input.read("lc2_drone", CompoundTag.CODEC).ifPresent(this::readDroneMeta);
+        input.read("trera_drone", CompoundTag.CODEC).ifPresent(this::readDroneMeta);
     }
 
     @Override

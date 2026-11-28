@@ -14,14 +14,14 @@ sourceSets {
 }
 
 configurations {
-    qaIc2Mod {
+    qaMheraMod {
         canBeConsumed = false
         canBeResolved = true
     }
 }
 
 dependencies {
-    qaIc2Mod fg.deobf("com.industrialage.ia2:ic2-forge-1.19.2:${ic2_version}")
+    qaMheraMod fg.deobf("com.industrialage.ia2:mhera-forge-1.19.2:${mhera_version}")
 }
 
 minecraft {
@@ -30,11 +30,11 @@ minecraft {
         serverQaLc2 {
             taskName 'runQaLc2Server'
             parent runs.server
-            workingDirectory layout.buildDirectory.dir('run/qa-lc2').get().asFile
+            workingDirectory layout.buildDirectory.dir('run/qa-trera').get().asFile
             property 'forge.logging.console.level', 'info'
             property 'lc2.qa.phase', providers.gradleProperty('lc2QaPhase').getOrElse('write')
             mods {
-                lc2_qa {
+                trera_qa {
                     source sourceSets.qa
                 }
             }
@@ -46,7 +46,7 @@ minecraft {
             property 'forge.logging.console.level', 'info'
             property 'lc2.qa.phase', 'field_server'
             mods {
-                lc2_qa {
+                trera_qa {
                     source sourceSets.qa
                 }
             }
@@ -58,7 +58,7 @@ minecraft {
             property 'forge.logging.console.level', 'info'
             property 'lc2.qa.phase', 'field_client'
             mods {
-                lc2_qa {
+                trera_qa {
                     source sourceSets.qa
                 }
             }
@@ -66,19 +66,19 @@ minecraft {
     }
 }
 
-def qaBuildDir = layout.buildDirectory.dir('qa-lc2')
+def qaBuildDir = layout.buildDirectory.dir('qa-trera')
 def qaModsDir = qaBuildDir.map { it.dir('mods') }
-def packagedLc2Jar = tasks.named('jar', Jar).flatMap { it.archiveFile }
-def packagedIc2Jar = file("../.ic2-deps/ic2-forge-1.19.2-${ic2_version}.jar")
+def packagedTreraJar = tasks.named('jar', Jar).flatMap { it.archiveFile }
+def packagedMheraJar = file("../.mhera-deps/mhera-forge-1.19.2-${mhera_version}.jar")
 
 // 1. Audit the exact SRG-reobfuscated production JAR before runtime execution.
 def auditPackagedLc2Jar = tasks.register('auditPackagedLc2Jar') {
     group = 'verification'
-    description = 'Verifies production lc2-forge-1.19.2 JAR has no QA leaks, valid MixinConfigs, recipes, and SRG bytecode.'
+    description = 'Verifies production trera-forge-1.19.2 JAR has no QA leaks, valid MixinConfigs, recipes, and SRG bytecode.'
     dependsOn 'reobfJar'
-    inputs.file(packagedLc2Jar)
+    inputs.file(packagedTreraJar)
     doLast {
-        File jarFile = packagedLc2Jar.get().asFile
+        File jarFile = packagedTreraJar.get().asFile
         if (!jarFile.isFile()) {
             throw new GradleException("Missing packaged production JAR: ${jarFile}")
         }
@@ -93,18 +93,18 @@ def auditPackagedLc2Jar = tasks.register('auditPackagedLc2Jar') {
                 throw new GradleException("Packaged JAR missing META-INF/MANIFEST.MF")
             }
             def mixinCfg = manifest.mainAttributes.getValue('MixinConfigs')
-            if (mixinCfg != 'lc2.mixins.json') {
-                throw new GradleException("Expected MixinConfigs=lc2.mixins.json in MANIFEST.MF, got: ${mixinCfg}")
+            if (mixinCfg != 'trera.mixins.json') {
+                throw new GradleException("Expected MixinConfigs=trera.mixins.json in MANIFEST.MF, got: ${mixinCfg}")
             }
             def entries = jf.entries().toList().collect { it.name }
-            def qaLeaks = entries.findAll { it.contains('lc2_qa') || it.startsWith('com/logisticscraft/lc2/qa/') }
+            def qaLeaks = entries.findAll { it.contains('trera_qa') || it.contains('lc2_qa') || it.startsWith('com/logisticscraft/lc2/qa/') }
             if (!qaLeaks.isEmpty()) {
                 throw new GradleException("Production JAR leaked QA entries: ${qaLeaks}")
             }
-            for (String required : ['lc2.mixins.json', 'wthit_plugins.json', 'META-INF/mods.toml',
-                                    'data/lc2/loot_tables/blocks/smart_port.json',
-                                    'data/lc2/loot_tables/blocks/cargo_station.json',
-                                    'data/lc2/loot_tables/blocks/comm_base_station.json',
+            for (String required : ['trera.mixins.json', 'wthit_plugins.json', 'META-INF/mods.toml',
+                                    'data/trera/loot_tables/blocks/smart_port.json',
+                                    'data/trera/loot_tables/blocks/cargo_station.json',
+                                    'data/trera/loot_tables/blocks/comm_base_station.json',
                                     'data/curios/tags/items/charm.json',
                                     'data/curios/tags/items/belt.json']) {
                 if (!entries.contains(required)) {
@@ -112,7 +112,7 @@ def auditPackagedLc2Jar = tasks.register('auditPackagedLc2Jar') {
                 }
             }
             for (String recipe : expectedRecipes) {
-                String path = "data/lc2/recipes/${recipe}.json"
+                String path = "data/trera/recipes/${recipe}.json"
                 if (!entries.contains(path)) {
                     throw new GradleException("Production JAR missing recipe: ${path}")
                 }
@@ -136,7 +136,7 @@ def auditPackagedLc2Jar = tasks.register('auditPackagedLc2Jar') {
             if (!gearMixinAscii.contains('m_41720_')) {
                 throw new GradleException("ForgeGearMixin.class does not appear SRG-reobfuscated (missing m_41720_ for ItemStack.getItem)")
             }
-            logger.lifecycle("[LC2-QA] Packaged production JAR audit PASSED: ${jarFile.name} (${jarFile.length()} bytes, ${entries.size()} entries, 0 QA leaks)")
+            logger.lifecycle("[TRERA-QA] Packaged production JAR audit PASSED: ${jarFile.name} (${jarFile.length()} bytes, ${entries.size()} entries, 0 QA leaks)")
         }
     }
 }
@@ -146,12 +146,12 @@ def auditPackagedLc2Jar = tasks.register('auditPackagedLc2Jar') {
 //    recipes, loot tables, and SRG-remapped bytecode) rather than exploded sourceSets.main directories.
 def deobfPackagedLc2Jar = tasks.register('deobfPackagedLc2Jar', JavaExec) {
     group = 'verification'
-    description = 'Deobfuscates the exact packaged reobfuscated LC2 JAR for ForgeGradle server runtime.'
+    description = 'Deobfuscates the exact packaged reobfuscated Transitera JAR for ForgeGradle server runtime.'
     dependsOn 'reobfJar', auditPackagedLc2Jar, 'createMcpToSrg'
-    def outJar = qaModsDir.map { it.file("lc2-forge-${minecraft_version}-${version}.jar") }
+    def outJar = qaModsDir.map { it.file("trera-forge-${minecraft_version}-${version}.jar") }
     def mappingsFile = tasks.named('createMcpToSrg').flatMap { it.output }
-    inputs.file(packagedLc2Jar)
-    inputs.file(packagedIc2Jar)
+    inputs.file(packagedTreraJar)
+    inputs.file(packagedMheraJar)
     inputs.file(mappingsFile)
     outputs.file(outJar)
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
@@ -182,17 +182,17 @@ def deobfPackagedLc2Jar = tasks.register('deobfPackagedLc2Jar', JavaExec) {
         classpath = files(renamerJar)
         def toolArgs = [
                 '--reverse',
-                '--input', packagedLc2Jar.get().asFile.absolutePath,
+                '--input', packagedTreraJar.get().asFile.absolutePath,
                 '--output', outFile.absolutePath,
                 '--names', mappingsFile.get().asFile.absolutePath,
-                '--log', qaBuildDir.get().file('deobf-lc2.log').asFile.absolutePath,
+                '--log', qaBuildDir.get().file('deobf-trera.log').asFile.absolutePath,
                 '--lib', srgForgeJar.absolutePath,
-                '--lib', packagedIc2Jar.absolutePath
+                '--lib', packagedMheraJar.absolutePath
         ]
         // Supply external non-MC compile libraries for clean inheritance resolution
         configurations.compileClasspath.files.each { File lib ->
             String n = lib.name
-            if (!n.contains('_mapped_official_') && !n.startsWith('ic2-forge-')) {
+            if (!n.contains('_mapped_official_') && !n.startsWith('mhera-forge-')) {
                 toolArgs.addAll(['--lib', lib.absolutePath])
             }
         }
@@ -200,7 +200,7 @@ def deobfPackagedLc2Jar = tasks.register('deobfPackagedLc2Jar', JavaExec) {
     }
 }
 
-// 3. Stage the mods directory and export exact ForgeGradle server launch manifest (with ONLY lc2_qa in MOD_CLASSES).
+// 3. Stage the mods directory and export exact ForgeGradle server launch manifest (with ONLY trera_qa in MOD_CLASSES).
 // Skip client-only sound/music asset downloads for dedicated-server QA runs (or offline runs when 1.19 assets are already cached).
 tasks.matching { it.name == 'downloadAssets' }.configureEach {
     onlyIf {
@@ -230,18 +230,18 @@ def exportQaHostLaunch = { run, side ->
     jvm += config.properties.collect { key, value -> "-D${key}=${expand(value)}" }
     def env = config.environment.collectEntries { key, value -> [(key): expand(value)] }
 
-    // Keep ONLY lc2_qa in MOD_CLASSES so Forge MUST load lc2 from mods/lc2-forge-1.19.2-1.0.0.jar!
+    // Keep ONLY trera_qa in MOD_CLASSES so Forge MUST load trera from mods/trera-forge-1.19.2-2.0.0.jar!
     if (env.containsKey('MOD_CLASSES')) {
         def sep = File.pathSeparator
         def kept = env['MOD_CLASSES'].split(java.util.regex.Pattern.quote(sep))
-                .findAll { it.startsWith('lc2_qa%%') }
+                .findAll { it.startsWith('trera_qa%%') }
         if (kept.isEmpty()) {
-            throw new GradleException("Expected lc2_qa entries in MOD_CLASSES for ${side}, got: ${env['MOD_CLASSES']}")
+            throw new GradleException("Expected trera_qa entries in MOD_CLASSES for ${side}, got: ${env['MOD_CLASSES']}")
         }
         env['MOD_CLASSES'] = kept.join(sep)
     }
 
-    // Remove sourceSets.main output directories from JVM classpath so they cannot shadow mods/lc2-*.jar
+    // Remove sourceSets.main output directories from JVM classpath so they cannot shadow mods/trera-*.jar
     Set<File> mainOutputs = sourceSets.main.output.files.collect { it.canonicalFile } as Set
     def cpFiles = files(run.classpath, sourceSets.qa.runtimeClasspath).files
             .findAll { !mainOutputs.contains(it.canonicalFile) }
@@ -258,7 +258,7 @@ def exportQaHostLaunch = { run, side ->
 
 def prepareLc2Qa = tasks.register('prepareLc2Qa') {
     group = 'verification'
-    description = 'Stages packaged IC2 + LC2 JARs and exports Forge 1.19.2 dedicated server launch command.'
+    description = 'Stages packaged MHERA + TRERA JARs and exports Forge 1.19.2 dedicated server launch command.'
     dependsOn 'qaClasses', deobfPackagedLc2Jar
     dependsOn {
         def run = tasks.getByName('runQaLc2Server')
@@ -281,24 +281,24 @@ def prepareLc2Qa = tasks.register('prepareLc2Qa') {
         jvm += config.properties.collect { key, value -> "-D${key}=${expand(value)}" }
         def env = config.environment.collectEntries { key, value -> [(key): expand(value)] }
 
-        // Keep ONLY lc2_qa in MOD_CLASSES so Forge MUST load lc2 from mods/lc2-forge-1.19.2-1.0.0.jar!
+        // Keep ONLY trera_qa in MOD_CLASSES so Forge MUST load trera from mods/trera-forge-1.19.2-2.0.0.jar!
         if (env.containsKey('MOD_CLASSES')) {
             def sep = File.pathSeparator
             def kept = env['MOD_CLASSES'].split(java.util.regex.Pattern.quote(sep))
-                    .findAll { it.startsWith('lc2_qa%%') }
+                    .findAll { it.startsWith('trera_qa%%') }
             if (kept.isEmpty()) {
-                throw new GradleException("Expected lc2_qa entries in MOD_CLASSES, got: ${env['MOD_CLASSES']}")
+                throw new GradleException("Expected trera_qa entries in MOD_CLASSES, got: ${env['MOD_CLASSES']}")
             }
             env['MOD_CLASSES'] = kept.join(sep)
         }
 
-        // Remove sourceSets.main output directories from JVM classpath so they cannot shadow mods/lc2-*.jar
+        // Remove sourceSets.main output directories from JVM classpath so they cannot shadow mods/trera-*.jar
         Set<File> mainOutputs = sourceSets.main.output.files.collect { it.canonicalFile } as Set
         def cpFiles = files(run.classpath, sourceSets.qa.runtimeClasspath).files
                 .findAll { !mainOutputs.contains(it.canonicalFile) }
 
-        File ic2DeobfJar = configurations.qaIc2Mod.singleFile
-        File lc2DeobfJar = deobfPackagedLc2Jar.get().outputs.files.singleFile
+        File mheraDeobfJar = configurations.qaMheraMod.singleFile
+        File treraDeobfJar = deobfPackagedLc2Jar.get().outputs.files.singleFile
 
         def manifest = [
                 java            : run.javaLauncher.get().executablePath.asFile.absolutePath,
@@ -307,11 +307,11 @@ def prepareLc2Qa = tasks.register('prepareLc2Qa') {
                 args            : config.args.collect(expand),
                 env             : env,
                 classpath       : cpFiles.collect { it.absolutePath }.join(File.pathSeparator),
-                ic2ModJar       : ic2DeobfJar.absolutePath,
-                lc2ModJar       : lc2DeobfJar.absolutePath,
-                packagedIc2Jar  : packagedIc2Jar.absolutePath,
-                packagedLc2Jar  : packagedLc2Jar.get().asFile.absolutePath,
-                runDir          : layout.buildDirectory.dir('run/qa-lc2').get().asFile.absolutePath,
+                ic2ModJar       : mheraDeobfJar.absolutePath,
+                lc2ModJar       : treraDeobfJar.absolutePath,
+                packagedIc2Jar  : packagedMheraJar.absolutePath,
+                packagedLc2Jar  : packagedTreraJar.get().asFile.absolutePath,
+                runDir          : layout.buildDirectory.dir('run/qa-trera').get().asFile.absolutePath,
                 reportDir       : qaBuildDir.get().asFile.absolutePath
         ]
         File target = launchManifest.get().asFile
@@ -323,7 +323,7 @@ def prepareLc2Qa = tasks.register('prepareLc2Qa') {
 // 4. Execute full two-phase (write + cold-restart read) live Forge 1.19.2 dedicated server QA suite.
 tasks.register('runLc2Qa', Exec) {
     group = 'verification'
-    description = 'Runs the full Forge 1.19.2 live dedicated server QA suite (write + cold-restart read) against packaged IC2 and LC2 JARs.'
+    description = 'Runs the full Forge 1.19.2 live dedicated server QA suite (write + cold-restart read) against packaged MHERA and TRERA JARs.'
     dependsOn prepareLc2Qa
     outputs.upToDateWhen { false }
     doFirst {
@@ -333,8 +333,8 @@ tasks.register('runLc2Qa', Exec) {
     }
 }
 
-// 5. Stage packaged IC2 + LC2 JARs and export both Dedicated Server and Graphical Client launch specs
-//    for the real-world natural-seed IC2 mining/refining + live Client-Server field test.
+// 5. Stage packaged MHERA + TRERA JARs and export both Dedicated Server and Graphical Client launch specs
+//    for the real-world natural-seed MHERA mining/refining + live Client-Server field test.
 def prepareFieldTest = tasks.register('prepareFieldTest') {
     group = 'verification'
     description = 'Exports Forge 1.19.2 Dedicated Server + Graphical Client launch manifest for runFieldTest.'
@@ -349,15 +349,15 @@ def prepareFieldTest = tasks.register('prepareFieldTest') {
     outputs.file(launchManifest)
     outputs.upToDateWhen { false }
     doLast {
-        File ic2DeobfJar = configurations.qaIc2Mod.singleFile
-        File lc2DeobfJar = deobfPackagedLc2Jar.get().outputs.files.singleFile
+        File mheraDeobfJar = configurations.qaMheraMod.singleFile
+        File treraDeobfJar = deobfPackagedLc2Jar.get().outputs.files.singleFile
         def manifest = [
                 server        : exportQaHostLaunch(tasks.getByName('runFieldLc2Server'), 'server'),
                 client        : exportQaHostLaunch(tasks.getByName('runFieldLc2Client'), 'client'),
-                ic2ModJar     : ic2DeobfJar.absolutePath,
-                lc2ModJar     : lc2DeobfJar.absolutePath,
-                packagedIc2Jar: packagedIc2Jar.absolutePath,
-                packagedLc2Jar: packagedLc2Jar.get().asFile.absolutePath,
+                ic2ModJar     : mheraDeobfJar.absolutePath,
+                lc2ModJar     : treraDeobfJar.absolutePath,
+                packagedIc2Jar: packagedMheraJar.absolutePath,
+                packagedLc2Jar: packagedTreraJar.get().asFile.absolutePath,
                 serverRunDir  : layout.buildDirectory.dir('run/field-server').get().asFile.absolutePath,
                 clientRunDir  : layout.buildDirectory.dir('run/field-client').get().asFile.absolutePath,
                 reportDir     : qaBuildDir.get().asFile.absolutePath

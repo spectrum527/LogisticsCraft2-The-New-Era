@@ -94,9 +94,9 @@ public final class Lc2Registries {
             "smart_port",
             SMART_PORT_BLOCK,
             List.of(
-                    "tooltip.lc2.smart_port.line1",
-                    "tooltip.lc2.smart_port.line2",
-                    "tooltip.lc2.smart_port.line3"
+                    "tooltip.trera.smart_port.line1",
+                    "tooltip.trera.smart_port.line2",
+                    "tooltip.trera.smart_port.line3"
             )
     );
 
@@ -105,9 +105,9 @@ public final class Lc2Registries {
             "cargo_station",
             CARGO_STATION_BLOCK,
             List.of(
-                    "tooltip.lc2.cargo_station.line1",
-                    "tooltip.lc2.cargo_station.line2",
-                    "tooltip.lc2.cargo_station.line3"
+                    "tooltip.trera.cargo_station.line1",
+                    "tooltip.trera.cargo_station.line2",
+                    "tooltip.trera.cargo_station.line3"
             )
     );
 
@@ -116,9 +116,9 @@ public final class Lc2Registries {
             "comm_base_station",
             COMM_BASE_STATION_BLOCK,
             List.of(
-                    "tooltip.lc2.comm_base_station.line1",
-                    "tooltip.lc2.comm_base_station.line2",
-                    "tooltip.lc2.comm_base_station.line3"
+                    "tooltip.trera.comm_base_station.line1",
+                    "tooltip.trera.comm_base_station.line2",
+                    "tooltip.trera.comm_base_station.line3"
             )
     );
 
@@ -128,9 +128,9 @@ public final class Lc2Registries {
             props -> new OperationTerminalItem(
                     props.stacksTo(1),
                     List.of(
-                            "tooltip.lc2.operation_terminal.line1",
-                            "tooltip.lc2.operation_terminal.line2",
-                            "tooltip.lc2.operation_terminal.line3"
+                            "tooltip.trera.operation_terminal.line1",
+                            "tooltip.trera.operation_terminal.line2",
+                            "tooltip.trera.operation_terminal.line3"
                     )
             ),
             Item.Properties::new
@@ -142,9 +142,9 @@ public final class Lc2Registries {
             props -> new ElectricCargoBoatItem(
                     props.stacksTo(1),
                     List.of(
-                            "tooltip.lc2.electric_cargo_boat.line1",
-                            "tooltip.lc2.electric_cargo_boat.line2",
-                            "tooltip.lc2.electric_cargo_boat.line3"
+                            "tooltip.trera.electric_cargo_boat.line1",
+                            "tooltip.trera.electric_cargo_boat.line2",
+                            "tooltip.trera.electric_cargo_boat.line3"
                     )
             ),
             Item.Properties::new
@@ -156,8 +156,8 @@ public final class Lc2Registries {
             props -> new Lc2TooltipItem(
                     props.stacksTo(1),
                     List.of(
-                            "tooltip.lc2.transport_drone.line1",
-                            "tooltip.lc2.transport_drone.line2"
+                            "tooltip.trera.transport_drone.line1",
+                            "tooltip.trera.transport_drone.line2"
                     )
             ),
             Item.Properties::new
@@ -169,8 +169,8 @@ public final class Lc2Registries {
             props -> new Lc2TooltipItem(
                     props.stacksTo(1),
                     List.of(
-                            "tooltip.lc2.heavy_transport_drone.line1",
-                            "tooltip.lc2.heavy_transport_drone.line2"
+                            "tooltip.trera.heavy_transport_drone.line1",
+                            "tooltip.trera.heavy_transport_drone.line2"
                     )
             ),
             Item.Properties::new
@@ -182,8 +182,8 @@ public final class Lc2Registries {
             props -> new Lc2TooltipItem(
                     props.stacksTo(1),
                     List.of(
-                            "tooltip.lc2.rf_chip_1.line1",
-                            "tooltip.lc2.rf_chip_1.line2"
+                            "tooltip.trera.rf_chip_1.line1",
+                            "tooltip.trera.rf_chip_1.line2"
                     )
             ),
             Item.Properties::new
@@ -195,8 +195,8 @@ public final class Lc2Registries {
             props -> new Lc2TooltipItem(
                     props.stacksTo(1),
                     List.of(
-                            "tooltip.lc2.rf_chip_2.line1",
-                            "tooltip.lc2.rf_chip_2.line2"
+                            "tooltip.trera.rf_chip_2.line1",
+                            "tooltip.trera.rf_chip_2.line2"
                     )
             ),
             Item.Properties::new
@@ -208,8 +208,8 @@ public final class Lc2Registries {
             props -> new Lc2TooltipItem(
                     props.stacksTo(1),
                     List.of(
-                            "tooltip.lc2.rf_chip_3.line1",
-                            "tooltip.lc2.rf_chip_3.line2"
+                            "tooltip.trera.rf_chip_3.line1",
+                            "tooltip.trera.rf_chip_3.line2"
                     )
             ),
             Item.Properties::new
@@ -221,8 +221,8 @@ public final class Lc2Registries {
             props -> new Lc2TooltipItem(
                     props.stacksTo(16),
                     List.of(
-                            "tooltip.lc2.chunk_loading_upgrade.line1",
-                            "tooltip.lc2.chunk_loading_upgrade.line2"
+                            "tooltip.trera.chunk_loading_upgrade.line1",
+                            "tooltip.trera.chunk_loading_upgrade.line2"
                     )
             ),
             Item.Properties::new
@@ -295,7 +295,7 @@ public final class Lc2Registries {
     public static final Supplier<CreativeModeTab> MAIN_TAB = TABS.register(
             "main",
             () -> CreativeModeTab.builder()
-                    .title(Component.translatable("itemGroup.lc2.main"))
+                    .title(Component.translatable("itemGroup.trera.main"))
                     .icon(() -> new ItemStack(SMART_PORT_ITEM.get()))
                     .displayItems((params, output) -> {
                         output.accept(SMART_PORT_ITEM.get());

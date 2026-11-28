@@ -13,8 +13,8 @@ class EnergyUnitsTest {
 
     @Test
     void commAndTerminalConstantsMatchSpecification() {
-        assertEquals("lc2:comm_base_station", LogisticsConstants.COMM_BASE_STATION_ID);
-        assertEquals("lc2:operation_terminal", LogisticsConstants.OPERATION_TERMINAL_ID);
+        assertEquals("trera:comm_base_station", LogisticsConstants.COMM_BASE_STATION_ID);
+        assertEquals("trera:operation_terminal", LogisticsConstants.OPERATION_TERMINAL_ID);
         assertEquals(4, LogisticsConstants.FE_PER_EU);
         assertEquals(4, EnergyUnits.FE_PER_EU);
 

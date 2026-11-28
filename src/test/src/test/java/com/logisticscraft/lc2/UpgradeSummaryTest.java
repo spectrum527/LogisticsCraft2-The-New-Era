@@ -17,15 +17,15 @@ class UpgradeSummaryTest {
     @Test
     void allNineSupportedUpgradeIdsAreRecognized() {
         List<String> expectedIds = List.of(
-                "ic2:transformer_upgrade",
-                "ic2:energy_storage_upgrade",
-                "ic2:overclocker_upgrade",
-                "ic2:ejector_upgrade",
-                "ic2:advanced_ejector_upgrade",
-                "ic2:pulling_upgrade",
-                "ic2:advanced_pulling_upgrade",
-                "ic2:redstone_inverter_upgrade",
-                "lc2:chunk_loading_upgrade"
+                "mhera:transformer_upgrade",
+                "mhera:energy_storage_upgrade",
+                "mhera:overclocker_upgrade",
+                "mhera:ejector_upgrade",
+                "mhera:advanced_ejector_upgrade",
+                "mhera:pulling_upgrade",
+                "mhera:advanced_pulling_upgrade",
+                "mhera:redstone_inverter_upgrade",
+                "trera:chunk_loading_upgrade"
         );
 
         assertEquals(9, UpgradeSummary.supportedUpgradeIds().size());
@@ -53,13 +53,13 @@ class UpgradeSummaryTest {
         assertFalse(UpgradeSummary.isSupportedUpgrade("minecraft:diamond"));
         assertFalse(UpgradeSummary.isSupportedUpgrade(LogisticsConstants.SINGLE_USE_BATTERY_ID));
         assertFalse(UpgradeSummary.isSupportedUpgrade(LogisticsConstants.RF_CHIP_1_ID));
-        assertFalse(UpgradeSummary.isSupportedUpgrade("ic2:fluid_ejector_upgrade"));
+        assertFalse(UpgradeSummary.isSupportedUpgrade("mhera:fluid_ejector_upgrade"));
 
         UpgradeSummary summary = UpgradeSummary.fromItemCounts(Map.of(
                 "minecraft:hopper", 4,
-                "ic2:single_use_battery", 16,
-                "lc2:rf_chip_3", 1,
-                "ic2:transformer_upgrade", 2
+                "mhera:single_use_battery", 16,
+                "trera:rf_chip_3", 1,
+                "mhera:transformer_upgrade", 2
         ));
         assertEquals(2, summary.transformerCount());
         assertEquals(2, summary.totalUpgradeCount());

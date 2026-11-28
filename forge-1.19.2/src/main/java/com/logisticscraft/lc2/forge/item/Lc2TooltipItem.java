@@ -10,7 +10,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 
 /**
- * Standard LogisticsCraft² item with localized multi-line tooltips from {@code tooltip.lc2.*}.
+ * Standard LogisticsCraft² item with localized multi-line tooltips from {@code tooltip.trera.*}.
  */
 public class Lc2TooltipItem extends Item {
 

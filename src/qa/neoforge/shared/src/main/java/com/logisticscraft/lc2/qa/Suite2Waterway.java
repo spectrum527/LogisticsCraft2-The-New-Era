@@ -102,19 +102,19 @@ public final class Suite2Waterway {
 
         // Place Port A (facing EAST) and Port B (facing WEST)
         level.setBlockAndUpdate(PORT_A,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.EAST));
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.EAST));
         level.setBlockAndUpdate(PORT_B,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.WEST));
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.WEST));
 
         // Adjacent containers at Port A (Chest + Shulker Box + IC2 Iron Storage Box)
         level.setBlockAndUpdate(A_CHEST, Blocks.CHEST.defaultBlockState());
         level.setBlockAndUpdate(A_SHULKER, Blocks.SHULKER_BOX.defaultBlockState());
-        level.setBlockAndUpdate(A_IC2_BOX, QaChecks.block("ic2:iron_storage_box").defaultBlockState());
+        level.setBlockAndUpdate(A_IC2_BOX, QaChecks.block("mhera:iron_storage_box").defaultBlockState());
 
         // Adjacent empty containers at Port B (Chest + Shulker Box + IC2 Iron Storage Box)
         level.setBlockAndUpdate(B_CHEST, Blocks.CHEST.defaultBlockState());
         level.setBlockAndUpdate(B_SHULKER, Blocks.SHULKER_BOX.defaultBlockState());
-        level.setBlockAndUpdate(B_IC2_BOX, QaChecks.block("ic2:iron_storage_box").defaultBlockState());
+        level.setBlockAndUpdate(B_IC2_BOX, QaChecks.block("mhera:iron_storage_box").defaultBlockState());
 
         // Load 42 distinct item stacks (> 27 slots!) across Chest (20) + Shulker (12) + IC2 Box (10)
         expectedCargo.clear();
@@ -163,7 +163,7 @@ public final class Suite2Waterway {
         // Switching to an isolated dry Smart Port MUST immediately report disconnected (never inherit cached true)
         BlockPos dryPortPos = PORT_A.offset(0, 0, -6);
         level.setBlockAndUpdate(dryPortPos,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.NORTH));
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.NORTH));
         SmartPortBlockEntity dryPort = (SmartPortBlockEntity) level.getBlockEntity(dryPortPos);
         if (dryPort != null) {
             dryPort.setStationName("Dry Port");
@@ -206,7 +206,7 @@ public final class Suite2Waterway {
         checks.check("s2.gui.reopened_canal_sync_connected_before_dispatch",
                 reopenedGuiSync.selectedTargetInfo() != null
                         && reopenedGuiSync.selectedTargetInfo().reachableFlag()
-                        && "status.lc2.ready".equals(reopenedGuiSync.statusKey()),
+                        && "status.trera.ready".equals(reopenedGuiSync.statusKey()),
                 "reopenedInfo=" + reopenedGuiSync.selectedTargetInfo() + ", status=" + reopenedGuiSync.statusKey());
 
         // 2. EU_FIRST with autoReturn=true at 3000 EU -> MUST fail (requires 6000 EU round-trip!)

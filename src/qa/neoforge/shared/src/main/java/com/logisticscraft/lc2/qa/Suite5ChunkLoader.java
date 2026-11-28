@@ -91,7 +91,7 @@ public final class Suite5ChunkLoader {
     }
 
     private void setupStation(ServerLevel level, QaChecks checks) {
-        level.setBlockAndUpdate(STATION_POS, QaChecks.block("lc2:cargo_station").defaultBlockState());
+        level.setBlockAndUpdate(STATION_POS, QaChecks.block("trera:cargo_station").defaultBlockState());
         CargoStationBlockEntity station = (CargoStationBlockEntity) level.getBlockEntity(STATION_POS);
         checks.check("s5.setup.station_placed_outside_spawn", station != null);
         checks.check("s5.tickets.initially_unheld", countHeldIn3x3(level) == 0, "held=0/9");

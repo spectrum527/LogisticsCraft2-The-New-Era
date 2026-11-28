@@ -12,78 +12,78 @@ public final class LogisticsConstants {
     // --- Mod & Registry IDs ---
 
     /** Primary mod namespace. */
-    public static final String MOD_ID = "lc2";
+    public static final String MOD_ID = "trera";
 
     /** IndustrialCraft² addon target namespace. */
-    public static final String IC2_MOD_ID = "ic2";
+    public static final String IC2_MOD_ID = "mhera";
 
     /** Smart Port block and block entity registry ID. */
-    public static final String SMART_PORT_ID = "lc2:smart_port";
+    public static final String SMART_PORT_ID = "trera:smart_port";
 
     /** Cargo Station block and block entity registry ID. */
-    public static final String CARGO_STATION_ID = "lc2:cargo_station";
+    public static final String CARGO_STATION_ID = "trera:cargo_station";
 
     /** Electric Smart Cargo Boat item and entity registry ID. */
-    public static final String ELECTRIC_CARGO_BOAT_ID = "lc2:electric_cargo_boat";
+    public static final String ELECTRIC_CARGO_BOAT_ID = "trera:electric_cargo_boat";
 
     /** Cargo Drone entity registry ID (shared across Standard and Heavy variants). */
-    public static final String CARGO_DRONE_ENTITY_ID = "lc2:cargo_drone";
+    public static final String CARGO_DRONE_ENTITY_ID = "trera:cargo_drone";
 
     /** Standard Transport Drone item registry ID. */
-    public static final String TRANSPORT_DRONE_ID = "lc2:transport_drone";
+    public static final String TRANSPORT_DRONE_ID = "trera:transport_drone";
 
     /** Heavy Transport Drone item registry ID. */
-    public static final String HEAVY_TRANSPORT_DRONE_ID = "lc2:heavy_transport_drone";
+    public static final String HEAVY_TRANSPORT_DRONE_ID = "trera:heavy_transport_drone";
 
     /** RF Chip Tier I item registry ID (256-block Manhattan range). */
-    public static final String RF_CHIP_1_ID = "lc2:rf_chip_1";
+    public static final String RF_CHIP_1_ID = "trera:rf_chip_1";
 
     /** RF Chip Tier II item registry ID (512-block Manhattan range). */
-    public static final String RF_CHIP_2_ID = "lc2:rf_chip_2";
+    public static final String RF_CHIP_2_ID = "trera:rf_chip_2";
 
     /** RF Chip Tier III item registry ID (1024-block Manhattan range). */
-    public static final String RF_CHIP_3_ID = "lc2:rf_chip_3";
+    public static final String RF_CHIP_3_ID = "trera:rf_chip_3";
 
     /** Chunk Loading Upgrade item registry ID. */
-    public static final String CHUNK_LOADING_UPGRADE_ID = "lc2:chunk_loading_upgrade";
+    public static final String CHUNK_LOADING_UPGRADE_ID = "trera:chunk_loading_upgrade";
 
     /** Communication Base Station block and block entity registry ID. */
-    public static final String COMM_BASE_STATION_ID = "lc2:comm_base_station";
+    public static final String COMM_BASE_STATION_ID = "trera:comm_base_station";
 
     /** Operation Terminal handheld item registry ID. */
-    public static final String OPERATION_TERMINAL_ID = "lc2:operation_terminal";
+    public static final String OPERATION_TERMINAL_ID = "trera:operation_terminal";
 
     /** IC2 Single-Use Battery item registry ID accepted by both stations. */
-    public static final String SINGLE_USE_BATTERY_ID = "ic2:single_use_battery";
+    public static final String SINGLE_USE_BATTERY_ID = "mhera:single_use_battery";
 
     /** Optional item tag allowing modpacks to extend the single-use battery slot. */
-    public static final String SINGLE_USE_BATTERIES_TAG = "lc2:single_use_batteries";
+    public static final String SINGLE_USE_BATTERIES_TAG = "trera:single_use_batteries";
 
     // --- Supported Upgrade Item IDs ---
 
     /** IC2 Transformer Upgrade (+1 voltage tier). */
-    public static final String UPGRADE_TRANSFORMER = "ic2:transformer_upgrade";
+    public static final String UPGRADE_TRANSFORMER = "mhera:transformer_upgrade";
 
     /** IC2 Energy Storage Upgrade (+10,000 EU capacity). */
-    public static final String UPGRADE_ENERGY_STORAGE = "ic2:energy_storage_upgrade";
+    public static final String UPGRADE_ENERGY_STORAGE = "mhera:energy_storage_upgrade";
 
     /** IC2 Overclocker Upgrade (throughput and cruise speed boost). */
-    public static final String UPGRADE_OVERCLOCKER = "ic2:overclocker_upgrade";
+    public static final String UPGRADE_OVERCLOCKER = "mhera:overclocker_upgrade";
 
     /** IC2 Ejector Upgrade. */
-    public static final String UPGRADE_EJECTOR = "ic2:ejector_upgrade";
+    public static final String UPGRADE_EJECTOR = "mhera:ejector_upgrade";
 
     /** IC2 Advanced Ejector Upgrade. */
-    public static final String UPGRADE_ADVANCED_EJECTOR = "ic2:advanced_ejector_upgrade";
+    public static final String UPGRADE_ADVANCED_EJECTOR = "mhera:advanced_ejector_upgrade";
 
     /** IC2 Pulling Upgrade. */
-    public static final String UPGRADE_PULLING = "ic2:pulling_upgrade";
+    public static final String UPGRADE_PULLING = "mhera:pulling_upgrade";
 
     /** IC2 Advanced Pulling Upgrade. */
-    public static final String UPGRADE_ADVANCED_PULLING = "ic2:advanced_pulling_upgrade";
+    public static final String UPGRADE_ADVANCED_PULLING = "mhera:advanced_pulling_upgrade";
 
     /** IC2 Redstone Inverter Upgrade. */
-    public static final String UPGRADE_REDSTONE_INVERTER = "ic2:redstone_inverter_upgrade";
+    public static final String UPGRADE_REDSTONE_INVERTER = "mhera:redstone_inverter_upgrade";
 
     /** LC2 Chunk Loading Upgrade (3x3 chunks, 2 EU/t standby). */
     public static final String UPGRADE_CHUNK_LOADING = CHUNK_LOADING_UPGRADE_ID;

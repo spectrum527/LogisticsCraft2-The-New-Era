@@ -82,7 +82,7 @@ public abstract class ElectricCargoBoatBase extends ChestBoat {
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("container.lc2.electric_cargo_boat");
+        return Component.translatable("container.trera.electric_cargo_boat");
     }
 
     @Override
@@ -130,7 +130,7 @@ public abstract class ElectricCargoBoatBase extends ChestBoat {
         ContainerHelper.saveAllItems(tag, cargoItems, registryAccess());
         CompoundTag meta = new CompoundTag();
         writeBoatMeta(meta);
-        tag.put("lc2_boat", meta);
+        tag.put("trera_boat", meta);
     }
 
     @Override
@@ -138,8 +138,8 @@ public abstract class ElectricCargoBoatBase extends ChestBoat {
         super.readAdditionalSaveData(tag);
         clearItemStacks();
         ContainerHelper.loadAllItems(tag, cargoItems, registryAccess());
-        if (tag.contains("lc2_boat")) {
-            readBoatMeta(tag.getCompound("lc2_boat"));
+        if (tag.contains("trera_boat")) {
+            readBoatMeta(tag.getCompound("trera_boat"));
         }
     }
 

@@ -203,7 +203,7 @@ public class CargoStationBlockEntity extends AbstractLogisticsStationBlockEntity
         if (targetBay >= 0) {
             this.items.set(SLOT_DRONE_BAY_START + targetBay, droneItem);
             syncBayStateAndVisuals(level);
-            setStatusKey("status.lc2.docked");
+            setStatusKey("status.trera.docked");
         } else {
             Containers.dropItemStack(
                     level,
@@ -377,7 +377,7 @@ public class CargoStationBlockEntity extends AbstractLogisticsStationBlockEntity
         LogisticsLevelManager.bindDispatchedDrone(level, result.transit(), cargo);
 
         this.dispatchCooldown = 20;
-        setStatusKey("status.lc2.dispatched");
+        setStatusKey("status.trera.dispatched");
         setActiveBlockState(level, true);
         setChanged();
         return true;
@@ -480,7 +480,7 @@ public class CargoStationBlockEntity extends AbstractLogisticsStationBlockEntity
     @Override
     public Component getDisplayName() {
         return this.stationName.isBlank()
-                ? Component.translatable("container.lc2.cargo_station")
+                ? Component.translatable("container.trera.cargo_station")
                 : Component.literal(this.stationName);
     }
 

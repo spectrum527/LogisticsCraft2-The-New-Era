@@ -103,15 +103,15 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
         // Row 1: Station Name EditBox (8, 13, 150, 12)
         nameBox = addTrackedEditBox(new EditBox(
                 font, leftPos + 8, topPos + 13, 150, 12,
-                Component.translatable("gui.lc2.station_name")
+                Component.translatable("gui.trera.station_name")
         ));
         nameBox.setMaxLength(32);
-        nameBox.setHint(Component.translatable("gui.lc2.name_placeholder"));
+        nameBox.setHint(Component.translatable("gui.trera.name_placeholder"));
         addRenderableWidget(nameBox);
 
         // Button 0: Save Name (162, 13, 44, 12)
         saveNameBtn = addRenderableWidget(Button.builder(
-                Component.translatable("gui.lc2.save"),
+                Component.translatable("gui.trera.save"),
                 b -> Lc2Native.sendToServer(StationActionPayload.rename(menu.stationPos(), nameBox.getValue()))
         ).bounds(leftPos + 162, topPos + 13, 44, 12).build());
 
@@ -145,25 +145,25 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
 
         // Button 3: Set Coords (138, 41, 36, 12)
         applyCoordsBtn = addRenderableWidget(Button.builder(
-                Component.translatable("gui.lc2.set_target"),
+                Component.translatable("gui.trera.set_target"),
                 b -> applyManualCoords()
         ).bounds(leftPos + 138, topPos + 41, 36, 12).build());
 
         // Button 4: Auto-Return Toggle (210, 13, 66, 12)
         autoReturnBtn = addRenderableWidget(Button.builder(
-                Component.translatable("gui.lc2.auto_return.off"),
+                Component.translatable("gui.trera.auto_return.off"),
                 b -> Lc2Native.sendToServer(StationActionPayload.simple(menu.stationPos(), StationActionPayload.Action.TOGGLE_AUTO_RETURN))
         ).bounds(leftPos + 210, topPos + 13, 66, 12).build());
 
         // Button 5: Energy Priority Toggle (279, 13, 68, 12)
         priorityBtn = addRenderableWidget(Button.builder(
-                Component.translatable("gui.lc2.priority.eu_first"),
+                Component.translatable("gui.trera.priority.eu_first"),
                 b -> Lc2Native.sendToServer(StationActionPayload.simple(menu.stationPos(), StationActionPayload.Action.TOGGLE_ENERGY_PRIORITY))
         ).bounds(leftPos + 279, topPos + 13, 68, 12).build());
 
         // Button 6: Launch / Manual Dispatch (297, 27, 50, 12)
         dispatchBtn = addRenderableWidget(Button.builder(
-                Component.translatable("gui.lc2.dispatch"),
+                Component.translatable("gui.trera.dispatch"),
                 b -> Lc2Native.sendToServer(StationActionPayload.simple(menu.stationPos(), StationActionPayload.Action.MANUAL_DISPATCH))
         ).bounds(leftPos + 297, topPos + 27, 50, 12).build());
 
@@ -173,7 +173,7 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
                 104,
                 16,
                 20,
-                Component.translatable("gui.lc2.swap.title"),
+                Component.translatable("gui.trera.swap.title"),
                 guiTextureName(),
                 2,
                 5,
@@ -188,7 +188,7 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
         // Button 8 (remote mode only): Return to Operation Terminal list (279, 1, 68, 11)
         if (menu.isRemoteMode()) {
             backToTerminalBtn = addRenderableWidget(Button.builder(
-                    Component.translatable("gui.lc2.back_to_terminal"),
+                    Component.translatable("gui.trera.back_to_terminal"),
                     b -> Lc2Native.sendToServer(TerminalActionPayload.returnToList(menu.remoteTerminalId()))
             ).bounds(leftPos + 279, topPos + 1, 68, 11).build());
         } else {
@@ -213,7 +213,7 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
         }
         if (autoReturnBtn != null) {
             autoReturnBtn.setMessage(Component.translatable(
-                    state.autoReturn() ? "gui.lc2.auto_return.on" : "gui.lc2.auto_return.off"
+                    state.autoReturn() ? "gui.trera.auto_return.on" : "gui.trera.auto_return.off"
             ));
         }
         if (priorityBtn != null) {
@@ -272,12 +272,12 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
         canvas.blit(guiTextureName(), 0, 0, 0, 0, PANEL_WIDTH, PANEL_HEIGHT);
 
         // 2. 2-Zone cargo headers: Outbound at (8, 77) and Storage at (190, 77)
-        canvas.drawString(Component.translatable("gui.lc2.zone.outbound"), 8, 77, COLOR_ZONE_OUTBOUND);
-        canvas.drawString(Component.translatable("gui.lc2.zone.storage"), 190, 77, COLOR_ZONE_STORAGE);
+        canvas.drawString(Component.translatable("gui.trera.zone.outbound"), 8, 77, COLOR_ZONE_OUTBOUND);
+        canvas.drawString(Component.translatable("gui.trera.zone.storage"), 190, 77, COLOR_ZONE_STORAGE);
 
         // 2b. Remote read-only pill next to header title (never overlaps Back button at x = 279)
         if (menu.isRemoteMode()) {
-            String badgeLabel = Component.translatable("gui.lc2.remote_readonly").getString();
+            String badgeLabel = Component.translatable("gui.trera.remote_readonly").getString();
             int titleWidth = canvas.fontWidth(headerTitle().getString());
             int desiredX = Math.max(8 + titleWidth + 6, 92);
             int maxRight = 275;
@@ -358,13 +358,13 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
                 && relX < remoteBadgeX + remoteBadgeW
                 && relY >= remoteBadgeY
                 && relY < remoteBadgeY + remoteBadgeH) {
-            canvas.drawTooltip(List.of(Component.translatable("gui.lc2.remote_readonly.tooltip")), mouseX, mouseY);
+            canvas.drawTooltip(List.of(Component.translatable("gui.trera.remote_readonly.tooltip")), mouseX, mouseY);
             return;
         }
 
         // Swap button hover tooltip: (172, 104, 16, 20)
         if (relX >= 172 && relX < 188 && relY >= 104 && relY < 124) {
-            canvas.drawTooltip(List.of(Component.translatable("tooltip.lc2.swap")), mouseX, mouseY);
+            canvas.drawTooltip(List.of(Component.translatable("tooltip.trera.swap")), mouseX, mouseY);
             return;
         }
 
@@ -377,7 +377,7 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
         if (relX >= 362 && relX < 380 && relY >= 13 && relY < 55) {
             canvas.drawTooltip(
                     List.of(Component.translatable(
-                            "gui.lc2.eu_stored",
+                            "gui.trera.eu_stored",
                             Math.round(state.storedEu()),
                             Math.round(state.maxEu()),
                             state.inputTier(),
@@ -394,8 +394,8 @@ public abstract class AbstractLogisticsScreen<M extends AbstractLogisticsStation
             canvas.drawTooltip(
                     List.of(Component.translatable(
                             state.chunkLoaderActive()
-                                    ? "gui.lc2.chunk_loader_active"
-                                    : "gui.lc2.chunk_loader_inactive"
+                                    ? "gui.trera.chunk_loader_active"
+                                    : "gui.trera.chunk_loader_inactive"
                     )),
                     mouseX,
                     mouseY
