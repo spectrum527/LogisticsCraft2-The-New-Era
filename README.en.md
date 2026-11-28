@@ -1,8 +1,8 @@
-<h1><img src="assets/brand/icon.jpg" width="56" height="56" align="absmiddle" alt=""> Transitera (<code>trera</code>)</h1>
+<h1><img src="assets/brand/icon.jpg" width="56" height="56" align="absmiddle" alt=""> Transitera (物流纪元)</h1>
 
 [简体中文](README.md) · **English**
 
-![Transitera project cover](assets/brand/cover.jpg)
+![Transitera (物流纪元) project cover](assets/brand/cover.jpg)
 
 Transitera (`trera`) is a logistics addon for [Machinera](https://github.com/spectrum527/Machinera). It adds autonomous electric cargo boats and transport drones that keep moving through unloaded chunks, along with a Communication Base Station and Operation Terminal for remote station control.
 
