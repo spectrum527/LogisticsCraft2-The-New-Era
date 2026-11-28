@@ -147,7 +147,7 @@ public final class Suite8TwoZoneAndVehicleFix {
         FakePlayer player = FakePlayerFactory.getMinecraft(level);
 
         // --- Scenario A: Items First -> Drone Second ---
-        var cargoState = QaChecks.block("lc2:cargo_station").defaultBlockState();
+        var cargoState = QaChecks.block("trera:cargo_station").defaultBlockState();
         level.setBlockAndUpdate(DRONE_ORIGIN, cargoState);
         level.setBlockAndUpdate(DRONE_TARGET, cargoState);
 
@@ -170,9 +170,9 @@ public final class Suite8TwoZoneAndVehicleFix {
         // --- Scenario B: Items First -> Boat Second ---
         QaChecks.buildCanal(level, 69, 87, 18, 20, WATER_Y);
         level.setBlockAndUpdate(BOAT_ORIGIN,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.EAST));
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.EAST));
         level.setBlockAndUpdate(BOAT_TARGET,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.WEST));
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.WEST));
 
         SmartPortBlockEntity boatOrigin = (SmartPortBlockEntity) level.getBlockEntity(BOAT_ORIGIN);
         SmartPortBlockEntity boatTarget = (SmartPortBlockEntity) level.getBlockEntity(BOAT_TARGET);
@@ -242,9 +242,9 @@ public final class Suite8TwoZoneAndVehicleFix {
         String tag = isPort ? "smart_port" : "cargo_station";
         if (isPort) {
             level.setBlockAndUpdate(stationPos,
-                    QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.NORTH));
+                    QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.NORTH));
         } else {
-            level.setBlockAndUpdate(stationPos, QaChecks.block("lc2:cargo_station").defaultBlockState());
+            level.setBlockAndUpdate(stationPos, QaChecks.block("trera:cargo_station").defaultBlockState());
         }
         level.setBlockAndUpdate(inHopperPos, Blocks.HOPPER.defaultBlockState().setValue(HopperBlock.FACING, Direction.DOWN));
         level.setBlockAndUpdate(outHopperPos, Blocks.HOPPER.defaultBlockState().setValue(HopperBlock.FACING, Direction.DOWN));
@@ -282,8 +282,8 @@ public final class Suite8TwoZoneAndVehicleFix {
 
     private void runSwapQuickMoveAndMigrationChecks(ServerLevel level, FakePlayer player, QaChecks checks) {
         level.setBlockAndUpdate(SWAP_PORT,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.NORTH));
-        level.setBlockAndUpdate(SWAP_CARGO, QaChecks.block("lc2:cargo_station").defaultBlockState());
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.NORTH));
+        level.setBlockAndUpdate(SWAP_CARGO, QaChecks.block("trera:cargo_station").defaultBlockState());
 
         SmartPortBlockEntity port = (SmartPortBlockEntity) level.getBlockEntity(SWAP_PORT);
         CargoStationBlockEntity cargo = (CargoStationBlockEntity) level.getBlockEntity(SWAP_CARGO);
@@ -302,7 +302,7 @@ public final class Suite8TwoZoneAndVehicleFix {
                         && port.getItem(27).is(Items.DIAMOND) && port.getItem(27).getCount() == 10
                         && port.getItem(53).is(Items.EMERALD) && port.getItem(53).getCount() == 11
                         && port.availableSingleUseBatteries() == 4
-                        && "status.lc2.swapped".equals(port.getStatusKey()),
+                        && "status.trera.swapped".equals(port.getStatusKey()),
                 "status=" + port.getStatusKey());
 
         // 2. Menu Quick-Move check: player inventory normal items move ONLY into Outbound (0..26), NEVER Storage (27..53)!

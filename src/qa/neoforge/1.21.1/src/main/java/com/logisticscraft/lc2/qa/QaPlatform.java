@@ -138,7 +138,7 @@ public final class QaPlatform {
         }
         CompoundTag root = new CompoundTag();
         ContainerHelper.saveAllItems(root, list, level.registryAccess());
-        root.put("lc2", legacyLc2Tag.copy());
+        root.put("trera", legacyLc2Tag.copy());
         be.loadCustomOnly(root, level.registryAccess());
     }
 

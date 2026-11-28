@@ -81,7 +81,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
     protected BlockPos targetPos = null;
     protected boolean autoReturn = false;
     protected EnergyPriority energyPriority = EnergyPriority.EU_FIRST;
-    protected String statusKey = "status.lc2.ready";
+    protected String statusKey = "status.trera.ready";
 
     protected UpgradeSummary upgrades = UpgradeSummary.EMPTY;
     private boolean upgradesDirty = true;
@@ -625,7 +625,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
 
     /**
      * Atomically swaps every slot pair {@code i <-> 27 + i} ({@code i = 0..26}) between the
-     * Outbound and Storage zones, marks the block entity dirty, and reports {@code status.lc2.swapped}.
+     * Outbound and Storage zones, marks the block entity dirty, and reports {@code status.trera.swapped}.
      */
     public void swapCargoZones() {
         for (int i = 0; i < OUTBOUND_COUNT; i++) {
@@ -636,7 +636,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
             this.items.set(outboundIdx, storageStack);
             this.items.set(storageIdx, outStack);
         }
-        this.statusKey = "status.lc2.swapped";
+        this.statusKey = "status.trera.swapped";
         setChanged();
     }
 
@@ -652,7 +652,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
             cleaned = cleaned.substring(0, 32);
         }
         this.stationName = cleaned;
-        this.statusKey = "status.lc2.name_saved";
+        this.statusKey = "status.trera.name_saved";
         setChanged();
         if (this.level instanceof ServerLevel serverLevel) {
             syncRegistry(serverLevel);
@@ -674,7 +674,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
         }
         this.statusKey = this.targetPos == null
                 ? DispatchFailure.NO_TARGET.translationKey()
-                : "status.lc2.target_updated";
+                : "status.trera.target_updated";
         setChanged();
     }
 
@@ -717,7 +717,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
         if (changed) {
             onTargetChanged();
         }
-        this.statusKey = "status.lc2.target_updated";
+        this.statusKey = "status.trera.target_updated";
         setChanged();
     }
 
@@ -974,7 +974,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends BlockEntity
         this.stationName = tag.getString("StationName");
         this.autoReturn = tag.getBoolean("AutoReturn");
         this.energyPriority = EnergyPriority.fromOrdinal(tag.getInt("EnergyPriority"));
-        this.statusKey = tag.contains("StatusKey") ? tag.getString("StatusKey") : "status.lc2.ready";
+        this.statusKey = tag.contains("StatusKey") ? tag.getString("StatusKey") : "status.trera.ready";
         if (tag.getBoolean("HasTarget")) {
             this.targetPos = new BlockPos(tag.getInt("TargetX"), tag.getInt("TargetY"), tag.getInt("TargetZ"));
         } else {

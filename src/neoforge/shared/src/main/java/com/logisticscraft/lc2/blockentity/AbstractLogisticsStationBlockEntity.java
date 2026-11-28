@@ -125,7 +125,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
     protected BlockPos targetPos = null;
     protected boolean autoReturn = false;
     protected EnergyPriority energyPriority = EnergyPriority.EU_FIRST;
-    protected String statusKey = "status.lc2.ready";
+    protected String statusKey = "status.trera.ready";
     protected UpgradeSummary upgrades = UpgradeSummary.EMPTY;
 
     private int lastServerTick = Integer.MIN_VALUE;
@@ -605,7 +605,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
     /**
      * Atomically swaps every slot pair {@code i <-> 27 + i} between Outbound ({@code 0..26})
      * and Storage ({@code 27..53}), marks the station dirty, and updates status to
-     * {@code status.lc2.swapped}.
+     * {@code status.trera.swapped}.
      */
     public final void swapCargoZones() {
         for (int i = 0; i < OUTBOUND_SLOTS; i++) {
@@ -615,7 +615,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
             items.set(outboundIdx, items.get(storageIdx));
             items.set(storageIdx, tmp);
         }
-        setStatusKey("status.lc2.swapped");
+        setStatusKey("status.trera.swapped");
         setChanged();
     }
 
@@ -950,7 +950,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
             data.stationRegistry().updateName(LogisticsSavedData.toPos3i(worldPosition), this.stationName);
             data.setDirty();
         }
-        setStatusKey("status.lc2.name_saved");
+        setStatusKey("status.trera.name_saved");
         setChanged();
     }
 
@@ -966,7 +966,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         if (changed) {
             onTargetChanged();
         }
-        setStatusKey("status.lc2.target_updated");
+        setStatusKey("status.trera.target_updated");
         setChanged();
     }
 
@@ -997,7 +997,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
     }
 
     public void setStatusKey(String statusKey) {
-        this.statusKey = statusKey == null ? "status.lc2.ready" : statusKey;
+        this.statusKey = statusKey == null ? "status.trera.ready" : statusKey;
         setChanged();
     }
 
@@ -1008,7 +1008,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         var targets = data.stationRegistry().listCompatibleTargets(self, stationType());
         if (targets.isEmpty()) {
             setTargetPos(null);
-            setStatusKey("status.lc2.failure.target_not_found");
+            setStatusKey("status.trera.failure.target_not_found");
             return;
         }
         int currentIndex = -1;
@@ -1071,7 +1071,7 @@ public abstract class AbstractLogisticsStationBlockEntity extends Lc2StationBloc
         }
         autoReturn = Lc2Nbt.getBoolean(tag, "autoReturn", false);
         energyPriority = EnergyPriority.fromOrdinal(Lc2Nbt.getInt(tag, "priority", 0));
-        statusKey = Lc2Nbt.getString(tag, "status", "status.lc2.ready");
+        statusKey = Lc2Nbt.getString(tag, "status", "status.trera.ready");
     }
 
     @Override

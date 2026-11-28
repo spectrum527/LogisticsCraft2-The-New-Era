@@ -125,27 +125,27 @@ public final class Lc2Registries {
             ITEMS.register("smart_port", () -> new Lc2BlockItem(
                     SMART_PORT_BLOCK.get(),
                     tabProps(),
-                    "tooltip.lc2.smart_port.line1",
-                    "tooltip.lc2.smart_port.line2",
-                    "tooltip.lc2.smart_port.line3"
+                    "tooltip.trera.smart_port.line1",
+                    "tooltip.trera.smart_port.line2",
+                    "tooltip.trera.smart_port.line3"
             ));
 
     public static final RegistryObject<Item> CARGO_STATION_ITEM =
             ITEMS.register("cargo_station", () -> new Lc2BlockItem(
                     CARGO_STATION_BLOCK.get(),
                     tabProps(),
-                    "tooltip.lc2.cargo_station.line1",
-                    "tooltip.lc2.cargo_station.line2",
-                    "tooltip.lc2.cargo_station.line3"
+                    "tooltip.trera.cargo_station.line1",
+                    "tooltip.trera.cargo_station.line2",
+                    "tooltip.trera.cargo_station.line3"
             ));
 
     public static final RegistryObject<Item> COMM_BASE_STATION_ITEM =
             ITEMS.register("comm_base_station", () -> new Lc2BlockItem(
                     COMM_BASE_STATION_BLOCK.get(),
                     tabProps(),
-                    "tooltip.lc2.comm_base_station.line1",
-                    "tooltip.lc2.comm_base_station.line2",
-                    "tooltip.lc2.comm_base_station.line3"
+                    "tooltip.trera.comm_base_station.line1",
+                    "tooltip.trera.comm_base_station.line2",
+                    "tooltip.trera.comm_base_station.line3"
             ));
 
     public static final RegistryObject<Item> OPERATION_TERMINAL_ITEM =
@@ -157,43 +157,43 @@ public final class Lc2Registries {
     public static final RegistryObject<Item> TRANSPORT_DRONE_ITEM =
             ITEMS.register("transport_drone", () -> new Lc2TooltipItem(
                     tabProps().stacksTo(1),
-                    "tooltip.lc2.transport_drone.line1",
-                    "tooltip.lc2.transport_drone.line2"
+                    "tooltip.trera.transport_drone.line1",
+                    "tooltip.trera.transport_drone.line2"
             ));
 
     public static final RegistryObject<Item> HEAVY_TRANSPORT_DRONE_ITEM =
             ITEMS.register("heavy_transport_drone", () -> new Lc2TooltipItem(
                     tabProps().stacksTo(1),
-                    "tooltip.lc2.heavy_transport_drone.line1",
-                    "tooltip.lc2.heavy_transport_drone.line2"
+                    "tooltip.trera.heavy_transport_drone.line1",
+                    "tooltip.trera.heavy_transport_drone.line2"
             ));
 
     public static final RegistryObject<Item> RF_CHIP_1_ITEM =
             ITEMS.register("rf_chip_1", () -> new Lc2TooltipItem(
                     tabProps().stacksTo(1),
-                    "tooltip.lc2.rf_chip_1.line1",
-                    "tooltip.lc2.rf_chip_1.line2"
+                    "tooltip.trera.rf_chip_1.line1",
+                    "tooltip.trera.rf_chip_1.line2"
             ));
 
     public static final RegistryObject<Item> RF_CHIP_2_ITEM =
             ITEMS.register("rf_chip_2", () -> new Lc2TooltipItem(
                     tabProps().stacksTo(1),
-                    "tooltip.lc2.rf_chip_2.line1",
-                    "tooltip.lc2.rf_chip_2.line2"
+                    "tooltip.trera.rf_chip_2.line1",
+                    "tooltip.trera.rf_chip_2.line2"
             ));
 
     public static final RegistryObject<Item> RF_CHIP_3_ITEM =
             ITEMS.register("rf_chip_3", () -> new Lc2TooltipItem(
                     tabProps().stacksTo(1),
-                    "tooltip.lc2.rf_chip_3.line1",
-                    "tooltip.lc2.rf_chip_3.line2"
+                    "tooltip.trera.rf_chip_3.line1",
+                    "tooltip.trera.rf_chip_3.line2"
             ));
 
     public static final RegistryObject<Item> CHUNK_LOADING_UPGRADE_ITEM =
             ITEMS.register("chunk_loading_upgrade", () -> new Lc2TooltipItem(
                     tabProps().stacksTo(16),
-                    "tooltip.lc2.chunk_loading_upgrade.line1",
-                    "tooltip.lc2.chunk_loading_upgrade.line2"
+                    "tooltip.trera.chunk_loading_upgrade.line1",
+                    "tooltip.trera.chunk_loading_upgrade.line2"
             ));
 
     // --- Menus (3) ---

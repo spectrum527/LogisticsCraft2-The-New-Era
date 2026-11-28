@@ -274,10 +274,10 @@ public final class OperationTerminalItem extends Lc2UsableTooltipItem {
             if (unbindCommStation(stack, dim, pos)) {
                 Lc2Native.sendActionBar(
                         player,
-                        Component.translatable("status.lc2.terminal.unbound", pos.getX(), pos.getY(), pos.getZ())
+                        Component.translatable("status.trera.terminal.unbound", pos.getX(), pos.getY(), pos.getZ())
                 );
             } else {
-                Lc2Native.sendActionBar(player, Component.translatable("status.lc2.terminal.not_bound"));
+                Lc2Native.sendActionBar(player, Component.translatable("status.trera.terminal.not_bound"));
             }
             return;
         }
@@ -288,7 +288,7 @@ public final class OperationTerminalItem extends Lc2UsableTooltipItem {
             Lc2Native.sendActionBar(
                     player,
                     Component.translatable(
-                            "status.lc2.terminal.bound",
+                            "status.trera.terminal.bound",
                             pos.getX(),
                             pos.getY(),
                             pos.getZ(),
@@ -299,12 +299,12 @@ public final class OperationTerminalItem extends Lc2UsableTooltipItem {
         } else if (result == BindResult.ALREADY_BOUND) {
             Lc2Native.sendActionBar(
                     player,
-                    Component.translatable("status.lc2.terminal.already_bound", pos.getX(), pos.getY(), pos.getZ())
+                    Component.translatable("status.trera.terminal.already_bound", pos.getX(), pos.getY(), pos.getZ())
             );
         } else {
             Lc2Native.sendActionBar(
                     player,
-                    Component.translatable("status.lc2.terminal.limit_reached", LogisticsConstants.TERMINAL_MAX_BINDINGS)
+                    Component.translatable("status.trera.terminal.limit_reached", LogisticsConstants.TERMINAL_MAX_BINDINGS)
             );
         }
     }
@@ -357,7 +357,7 @@ public final class OperationTerminalItem extends Lc2UsableTooltipItem {
         double maxEu = LogisticsConstants.TERMINAL_CAPACITY_EU;
         tooltipAdder.accept(
                 Component.translatable(
-                        "tooltip.lc2.operation_terminal.energy",
+                        "tooltip.trera.operation_terminal.energy",
                         Math.round(eu),
                         Math.round(maxEu),
                         EnergyUnits.euToFeFloor(eu),
@@ -366,7 +366,7 @@ public final class OperationTerminalItem extends Lc2UsableTooltipItem {
         );
         tooltipAdder.accept(
                 Component.translatable(
-                        "tooltip.lc2.operation_terminal.bound_count",
+                        "tooltip.trera.operation_terminal.bound_count",
                         getBindings(stack).size()
                 ).withStyle(ChatFormatting.GREEN)
         );

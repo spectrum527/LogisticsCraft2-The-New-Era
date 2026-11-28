@@ -116,7 +116,7 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
     @Override
     public Component getDisplayName() {
         return stationName.isBlank()
-                ? Component.translatable("container.lc2.smart_port")
+                ? Component.translatable("container.trera.smart_port")
                 : Component.literal(stationName);
     }
 
@@ -251,7 +251,7 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
             return false;
         }
         if (findDockedBoat(level).isPresent()) {
-            Lc2Native.sendActionBar(player, Component.translatable("status.lc2.boat_docked"));
+            Lc2Native.sendActionBar(player, Component.translatable("status.trera.boat_docked"));
             return false;
         }
         Vec3d spawnPos = berthOpt.get().waterSurfaceCenter();
@@ -269,8 +269,8 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
                 stack.shrink(1);
             }
             resetDispatchCooldown();
-            setStatusKey("status.lc2.boat_docked");
-            Lc2Native.sendActionBar(player, Component.translatable("status.lc2.boat_docked"));
+            setStatusKey("status.trera.boat_docked");
+            Lc2Native.sendActionBar(player, Component.translatable("status.trera.boat_docked"));
             return true;
         }
         return false;
@@ -416,7 +416,7 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
         LogisticsLevelManager.bindLiveEntity(level, transitId, boat);
         data.setDirty();
 
-        setStatusKey("status.lc2.dispatched");
+        setStatusKey("status.trera.dispatched");
         return result;
     }
 
@@ -465,10 +465,6 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
         if (!force && !lastWaterConnected && elapsed < GUI_NEGATIVE_PROBE_COOLDOWN_TICKS) {
             return false;
         }
-        if (force && !pairChanged && !lastWaterConnected && elapsed < REQUEST_SYNC_RECHECK_TICKS) {
-            this.forceNextWaterProbe = false;
-            return false;
-        }
 
         // GUI preview strictly inspects already-loaded chunks with a tight node budget so GUI
         // refreshes can never synchronously force-load unloaded chunks or freeze the server thread.
@@ -506,7 +502,7 @@ public final class SmartPortBlockEntity extends AbstractLogisticsStationBlockEnt
     private void clearStaleWaterFailureStatus() {
         if (DispatchFailure.WATER_DISCONNECTED.translationKey().equals(statusKey)
                 || DispatchFailure.NO_WATER_BERTH.translationKey().equals(statusKey)) {
-            setStatusKey("status.lc2.ready");
+            setStatusKey("status.trera.ready");
         }
     }
 

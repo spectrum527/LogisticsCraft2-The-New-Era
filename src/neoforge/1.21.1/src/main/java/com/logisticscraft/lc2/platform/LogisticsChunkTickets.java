@@ -19,7 +19,7 @@ import net.neoforged.bus.api.IEventBus;
 public final class LogisticsChunkTickets {
 
     private static final TicketType<ChunkPos> LEASE = TicketType.create(
-            "lc2_chunk_loader",
+            "trera_chunk_loader",
             Comparator.comparingLong(ChunkPos::toLong)
     );
     private static final Map<ServerLevel, Map<ChunkPos, Integer>> HOLDERS = new WeakHashMap<>();

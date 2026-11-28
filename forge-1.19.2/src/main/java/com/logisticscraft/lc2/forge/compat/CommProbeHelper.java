@@ -83,10 +83,10 @@ public final class CommProbeHelper {
 
         List<TerminalTargetResolver.AdjacentStationInfo> adjacent = comm.findAdjacentStations(level);
         if (adjacent.isEmpty()) {
-            lines.add(Component.translatable("probe.lc2.comm.adjacent_none").withStyle(ChatFormatting.GRAY));
+            lines.add(Component.translatable("probe.trera.comm.adjacent_none").withStyle(ChatFormatting.GRAY));
         } else {
             lines.add(Component.translatable(
-                    "probe.lc2.comm.adjacent",
+                    "probe.trera.comm.adjacent",
                     CommBaseStationBlock.formatAdjacentList(adjacent)
             ).withStyle(ChatFormatting.AQUA));
         }
@@ -101,7 +101,7 @@ public final class CommProbeHelper {
 
         ListTag adjTag = tag.getList(KEY_ADJACENT, Tag.TAG_COMPOUND);
         if (adjTag.isEmpty()) {
-            lines.add(Component.translatable("probe.lc2.comm.adjacent_none").withStyle(ChatFormatting.GRAY));
+            lines.add(Component.translatable("probe.trera.comm.adjacent_none").withStyle(ChatFormatting.GRAY));
         } else {
             MutableComponent joined = Component.empty();
             StationType[] types = StationType.values();
@@ -117,8 +117,8 @@ public final class CommProbeHelper {
                     int ord = entry.getInt("type");
                     StationType type = (ord >= 0 && ord < types.length) ? types[ord] : StationType.SMART_PORT;
                     String key = type == StationType.SMART_PORT
-                            ? "gui.lc2.terminal.unnamed_port"
-                            : "gui.lc2.terminal.unnamed_cargo";
+                            ? "gui.trera.terminal.unnamed_port"
+                            : "gui.trera.terminal.unnamed_cargo";
                     joined.append(Component.translatable(
                             key,
                             entry.getInt("x"),
@@ -127,19 +127,19 @@ public final class CommProbeHelper {
                     ));
                 }
             }
-            lines.add(Component.translatable("probe.lc2.comm.adjacent", joined).withStyle(ChatFormatting.AQUA));
+            lines.add(Component.translatable("probe.trera.comm.adjacent", joined).withStyle(ChatFormatting.AQUA));
         }
         return lines;
     }
 
     private static Component statusLine(boolean online) {
-        return Component.translatable(online ? "probe.lc2.comm.status_online" : "probe.lc2.comm.status_offline")
+        return Component.translatable(online ? "probe.trera.comm.status_online" : "probe.trera.comm.status_offline")
                 .withStyle(online ? ChatFormatting.GREEN : ChatFormatting.RED);
     }
 
     private static Component energyLine(double eu, double maxEu) {
         return Component.translatable(
-                "probe.lc2.comm.energy",
+                "probe.trera.comm.energy",
                 Math.round(eu),
                 Math.round(maxEu),
                 EnergyUnits.euToFeFloor(eu),
@@ -258,7 +258,7 @@ public final class CommProbeHelper {
     ) {
         List<Component> lines = new ArrayList<>(4);
         lines.add(Component.translatable(
-                "probe.lc2.station.energy",
+                "probe.trera.station.energy",
                 Math.round(eu),
                 Math.round(maxEu),
                 tier,
@@ -267,13 +267,13 @@ public final class CommProbeHelper {
 
         if (isPort) {
             lines.add(Component.translatable(
-                    boatDocked ? "gui.lc2.berth_docked" : "gui.lc2.berth_empty"
+                    boatDocked ? "gui.trera.berth_docked" : "gui.trera.berth_empty"
             ).withStyle(boatDocked ? ChatFormatting.GREEN : ChatFormatting.GRAY));
         } else {
             Component rfComp = rfRange > 0
-                    ? Component.translatable("gui.lc2.rf_range", rfRange)
-                    : Component.translatable("gui.lc2.rf_none");
-            lines.add(Component.translatable("gui.lc2.flight_deck_ready", readyDrones)
+                    ? Component.translatable("gui.trera.rf_range", rfRange)
+                    : Component.translatable("gui.trera.rf_none");
+            lines.add(Component.translatable("gui.trera.flight_deck_ready", readyDrones)
                     .append(Component.literal(" | "))
                     .append(rfComp)
                     .withStyle(readyDrones > 0 && rfRange > 0 ? ChatFormatting.AQUA : ChatFormatting.GOLD));
@@ -281,13 +281,13 @@ public final class CommProbeHelper {
 
         if (hasChunkUpgrade || chunkLoaderActive) {
             lines.add(Component.translatable(
-                    chunkLoaderActive ? "gui.lc2.chunk_loader_active" : "gui.lc2.chunk_loader_inactive"
+                    chunkLoaderActive ? "gui.trera.chunk_loader_active" : "gui.trera.chunk_loader_inactive"
             ).withStyle(chunkLoaderActive ? ChatFormatting.GREEN : ChatFormatting.RED));
         }
 
-        String safeKey = (statusKey == null || statusKey.isBlank()) ? "status.lc2.ready" : statusKey;
+        String safeKey = (statusKey == null || statusKey.isBlank()) ? "status.trera.ready" : statusKey;
         lines.add(Component.translatable(
-                "probe.lc2.station.status",
+                "probe.trera.station.status",
                 Component.translatable(safeKey)
         ).withStyle(safeKey.contains(".failure.") ? ChatFormatting.RED : ChatFormatting.GRAY));
         return lines;

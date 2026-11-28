@@ -1,16 +1,16 @@
 java.toolchain.languageVersion = JavaLanguageVersion.of(platformJava)
-base.archivesName = "lc2-neoforge-$minecraftVersion"
+base.archivesName = "trera-neoforge-$minecraftVersion"
 sourceSets.main.java.srcDir('../shared/src/main/java')
 
-def ic2Version = rootProject.property('ic2_version')
-def ic2Jar = rootProject.file(".ic2-deps/ic2-neoforge-${minecraftVersion}-${ic2Version}.jar")
-if (!ic2Jar.isFile()) {
-    throw new GradleException("Missing IC2 dependency JAR: ${ic2Jar}")
+def mheraVersion = rootProject.property('mhera_version')
+def mheraJar = rootProject.file(".mhera-deps/mhera-neoforge-${minecraftVersion}-${mheraVersion}.jar")
+if (!mheraJar.isFile()) {
+    throw new GradleException("Missing MHERA dependency JAR: ${mheraJar}")
 }
 
 dependencies {
     implementation project(':common')
-    compileOnly files(ic2Jar)
+    compileOnly files(mheraJar)
 }
 
 neoForge {
@@ -28,33 +28,33 @@ neoForge {
         }
     }
     mods {
-        lc2 {
+        trera {
             sourceSet sourceSets.main
             sourceSet project(':common').sourceSets.main
         }
     }
 }
 
-def generatedLc2Resources = layout.buildDirectory.dir('generated/lc2-resources')
-def generateLc2Resources = tasks.register('generateLc2Resources', Exec) {
+def generatedTreraResources = layout.buildDirectory.dir('generated/trera-resources')
+def generateTreraResources = tasks.register('generateTreraResources', Exec) {
     def generator = rootProject.file('src/datagen/generate_resources.py')
     onlyIf { generator.isFile() }
     inputs.files(rootProject.fileTree('src/datagen') { include '*.py', '*.json', '*.tsv' })
-    inputs.files(rootProject.fileTree('assets/lc2/lang') { include '*.json' })
+    inputs.files(rootProject.fileTree('assets/trera/lang') { include '*.json' })
     inputs.property('minecraftTarget', minecraftVersion)
-    outputs.dir(generatedLc2Resources)
+    outputs.dir(generatedTreraResources)
     commandLine 'python3', generator, '--target', "neoforge-${minecraftVersion}",
-            '--output', generatedLc2Resources.get().asFile
+            '--output', generatedTreraResources.get().asFile
 }
 
 tasks.named('processResources') {
-    dependsOn generateLc2Resources
+    dependsOn generateTreraResources
     filteringCharset = 'UTF-8'
     inputs.properties(
             version: project.version,
             neoForgeVersion: neoForgeVersion,
             minecraftVersion: minecraftVersion,
-            ic2Version: ic2Version,
+            mheraVersion: mheraVersion,
             loaderMetadata: loaderMetadata
     )
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -64,12 +64,12 @@ tasks.named('processResources') {
         into 'assets'
         exclude '**/*.md', '**/*.csv', '**/.git*', '**/.DS_Store', 'preview/**', 'brand/**'
     }
-    from(generatedLc2Resources) { exclude '.lc2-generated-output' }
+    from(generatedTreraResources) { exclude '.trera-generated-output' }
     from('../metadata') {
         expand version: project.version,
                 neoForgeVersion: neoForgeVersion,
                 minecraftVersion: minecraftVersion,
-                ic2Version: ic2Version,
+                mheraVersion: mheraVersion,
                 loaderMetadata: loaderMetadata
     }
 }

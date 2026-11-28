@@ -84,7 +84,7 @@ public class OperationTerminalScreen extends Screen {
     private EditBox searchBox;
 
     public OperationTerminalScreen(S2CTerminalSyncPacket initialSync) {
-        super(Component.translatable("gui.lc2.terminal.title"));
+        super(Component.translatable("gui.trera.terminal.title"));
         this.terminalId = initialSync.terminalId();
         this.storedEu = initialSync.storedEu();
         this.maxEu = initialSync.maxEu();
@@ -147,7 +147,7 @@ public class OperationTerminalScreen extends Screen {
                 this.topPos + 23,
                 230,
                 10,
-                Component.translatable("gui.lc2.terminal.search_placeholder")
+                Component.translatable("gui.trera.terminal.search_placeholder")
         );
         this.searchBox.setBordered(false);
         this.searchBox.setMaxLength(64);
@@ -165,7 +165,7 @@ public class OperationTerminalScreen extends Screen {
                 this.topPos + 20,
                 64,
                 14,
-                Component.translatable("gui.lc2.terminal.refresh"),
+                Component.translatable("gui.trera.terminal.refresh"),
                 btn -> Lc2Network.sendToServer(C2STerminalActionPacket.refresh(this.terminalId))
         ));
     }
@@ -312,7 +312,7 @@ public class OperationTerminalScreen extends Screen {
             blitAtlas(poseStack, this.leftPos + 187, this.topPos + 5, 328, 30, fillW, 9);
         }
         String energyShort = Component.translatable(
-                "gui.lc2.terminal.energy_short",
+                "gui.trera.terminal.energy_short",
                 (long) Math.floor(this.storedEu),
                 (long) Math.floor(this.maxEu)
         ).getString();
@@ -323,14 +323,14 @@ public class OperationTerminalScreen extends Screen {
 
         // Search placeholder when empty and unfocused
         if (this.searchBox != null && this.searchBox.getValue().isEmpty() && !this.searchBox.isFocused()) {
-            String placeholder = Component.translatable("gui.lc2.terminal.search_placeholder").getString();
+            String placeholder = Component.translatable("gui.trera.terminal.search_placeholder").getString();
             drawFittedText(poseStack, placeholder, this.leftPos + 11, this.topPos + 23, 228, 0x6E8294, false);
         }
 
         // Scrollable station rows (6 visible) or empty / no-match message
         if (this.filteredEntries.isEmpty()) {
             Component emptyMsg = Component.translatable(
-                    this.allEntries.isEmpty() ? "gui.lc2.terminal.empty" : "gui.lc2.terminal.no_matches"
+                    this.allEntries.isEmpty() ? "gui.trera.terminal.empty" : "gui.trera.terminal.no_matches"
             );
             List<FormattedCharSequence> lines = this.font.split(emptyMsg, 272);
             int totalH = lines.size() * 10;
@@ -359,7 +359,7 @@ public class OperationTerminalScreen extends Screen {
 
         // Footer Status LCD at (8, 207, 304, 12) -> text at (12, 209), maxWidth = 296
         int onlineCount = countOnlineEntries();
-        String footerText = Component.translatable("gui.lc2.terminal.footer", this.boundCount, onlineCount).getString();
+        String footerText = Component.translatable("gui.trera.terminal.footer", this.boundCount, onlineCount).getString();
         drawFittedText(poseStack, footerText, this.leftPos + 12, this.topPos + 209, 296, COLOR_CYAN, false);
 
         // Tooltips (header energy gauge & row unbind buttons)
@@ -399,7 +399,7 @@ public class OperationTerminalScreen extends Screen {
         // Line 1: title + distance at (rx + 34, ry + 3), maxWidth = 184
         String titleText = resolveRowTitle(entry);
         String distText = entry.distance() >= 0
-                ? Component.translatable("gui.lc2.terminal.distance", entry.distance()).getString()
+                ? Component.translatable("gui.trera.terminal.distance", entry.distance()).getString()
                 : "";
         int distW = distText.isEmpty() ? 0 : this.font.width(distText);
         int titleMaxW = distText.isEmpty() ? 184 : Math.max(40, 184 - distW - 6);
@@ -437,7 +437,7 @@ public class OperationTerminalScreen extends Screen {
                 15,
                 online,
                 connectHover,
-                Component.translatable("gui.lc2.terminal.connect").getString()
+                Component.translatable("gui.trera.terminal.connect").getString()
         );
 
         // Unbind button at (rx + 274, ry + 5, 14, 15) with 10x10 X icon at (rx + 276, ry + 7)
@@ -453,7 +453,7 @@ public class OperationTerminalScreen extends Screen {
             renderTooltip(
                     poseStack,
                     Component.translatable(
-                            "gui.lc2.terminal.energy",
+                            "gui.trera.terminal.energy",
                             (long) Math.floor(this.storedEu),
                             (long) Math.floor(this.maxEu),
                             EnergyUnits.euToFeFloor(this.storedEu),
@@ -474,7 +474,7 @@ public class OperationTerminalScreen extends Screen {
             int rx = this.leftPos + ROW_X;
             int ry = this.topPos + ROW_START_Y + i * ROW_STRIDE;
             if (inRect(mouseX, mouseY, rx + 274, ry + 5, 14, 15)) {
-                renderTooltip(poseStack, Component.translatable("gui.lc2.terminal.unbind_tooltip"), mouseX, mouseY);
+                renderTooltip(poseStack, Component.translatable("gui.trera.terminal.unbind_tooltip"), mouseX, mouseY);
                 return;
             }
         }
@@ -486,8 +486,8 @@ public class OperationTerminalScreen extends Screen {
                 return entry.stationName();
             }
             String key = entry.stationType() == StationType.SMART_PORT
-                    ? "gui.lc2.terminal.unnamed_port"
-                    : "gui.lc2.terminal.unnamed_cargo";
+                    ? "gui.trera.terminal.unnamed_port"
+                    : "gui.trera.terminal.unnamed_cargo";
             return Component.translatable(
                     key,
                     entry.stationPos().x(),
@@ -496,7 +496,7 @@ public class OperationTerminalScreen extends Screen {
             ).getString();
         }
         return Component.translatable(
-                "gui.lc2.terminal.comm_coords",
+                "gui.trera.terminal.comm_coords",
                 entry.commPos().x(),
                 entry.commPos().y(),
                 entry.commPos().z()
@@ -506,7 +506,7 @@ public class OperationTerminalScreen extends Screen {
     private String formatRowCoords(TerminalTargetEntry entry) {
         if (entry.hasStation()) {
             return Component.translatable(
-                    "gui.lc2.terminal.station_coords",
+                    "gui.trera.terminal.station_coords",
                     entry.stationPos().x(),
                     entry.stationPos().y(),
                     entry.stationPos().z()
@@ -516,7 +516,7 @@ public class OperationTerminalScreen extends Screen {
             return entry.dimensionId();
         }
         return Component.translatable(
-                "gui.lc2.terminal.comm_coords",
+                "gui.trera.terminal.comm_coords",
                 entry.commPos().x(),
                 entry.commPos().y(),
                 entry.commPos().z()

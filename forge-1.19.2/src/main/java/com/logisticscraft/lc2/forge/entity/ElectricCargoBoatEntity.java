@@ -48,7 +48,7 @@ import net.minecraftforge.network.NetworkHooks;
  *   <li>When docked/idle ({@code !isAutonomousTransit()}): players can right-click to board or
  *       sneak-right-click to inspect the 54-slot cargo hold.</li>
  *   <li>When running autonomously ({@code isAutonomousTransit()}): boarding is refused with
- *       {@code status.lc2.failure.boarding_blocked_in_transit}, while any player who boarded
+ *       {@code status.trera.failure.boarding_blocked_in_transit}, while any player who boarded
  *       before launch remains seated and rides along seamlessly.</li>
  * </ul>
  */
@@ -373,7 +373,7 @@ public class ElectricCargoBoatEntity extends Boat implements MenuProvider {
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("container.lc2.electric_cargo_boat");
+        return Component.translatable("container.trera.electric_cargo_boat");
     }
 
     @Override

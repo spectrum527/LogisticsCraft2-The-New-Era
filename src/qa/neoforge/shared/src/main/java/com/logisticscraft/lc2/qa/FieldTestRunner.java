@@ -47,18 +47,18 @@ public final class FieldTestRunner {
             "minecraft:iron_ingot",
             "minecraft:copper_ingot",
             "minecraft:gold_ingot",
-            "ic2:tin_ingot",
-            "ic2:lead_ingot",
-            "ic2:silver_ingot"
+            "mhera:tin_ingot",
+            "mhera:lead_ingot",
+            "mhera:silver_ingot"
     );
 
     private static final Set<String> RAW_ORES = Set.of(
             "minecraft:raw_iron",
             "minecraft:raw_copper",
             "minecraft:raw_gold",
-            "ic2:raw_tin",
-            "ic2:raw_lead",
-            "ic2:raw_silver"
+            "mhera:raw_tin",
+            "mhera:raw_lead",
+            "mhera:raw_silver"
     );
 
     private FieldFactoryBuilder.BuiltFactory factory;
@@ -335,7 +335,7 @@ public final class FieldTestRunner {
         BlockPos tmpPort = built.portA().above(24);
         BlockPos tmpChest = tmpPort.east();
         level.setBlockAndUpdate(tmpPort,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.NORTH));
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.NORTH));
         level.setBlockAndUpdate(tmpChest, Blocks.CHEST.defaultBlockState());
         SmartPortBlockEntity tmpPortBe = (SmartPortBlockEntity) level.getBlockEntity(tmpPort);
         ChestBlockEntity tmpChestBe = (ChestBlockEntity) level.getBlockEntity(tmpChest);
@@ -358,9 +358,9 @@ public final class FieldTestRunner {
     }
 
     private void verifyProductionJars(QaChecks checks) throws IOException {
-        Path lc2Jar = ModList.get().getModContainerById("lc2").orElseThrow()
+        Path lc2Jar = ModList.get().getModContainerById("trera").orElseThrow()
                 .getModInfo().getOwningFile().getFile().getFilePath();
-        Path ic2Jar = ModList.get().getModContainerById("ic2").orElseThrow()
+        Path ic2Jar = ModList.get().getModContainerById("mhera").orElseThrow()
                 .getModInfo().getOwningFile().getFile().getFilePath();
         String expectedLc2 = System.getProperty("lc2.qa.expectedLc2Jar", lc2Jar.getFileName().toString());
         String expectedIc2 = System.getProperty("lc2.qa.expectedIc2Jar", ic2Jar.getFileName().toString());
@@ -413,7 +413,7 @@ public final class FieldTestRunner {
         int depth = 0;
         for (int d = 1; d <= 48; d++) {
             String id = BuiltInRegistries.BLOCK.getKey(level.getBlockState(minerPos.below(d)).getBlock()).toString();
-            if ("ic2:mining_pipe".equals(id) || "ic2:mining_pipe_tip".equals(id)) {
+            if ("mhera:mining_pipe".equals(id) || "mhera:mining_pipe_tip".equals(id)) {
                 depth = d;
             }
         }

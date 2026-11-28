@@ -29,8 +29,8 @@ public class SmartPortScreen extends AbstractStationScreen<SmartPortMenu> {
         boolean hasBerth = this.sync != null && this.sync.hasWaterBerth();
         boolean waterOk = hasBerth && (this.sync.targetWaterConnected() || !this.sync.hasTarget());
 
-        String berthText = Component.translatable(boatDocked ? "gui.lc2.berth_docked" : "gui.lc2.berth_empty").getString();
-        String waterText = Component.translatable(waterOk ? "gui.lc2.water_ok" : "gui.lc2.water_blocked").getString();
+        String berthText = Component.translatable(boatDocked ? "gui.trera.berth_docked" : "gui.trera.berth_empty").getString();
+        String waterText = Component.translatable(waterOk ? "gui.trera.water_ok" : "gui.trera.water_blocked").getString();
         String separator = "  |  ";
         int totalW = this.font.width(berthText) + this.font.width(separator) + this.font.width(waterText);
 
@@ -52,7 +52,7 @@ public class SmartPortScreen extends AbstractStationScreen<SmartPortMenu> {
     @Override
     protected String formatTargetReadout() {
         if (this.sync == null || !this.sync.hasTarget()) {
-            return Component.translatable("gui.lc2.no_target").getString();
+            return Component.translatable("gui.trera.no_target").getString();
         }
         S2CStationSyncPacket.TargetSummary summary = findSelectedTargetSummary();
         if (summary == null) {
@@ -85,18 +85,18 @@ public class SmartPortScreen extends AbstractStationScreen<SmartPortMenu> {
     protected Component emptySlotTooltip(int slotIndex) {
         if (slotIndex >= SmartPortBlockEntity.SLOT_OUTBOUND_START
                 && slotIndex < SmartPortBlockEntity.SLOT_OUTBOUND_START + SmartPortBlockEntity.SLOT_OUTBOUND_COUNT) {
-            return Component.translatable("gui.lc2.slot.outbound");
+            return Component.translatable("gui.trera.slot.outbound");
         }
         if (slotIndex >= SmartPortBlockEntity.SLOT_STORAGE_START
                 && slotIndex < SmartPortBlockEntity.SLOT_STORAGE_START + SmartPortBlockEntity.SLOT_STORAGE_COUNT) {
-            return Component.translatable("gui.lc2.slot.storage");
+            return Component.translatable("gui.trera.slot.storage");
         }
         if (slotIndex == SmartPortBlockEntity.SLOT_BATTERY) {
-            return Component.translatable("gui.lc2.slot.battery");
+            return Component.translatable("gui.trera.slot.battery");
         }
         if (slotIndex >= SmartPortBlockEntity.SLOT_UPGRADE_START
                 && slotIndex < SmartPortBlockEntity.TOTAL_SLOTS) {
-            return Component.translatable("gui.lc2.slot.upgrade");
+            return Component.translatable("gui.trera.slot.upgrade");
         }
         return null;
     }

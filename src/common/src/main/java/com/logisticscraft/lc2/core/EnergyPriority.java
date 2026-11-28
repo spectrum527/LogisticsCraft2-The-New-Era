@@ -6,10 +6,10 @@ package com.logisticscraft.lc2.core;
 public enum EnergyPriority {
 
     /** Prefer internal EU buffer first; fall back to single-use batteries only if EU is insufficient. */
-    EU_FIRST("gui.lc2.priority.eu_first"),
+    EU_FIRST("gui.trera.priority.eu_first"),
 
     /** Prefer single-use batteries first; fall back to internal EU only if batteries are insufficient. */
-    BATTERY_FIRST("gui.lc2.priority.battery_first");
+    BATTERY_FIRST("gui.trera.priority.battery_first");
 
     private final String translationKey;
 

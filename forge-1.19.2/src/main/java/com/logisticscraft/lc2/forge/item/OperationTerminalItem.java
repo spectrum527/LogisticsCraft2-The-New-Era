@@ -210,11 +210,11 @@ public class OperationTerminalItem extends Item {
         if (player.isShiftKeyDown()) {
             if (unbind(stack, dimId, pos)) {
                 player.displayClientMessage(
-                        Component.translatable("status.lc2.terminal.unbound", pos.getX(), pos.getY(), pos.getZ()),
+                        Component.translatable("status.trera.terminal.unbound", pos.getX(), pos.getY(), pos.getZ()),
                         true
                 );
             } else {
-                player.displayClientMessage(Component.translatable("status.lc2.terminal.not_bound"), true);
+                player.displayClientMessage(Component.translatable("status.trera.terminal.not_bound"), true);
             }
             return;
         }
@@ -223,7 +223,7 @@ public class OperationTerminalItem extends Item {
         switch (result) {
             case BOUND -> player.displayClientMessage(
                     Component.translatable(
-                            "status.lc2.terminal.bound",
+                            "status.trera.terminal.bound",
                             pos.getX(),
                             pos.getY(),
                             pos.getZ(),
@@ -233,11 +233,11 @@ public class OperationTerminalItem extends Item {
                     true
             );
             case ALREADY_BOUND -> player.displayClientMessage(
-                    Component.translatable("status.lc2.terminal.already_bound", pos.getX(), pos.getY(), pos.getZ()),
+                    Component.translatable("status.trera.terminal.already_bound", pos.getX(), pos.getY(), pos.getZ()),
                     true
             );
             case LIMIT_REACHED -> player.displayClientMessage(
-                    Component.translatable("status.lc2.terminal.limit_reached", LogisticsConstants.TERMINAL_MAX_BINDINGS),
+                    Component.translatable("status.trera.terminal.limit_reached", LogisticsConstants.TERMINAL_MAX_BINDINGS),
                     true
             );
         }
@@ -304,21 +304,21 @@ public class OperationTerminalItem extends Item {
             List<Component> tooltip,
             TooltipFlag flag
     ) {
-        tooltip.add(Component.translatable("tooltip.lc2.operation_terminal.line1").withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("tooltip.lc2.operation_terminal.line2").withStyle(ChatFormatting.DARK_AQUA));
-        tooltip.add(Component.translatable("tooltip.lc2.operation_terminal.line3").withStyle(ChatFormatting.DARK_AQUA));
+        tooltip.add(Component.translatable("tooltip.trera.operation_terminal.line1").withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("tooltip.trera.operation_terminal.line2").withStyle(ChatFormatting.DARK_AQUA));
+        tooltip.add(Component.translatable("tooltip.trera.operation_terminal.line3").withStyle(ChatFormatting.DARK_AQUA));
 
         double eu = getStoredEu(stack);
         double maxEu = LogisticsConstants.TERMINAL_CAPACITY_EU;
         tooltip.add(Component.translatable(
-                "tooltip.lc2.operation_terminal.energy",
+                "tooltip.trera.operation_terminal.energy",
                 (long) Math.floor(eu),
                 (long) Math.floor(maxEu),
                 EnergyUnits.euToFeFloor(eu),
                 EnergyUnits.euToFeFloor(maxEu)
         ).withStyle(ChatFormatting.AQUA));
         tooltip.add(Component.translatable(
-                "tooltip.lc2.operation_terminal.bound_count",
+                "tooltip.trera.operation_terminal.bound_count",
                 getBindings(stack).size()
         ).withStyle(ChatFormatting.GOLD));
 

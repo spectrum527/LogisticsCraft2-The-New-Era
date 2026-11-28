@@ -6,6 +6,7 @@ run/
 logs/
 **/logs/
 .ic2-deps/
+.mhera-deps/
 out/
 .idea/
 *.iml

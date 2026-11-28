@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 @Mod(Lc2QaMod.MOD_ID)
 public final class Lc2QaMod {
 
-    public static final String MOD_ID = "lc2_qa";
+    public static final String MOD_ID = "trera_qa";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     public Lc2QaMod() {

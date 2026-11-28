@@ -92,7 +92,7 @@ public final class Lc2ProbeHelper {
                     adjComp.append(Component.literal(name));
                 } else {
                     boolean isPort = Lc2Nbt.getBoolean(entry, "port", true);
-                    String key = isPort ? "gui.lc2.terminal.unnamed_port" : "gui.lc2.terminal.unnamed_cargo";
+                    String key = isPort ? "gui.trera.terminal.unnamed_port" : "gui.trera.terminal.unnamed_cargo";
                     adjComp.append(Component.translatable(
                             key,
                             Lc2Nbt.getInt(entry, "x", 0),
@@ -115,11 +115,11 @@ public final class Lc2ProbeHelper {
             Component adjacentComponent
     ) {
         Component statusLine = Component.translatable(
-                online ? "probe.lc2.comm.status_online" : "probe.lc2.comm.status_offline"
+                online ? "probe.trera.comm.status_online" : "probe.trera.comm.status_offline"
         ).withStyle(online ? ChatFormatting.GREEN : ChatFormatting.RED);
 
         Component energyLine = Component.translatable(
-                "probe.lc2.comm.energy",
+                "probe.trera.comm.energy",
                 Math.round(storedEu),
                 Math.round(maxEu),
                 EnergyUnits.euToFeFloor(storedEu),
@@ -127,8 +127,8 @@ public final class Lc2ProbeHelper {
         ).withStyle(ChatFormatting.YELLOW);
 
         Component adjacentLine = adjacentComponent == null
-                ? Component.translatable("probe.lc2.comm.adjacent_none").withStyle(ChatFormatting.GRAY)
-                : Component.translatable("probe.lc2.comm.adjacent", adjacentComponent).withStyle(ChatFormatting.AQUA);
+                ? Component.translatable("probe.trera.comm.adjacent_none").withStyle(ChatFormatting.GRAY)
+                : Component.translatable("probe.trera.comm.adjacent", adjacentComponent).withStyle(ChatFormatting.AQUA);
 
         return List.of(statusLine, energyLine, adjacentLine);
     }
@@ -186,7 +186,7 @@ public final class Lc2ProbeHelper {
                 Lc2Nbt.getBoolean(tag, KEY_ST_BOAT_DOCKED, false),
                 Lc2Nbt.getInt(tag, KEY_ST_DRONES_READY, 0),
                 Lc2Nbt.getInt(tag, KEY_ST_RF_RANGE, 0),
-                Lc2Nbt.getString(tag, KEY_ST_STATUS, "status.lc2.ready")
+                Lc2Nbt.getString(tag, KEY_ST_STATUS, "status.trera.ready")
         );
     }
 
@@ -231,7 +231,7 @@ public final class Lc2ProbeHelper {
     ) {
         List<Component> lines = new ArrayList<>(4);
         lines.add(Component.translatable(
-                "probe.lc2.station.energy",
+                "probe.trera.station.energy",
                 Math.round(storedEu),
                 Math.round(maxEu),
                 tier,
@@ -240,13 +240,13 @@ public final class Lc2ProbeHelper {
 
         if (isPort) {
             lines.add(Component.translatable(
-                    boatDocked ? "gui.lc2.berth_docked" : "gui.lc2.berth_empty"
+                    boatDocked ? "gui.trera.berth_docked" : "gui.trera.berth_empty"
             ).withStyle(boatDocked ? ChatFormatting.GREEN : ChatFormatting.GRAY));
         } else {
             Component rfComp = rfRange > 0
-                    ? Component.translatable("gui.lc2.rf_range", rfRange)
-                    : Component.translatable("gui.lc2.rf_none");
-            lines.add(Component.translatable("gui.lc2.flight_deck_ready", readyDrones)
+                    ? Component.translatable("gui.trera.rf_range", rfRange)
+                    : Component.translatable("gui.trera.rf_none");
+            lines.add(Component.translatable("gui.trera.flight_deck_ready", readyDrones)
                     .append(Component.literal(" | "))
                     .append(rfComp)
                     .withStyle(readyDrones > 0 && rfRange > 0 ? ChatFormatting.AQUA : ChatFormatting.GOLD));
@@ -254,12 +254,12 @@ public final class Lc2ProbeHelper {
 
         if (hasChunkUpgrade || chunkActive) {
             lines.add(Component.translatable(
-                    chunkActive ? "gui.lc2.chunk_loader_active" : "gui.lc2.chunk_loader_inactive"
+                    chunkActive ? "gui.trera.chunk_loader_active" : "gui.trera.chunk_loader_inactive"
             ).withStyle(chunkActive ? ChatFormatting.GREEN : ChatFormatting.RED));
         }
 
-        String safeStatus = (statusKey == null || statusKey.isBlank()) ? "status.lc2.ready" : statusKey;
-        lines.add(Component.translatable("probe.lc2.station.status", Component.translatable(safeStatus))
+        String safeStatus = (statusKey == null || statusKey.isBlank()) ? "status.trera.ready" : statusKey;
+        lines.add(Component.translatable("probe.trera.station.status", Component.translatable(safeStatus))
                 .withStyle(safeStatus.contains(".failure.") ? ChatFormatting.RED : ChatFormatting.GRAY));
         return lines;
     }

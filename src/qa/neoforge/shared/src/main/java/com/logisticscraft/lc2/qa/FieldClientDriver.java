@@ -40,34 +40,34 @@ public final class FieldClientDriver {
     private static final Logger LOGGER = LoggerFactory.getLogger(FieldClientDriver.class);
 
     private static final List<String> REQUIRED_BLOCK_SPRITES = List.of(
-            "lc2:block/smart_port_bottom",
-            "lc2:block/smart_port_front",
-            "lc2:block/smart_port_front_active",
-            "lc2:block/smart_port_side",
-            "lc2:block/smart_port_top",
-            "lc2:block/cargo_station_bottom",
-            "lc2:block/cargo_station_side",
-            "lc2:block/cargo_station_side_active",
-            "lc2:block/cargo_station_top",
-            "lc2:block/cargo_station_top_active"
+            "trera:block/smart_port_bottom",
+            "trera:block/smart_port_front",
+            "trera:block/smart_port_front_active",
+            "trera:block/smart_port_side",
+            "trera:block/smart_port_top",
+            "trera:block/cargo_station_bottom",
+            "trera:block/cargo_station_side",
+            "trera:block/cargo_station_side_active",
+            "trera:block/cargo_station_top",
+            "trera:block/cargo_station_top_active"
     );
 
     private static final List<String> REQUIRED_ITEM_SPRITES = List.of(
-            "lc2:item/electric_cargo_boat",
-            "lc2:item/transport_drone",
-            "lc2:item/heavy_transport_drone",
-            "lc2:item/rf_chip_1",
-            "lc2:item/rf_chip_2",
-            "lc2:item/rf_chip_3",
-            "lc2:item/chunk_loading_upgrade"
+            "trera:item/electric_cargo_boat",
+            "trera:item/transport_drone",
+            "trera:item/heavy_transport_drone",
+            "trera:item/rf_chip_1",
+            "trera:item/rf_chip_2",
+            "trera:item/rf_chip_3",
+            "trera:item/chunk_loading_upgrade"
     );
 
     private static final List<String> REQUIRED_RESOURCES = List.of(
-            "lc2:textures/gui/smart_port.png",
-            "lc2:textures/gui/cargo_station.png",
-            "lc2:textures/entity/boat/electric_cargo_boat.png",
-            "lc2:textures/entity/drone/transport_drone.png",
-            "lc2:textures/entity/drone/heavy_transport_drone.png"
+            "trera:textures/gui/smart_port.png",
+            "trera:textures/gui/cargo_station.png",
+            "trera:textures/entity/boat/electric_cargo_boat.png",
+            "trera:textures/entity/drone/transport_drone.png",
+            "trera:textures/entity/drone/heavy_transport_drone.png"
     );
 
     private final Path input = Path.of("qa-input.txt");

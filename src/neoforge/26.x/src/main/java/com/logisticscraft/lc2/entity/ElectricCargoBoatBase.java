@@ -79,7 +79,7 @@ public abstract class ElectricCargoBoatBase extends ChestBoat {
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("container.lc2.electric_cargo_boat");
+        return Component.translatable("container.trera.electric_cargo_boat");
     }
 
     @Override
@@ -128,21 +128,21 @@ public abstract class ElectricCargoBoatBase extends ChestBoat {
         for (int i = 0; i < cargoItems.size(); i++) {
             copy.add(cargoItems.get(i));
         }
-        output.store("lc2_cargo", ItemStack.OPTIONAL_CODEC.listOf(), copy);
+        output.store("trera_cargo", ItemStack.OPTIONAL_CODEC.listOf(), copy);
         CompoundTag meta = new CompoundTag();
         writeBoatMeta(meta);
-        output.store("lc2_boat", CompoundTag.CODEC, meta);
+        output.store("trera_boat", CompoundTag.CODEC, meta);
     }
 
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
         super.readAdditionalSaveData(input);
         clearItemStacks();
-        List<ItemStack> loaded = input.read("lc2_cargo", ItemStack.OPTIONAL_CODEC.listOf()).orElse(List.of());
+        List<ItemStack> loaded = input.read("trera_cargo", ItemStack.OPTIONAL_CODEC.listOf()).orElse(List.of());
         for (int i = 0; i < Math.min(loaded.size(), cargoItems.size()); i++) {
             cargoItems.set(i, loaded.get(i));
         }
-        input.read("lc2_boat", CompoundTag.CODEC).ifPresent(this::readBoatMeta);
+        input.read("trera_boat", CompoundTag.CODEC).ifPresent(this::readBoatMeta);
     }
 
     @Override

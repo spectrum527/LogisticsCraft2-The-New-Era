@@ -20,7 +20,7 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public abstract class Lc2StationBlockEntityBase extends BlockEntity {
 
-    private static final String KEY_LC2_DATA = "lc2";
+    private static final String KEY_LC2_DATA = "trera";
 
     protected Lc2StationBlockEntityBase(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);

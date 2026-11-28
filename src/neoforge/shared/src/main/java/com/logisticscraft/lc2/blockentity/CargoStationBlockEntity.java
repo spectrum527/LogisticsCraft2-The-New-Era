@@ -125,7 +125,7 @@ public final class CargoStationBlockEntity extends AbstractLogisticsStationBlock
     @Override
     public Component getDisplayName() {
         return stationName.isBlank()
-                ? Component.translatable("container.lc2.cargo_station")
+                ? Component.translatable("container.trera.cargo_station")
                 : Component.literal(stationName);
     }
 
@@ -408,7 +408,7 @@ public final class CargoStationBlockEntity extends AbstractLogisticsStationBlock
         data.setCargo(transitId, cargo);
         data.setDirty();
 
-        setStatusKey("status.lc2.dispatched");
+        setStatusKey("status.trera.dispatched");
         return result;
     }
 

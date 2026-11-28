@@ -29,8 +29,8 @@ public class CargoStationScreen extends AbstractStationScreen<CargoStationMenu> 
         // RF Range Mini-LCD box at (26, 56, 42, 18) -> centered around (29, 61)
         RfChipTier chip = this.sync != null ? RfChipTier.fromTierIndex(this.sync.rfChipTierIndex()) : RfChipTier.NONE;
         String rangeText = chip.isInstalled()
-                ? Component.translatable("gui.lc2.rf_range", chip.maxRange()).getString()
-                : Component.translatable("gui.lc2.rf_none").getString();
+                ? Component.translatable("gui.trera.rf_range", chip.maxRange()).getString()
+                : Component.translatable("gui.trera.rf_none").getString();
         int rangeColor = chip.isInstalled() ? colorCyan() : colorRed();
         int rawRangeW = this.font.width(rangeText);
         if (rawRangeW <= 38) {
@@ -42,13 +42,13 @@ public class CargoStationScreen extends AbstractStationScreen<CargoStationMenu> 
 
         // Flight Deck Status LCD at (186, 56, 161, 18) -> text at (190, 61), maxWidth = 153
         int readyBays = countReadyDroneBays();
-        String baysText = Component.translatable("gui.lc2.flight_deck_ready", readyBays).getString();
+        String baysText = Component.translatable("gui.trera.flight_deck_ready", readyBays).getString();
         int baysColor = readyBays > 0 ? colorGreen() : colorAmber();
 
         String rfStatusText = null;
         int rfStatusColor = colorMuted();
         if (!chip.isInstalled()) {
-            rfStatusText = Component.translatable("gui.lc2.rf_none").getString();
+            rfStatusText = Component.translatable("gui.trera.rf_none").getString();
             rfStatusColor = colorRed();
         } else if (this.sync != null && this.sync.hasTarget()) {
             S2CStationSyncPacket.TargetSummary summary = findSelectedTargetSummary();
@@ -56,7 +56,7 @@ public class CargoStationScreen extends AbstractStationScreen<CargoStationMenu> 
                     ? summary.manhattanDistance()
                     : this.menu.getStationPos().distManhattan(this.sync.targetPos());
             boolean inRange = chip.canReach(dist);
-            rfStatusText = Component.translatable(inRange ? "gui.lc2.in_range" : "gui.lc2.out_of_range").getString();
+            rfStatusText = Component.translatable(inRange ? "gui.trera.in_range" : "gui.trera.out_of_range").getString();
             rfStatusColor = inRange ? colorCyan() : colorRed();
         }
 
@@ -93,7 +93,7 @@ public class CargoStationScreen extends AbstractStationScreen<CargoStationMenu> 
     @Override
     protected String formatTargetReadout() {
         if (this.sync == null || !this.sync.hasTarget()) {
-            return Component.translatable("gui.lc2.no_target").getString();
+            return Component.translatable("gui.trera.no_target").getString();
         }
         S2CStationSyncPacket.TargetSummary summary = findSelectedTargetSummary();
         if (summary == null) {
@@ -133,25 +133,25 @@ public class CargoStationScreen extends AbstractStationScreen<CargoStationMenu> 
     protected Component emptySlotTooltip(int slotIndex) {
         if (slotIndex >= CargoStationBlockEntity.SLOT_OUTBOUND_START
                 && slotIndex < CargoStationBlockEntity.SLOT_OUTBOUND_START + CargoStationBlockEntity.SLOT_OUTBOUND_COUNT) {
-            return Component.translatable("gui.lc2.slot.outbound");
+            return Component.translatable("gui.trera.slot.outbound");
         }
         if (slotIndex >= CargoStationBlockEntity.SLOT_STORAGE_START
                 && slotIndex < CargoStationBlockEntity.SLOT_STORAGE_START + CargoStationBlockEntity.SLOT_STORAGE_COUNT) {
-            return Component.translatable("gui.lc2.slot.storage");
+            return Component.translatable("gui.trera.slot.storage");
         }
         if (slotIndex == CargoStationBlockEntity.SLOT_RF_CHIP) {
-            return Component.translatable("gui.lc2.slot.rf_chip");
+            return Component.translatable("gui.trera.slot.rf_chip");
         }
         if (slotIndex >= CargoStationBlockEntity.SLOT_DRONE_BAY_START
                 && slotIndex < CargoStationBlockEntity.SLOT_DRONE_BAY_START + CargoStationBlockEntity.DRONE_BAY_COUNT) {
-            return Component.translatable("gui.lc2.slot.drone_bay");
+            return Component.translatable("gui.trera.slot.drone_bay");
         }
         if (slotIndex == CargoStationBlockEntity.SLOT_BATTERY) {
-            return Component.translatable("gui.lc2.slot.battery");
+            return Component.translatable("gui.trera.slot.battery");
         }
         if (slotIndex >= CargoStationBlockEntity.SLOT_UPGRADE_START
                 && slotIndex < CargoStationBlockEntity.TOTAL_SLOTS) {
-            return Component.translatable("gui.lc2.slot.upgrade");
+            return Component.translatable("gui.trera.slot.upgrade");
         }
         return null;
     }

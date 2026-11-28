@@ -34,7 +34,7 @@ import net.minecraft.world.level.saveddata.SavedData;
 public final class LogisticsSavedData extends SavedData {
 
     /** SavedData storage filename inside each dimension's {@code data/} directory. */
-    public static final String DATA_NAME = "lc2_logistics_data";
+    public static final String DATA_NAME = "trera_logistics_data";
 
     private static final int MAX_CACHED_ROUTES = 512;
 

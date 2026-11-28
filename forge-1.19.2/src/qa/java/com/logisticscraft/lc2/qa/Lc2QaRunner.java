@@ -598,8 +598,8 @@ final class Lc2QaRunner {
 
     private void runScenario1Setup(MinecraftServer server, ServerLevel level) {
         Lc2QaMod.LOGGER.info("[LC2-QA] === Scenario 1: Mod, Registry, Mixin, Recipes & IC2 Power ===");
-        qa.check("s1.mod_ic2_loaded", ModList.get().isLoaded("ic2"), "ic2 loaded");
-        qa.check("s1.mod_lc2_loaded", ModList.get().isLoaded("lc2"), "lc2 loaded");
+        qa.check("s1.mod_ic2_loaded", ModList.get().isLoaded("mhera"), "ic2 loaded");
+        qa.check("s1.mod_lc2_loaded", ModList.get().isLoaded("trera"), "lc2 loaded");
 
         // Flat world sanity check
         qa.check("s1.flat_world_bedrock",
@@ -660,46 +660,46 @@ final class Lc2QaRunner {
             qa.check("s1.tag.relocation_not_supported." + id,
                     defaultState.is(Lc2Coords.TAG_FORGE_RELOCATION_NOT_SUPPORTED), rl.toString());
             qa.check("s1.tag.power_blocks.block." + id,
-                    defaultState.is(Lc2Coords.blockTag("lc2", "power_blocks")), rl.toString());
+                    defaultState.is(Lc2Coords.blockTag("trera", "power_blocks")), rl.toString());
             qa.check("s1.tag.power_blocks.item." + id,
-                    itemStack.is(Lc2Coords.itemTag("lc2", "power_blocks")), rl.toString());
+                    itemStack.is(Lc2Coords.itemTag("trera", "power_blocks")), rl.toString());
         }
         for (String id : List.of("smart_port", "cargo_station")) {
             ResourceLocation rl = Lc2Coords.id(id);
             qa.check("s1.tag.stations.block." + id,
-                    ForgeRegistries.BLOCKS.getValue(rl).defaultBlockState().is(Lc2Coords.blockTag("lc2", "stations")),
+                    ForgeRegistries.BLOCKS.getValue(rl).defaultBlockState().is(Lc2Coords.blockTag("trera", "stations")),
                     rl.toString());
             qa.check("s1.tag.stations.item." + id,
-                    new ItemStack(ForgeRegistries.ITEMS.getValue(rl)).is(Lc2Coords.itemTag("lc2", "stations")),
+                    new ItemStack(ForgeRegistries.ITEMS.getValue(rl)).is(Lc2Coords.itemTag("trera", "stations")),
                     rl.toString());
         }
         for (String id : List.of("rf_chip_1", "rf_chip_2", "rf_chip_3")) {
             ResourceLocation rl = Lc2Coords.id(id);
             qa.check("s1.tag.rf_chips." + id,
-                    new ItemStack(ForgeRegistries.ITEMS.getValue(rl)).is(Lc2Coords.itemTag("lc2", "rf_chips")),
+                    new ItemStack(ForgeRegistries.ITEMS.getValue(rl)).is(Lc2Coords.itemTag("trera", "rf_chips")),
                     rl.toString());
         }
         for (String id : List.of("transport_drone", "heavy_transport_drone")) {
             ResourceLocation rl = Lc2Coords.id(id);
             qa.check("s1.tag.drones." + id,
-                    new ItemStack(ForgeRegistries.ITEMS.getValue(rl)).is(Lc2Coords.itemTag("lc2", "drones")),
+                    new ItemStack(ForgeRegistries.ITEMS.getValue(rl)).is(Lc2Coords.itemTag("trera", "drones")),
                     rl.toString());
         }
         ItemStack singleUseBat = Lc2QaHelpers.itemStack(LogisticsConstants.SINGLE_USE_BATTERY_ID, 1);
         qa.check("s1.tag.single_use_batteries",
                 singleUseBat.is(Lc2Coords.TAG_SINGLE_USE_BATTERIES) && Lc2Coords.isSingleUseBattery(singleUseBat),
-                "ic2:single_use_battery");
+                "mhera:single_use_battery");
         qa.check("s1.tag.common_recipe_inputs",
                 new ItemStack(Items.CHEST).is(Lc2Coords.itemTag("forge", "chests/wooden"))
                         && new ItemStack(Items.REDSTONE).is(Lc2Coords.itemTag("forge", "dusts/redstone"))
                         && new ItemStack(Items.ENDER_PEARL).is(Lc2Coords.itemTag("forge", "ender_pearls"))
                         && new ItemStack(Items.BLUE_STAINED_GLASS_PANE).is(Lc2Coords.itemTag("forge", "glass_panes"))
-                        && Lc2QaHelpers.itemStack("ic2:iron_plate", 1).is(Lc2Coords.itemTag("forge", "plates/iron"))
-                        && Lc2QaHelpers.itemStack("ic2:steel_plate", 1).is(Lc2Coords.itemTag("forge", "plates/steel"))
-                        && Lc2QaHelpers.itemStack("ic2:copper_plate", 1).is(Lc2Coords.itemTag("forge", "plates/copper"))
-                        && Lc2QaHelpers.itemStack("ic2:gold_plate", 1).is(Lc2Coords.itemTag("forge", "plates/gold"))
-                        && Lc2QaHelpers.itemStack("ic2:circuit", 1).is(Lc2Coords.itemTag("forge", "circuits/basic"))
-                        && Lc2QaHelpers.itemStack("ic2:advanced_circuit", 1).is(Lc2Coords.itemTag("forge", "circuits/advanced")),
+                        && Lc2QaHelpers.itemStack("mhera:iron_plate", 1).is(Lc2Coords.itemTag("forge", "plates/iron"))
+                        && Lc2QaHelpers.itemStack("mhera:steel_plate", 1).is(Lc2Coords.itemTag("forge", "plates/steel"))
+                        && Lc2QaHelpers.itemStack("mhera:copper_plate", 1).is(Lc2Coords.itemTag("forge", "plates/copper"))
+                        && Lc2QaHelpers.itemStack("mhera:gold_plate", 1).is(Lc2Coords.itemTag("forge", "plates/gold"))
+                        && Lc2QaHelpers.itemStack("mhera:circuit", 1).is(Lc2Coords.itemTag("forge", "circuits/basic"))
+                        && Lc2QaHelpers.itemStack("mhera:advanced_circuit", 1).is(Lc2Coords.itemTag("forge", "circuits/advanced")),
                 "forge common recipe tags populated");
 
         BlockState spNorth = Lc2Registries.SMART_PORT_BLOCK.get().defaultBlockState()
@@ -709,13 +709,13 @@ final class Lc2QaRunner {
                         && spNorth.mirror(Mirror.LEFT_RIGHT).getValue(SmartPortBlock.FACING) == Direction.SOUTH,
                 "rotate+mirror");
         qa.check("s1.wrench.ic2_wrench_excluded",
-                !Lc2Coords.isThirdPartyWrench(Lc2QaHelpers.itemStack("ic2:wrench", 1))
-                        && !Lc2Coords.isThirdPartyWrench(Lc2QaHelpers.itemStack("ic2:electric_wrench", 1)),
+                !Lc2Coords.isThirdPartyWrench(Lc2QaHelpers.itemStack("mhera:wrench", 1))
+                        && !Lc2Coords.isThirdPartyWrench(Lc2QaHelpers.itemStack("mhera:electric_wrench", 1)),
                 "ic2 wrenches excluded");
 
         // Place IC2 Generator + 2 insulated_copper_cable + Smart Port & Cargo Station
-        Block cableBlock = Lc2QaHelpers.requireBlock("ic2:insulated_copper_cable");
-        Block genBlock = Lc2QaHelpers.requireBlock("ic2:generator");
+        Block cableBlock = Lc2QaHelpers.requireBlock("mhera:insulated_copper_cable");
+        Block genBlock = Lc2QaHelpers.requireBlock("mhera:generator");
         // Stone floor underneath
         for (int x = 7; x <= 13; x++) {
             level.setBlock(new BlockPos(x, SURFACE_Y - 1, 0), Blocks.STONE.defaultBlockState(), Block.UPDATE_CLIENTS);
@@ -755,7 +755,7 @@ final class Lc2QaRunner {
 
         // Fuel the IC2 Generator with coal
         boolean fueled = Lc2QaHelpers.insertItemIntoBlock(level, s1GenPos, new ItemStack(Items.COAL, 16));
-        qa.check("s1.ic2_generator_fueled", fueled, "inserted 16 coal into ic2:generator");
+        qa.check("s1.ic2_generator_fueled", fueled, "inserted 16 coal into mhera:generator");
     }
 
     private void runScenario1VerifyEuAndUpgrades(ServerLevel level) {
@@ -769,13 +769,13 @@ final class Lc2QaRunner {
         qa.metric("s1.station_eu_after_50t", station.getStoredEu());
 
         // Verify ic2:energy_storage_upgrade -> 24400 EU & ic2:transformer_upgrade -> 128 EU/t
-        port.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:energy_storage_upgrade", 1));
-        port.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("ic2:transformer_upgrade", 1));
+        port.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("mhera:energy_storage_upgrade", 1));
+        port.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("mhera:transformer_upgrade", 1));
         qa.checkClose("s1.port_upgraded_capacity", 24400.0, port.maxCapacityEu(), 1e-6);
         qa.checkClose("s1.port_upgraded_packet_limit", 128.0, port.packetLimit(), 1e-6);
 
-        station.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:energy_storage_upgrade", 1));
-        station.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("ic2:transformer_upgrade", 1));
+        station.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("mhera:energy_storage_upgrade", 1));
+        station.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("mhera:transformer_upgrade", 1));
         qa.checkClose("s1.station_upgraded_capacity", 24400.0, station.maxCapacityEu(), 1e-6);
         qa.checkClose("s1.station_upgraded_packet_limit", 128.0, station.packetLimit(), 1e-6);
     }
@@ -794,7 +794,7 @@ final class Lc2QaRunner {
         qa.check("s2.portB_berth_detected", portB.getWaterBerthPos() != null, "berthB=" + portB.getWaterBerthPos());
 
         // Place Chest + Shulker Box + IC2 Iron Storage Box adjacent to Port A AND Port B
-        Block ironStorageBox = Lc2QaHelpers.requireBlock("ic2:iron_storage_box");
+        Block ironStorageBox = Lc2QaHelpers.requireBlock("mhera:iron_storage_box");
         level.setBlock(s2PortAContainers.get(0), Blocks.CHEST.defaultBlockState(), Block.UPDATE_ALL);
         level.setBlock(s2PortAContainers.get(1), Blocks.SHULKER_BOX.defaultBlockState(), Block.UPDATE_ALL);
         level.setBlock(s2PortAContainers.get(2), ironStorageBox.defaultBlockState(), Block.UPDATE_ALL);
@@ -825,9 +825,9 @@ final class Lc2QaRunner {
         portA.setAutoReturn(false);
         portA.setStoredEu(10000.0);
         portA.setEnergyPriority(EnergyPriority.BATTERY_FIRST);
-        portA.setItem(SmartPortBlockEntity.SLOT_BATTERY, Lc2QaHelpers.itemStack("ic2:single_use_battery", 4));
-        portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:pulling_upgrade", 1));
-        portB.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("ic2:ejector_upgrade", 1));
+        portA.setItem(SmartPortBlockEntity.SLOT_BATTERY, Lc2QaHelpers.itemStack("mhera:single_use_battery", 4));
+        portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("mhera:pulling_upgrade", 1));
+        portB.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("mhera:ejector_upgrade", 1));
 
         // 0) GUI sync MUST report water connected BEFORE any dispatch ever runs (regression check!)
         var initialSync = portA.buildSyncPacket(level);
@@ -864,7 +864,7 @@ final class Lc2QaRunner {
         portA.requestImmediateWaterCheck();
         var reopenedSync = portA.buildSyncPacket(level);
         qa.check("s2.gui.reopened_canal_sync_connected_before_dispatch",
-                reopenedSync.targetWaterConnected() && "status.lc2.ready".equals(reopenedSync.statusKey()),
+                reopenedSync.targetWaterConnected() && "status.trera.ready".equals(reopenedSync.statusKey()),
                 "reopenedWaterConnected=" + reopenedSync.targetWaterConnected() + ", status=" + reopenedSync.statusKey());
 
         // BATTERY_FIRST dispatch consumes 2 single-use batteries, EU untouched!
@@ -876,7 +876,8 @@ final class Lc2QaRunner {
         s2BoatTransitId = boat.getTransitId();
         qa.check("s2.boat_bound_to_transit", s2BoatTransitId != null, "transitId=" + s2BoatTransitId);
         qa.check("s2.boat_is_autonomous_transit", boat.isAutonomousTransit(), "isAutonomousTransit=true");
-        qa.checkEquals("s2.boat_loaded_42_stacks", 42, boat.snapshotCargoList().size());
+        qa.checkEquals("s2.boat_loaded_42_stacks", 42,
+                LogisticsSavedData.get(level).getTransitCargo(s2BoatTransitId).size());
 
         // Check active-transit riding block immediately!
         Villager intruder = EntityType.VILLAGER.create(level);
@@ -958,9 +959,9 @@ final class Lc2QaRunner {
         qa.check("s2.prelaunch_passenger_boarded", preSeated && dockedBoat.getPassengers().contains(s2PreLaunchRider),
                 "preSeated=" + preSeated);
 
-        // Install redstone block (powered) + ic2:redstone_inverter_upgrade -> MUST NOT dispatch while powered!
+        // Install mhera:redstone_inverter_upgrade BEFORE placing redstone block so neighborChanged does not dispatch on rising edge!
+        portB.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("mhera:redstone_inverter_upgrade", 1));
         level.setBlock(s2PortBRedstonePos, Blocks.REDSTONE_BLOCK.defaultBlockState(), Block.UPDATE_ALL);
-        portB.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:redstone_inverter_upgrade", 1));
         advance(Stage.S2_INVERTER_HOLD_CHECK);
     }
 
@@ -1043,36 +1044,36 @@ final class Lc2QaRunner {
         rfOrig.setTargetPos(rf300Pos);
         rfOrig.setAutoReturn(false);
         rfOrig.setStoredEu(14400.0);
-        rfOrig.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+        rfOrig.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
         qa.check("s3.no_rf_chip_blocked", !rfOrig.tryDispatch(level, true), "status=" + rfOrig.getStatusKey());
         qa.checkEquals("s3.no_rf_chip_reason", DispatchFailure.NO_RF_CHIP.translationKey(), rfOrig.getStatusKey());
 
         // 2) rf_chip_1 (256m) rejects distance 300 -> OUT_OF_RF_RANGE
-        rfOrig.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
+        rfOrig.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_1", 1));
         qa.checkEquals("s3.rf_chip_1_tier", RfChipTier.TIER_1, rfOrig.getRfChipTier());
         qa.check("s3.rf_chip_1_rejects_300", !rfOrig.tryDispatch(level, true), "status=" + rfOrig.getStatusKey());
         qa.checkEquals("s3.rf_chip_1_rejects_300_reason", DispatchFailure.OUT_OF_RF_RANGE.translationKey(), rfOrig.getStatusKey());
 
         // 3) rf_chip_2 (512m) accepts distance 300: 2000/4000 EU and 2/4 batteries
-        rfOrig.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_2", 1));
-        probeDroneCost(level, rfOrig, rf300Pos, "lc2:transport_drone", EnergyPriority.EU_FIRST, 10000.0, 0, 2000.0, 0, "s3.rf2_300_std_eu");
-        probeDroneCost(level, rfOrig, rf300Pos, "lc2:heavy_transport_drone", EnergyPriority.EU_FIRST, 10000.0, 0, 4000.0, 0, "s3.rf2_300_heavy_eu");
-        probeDroneCost(level, rfOrig, rf300Pos, "lc2:transport_drone", EnergyPriority.BATTERY_FIRST, 10000.0, 10, 0.0, 2, "s3.rf2_300_std_bat");
-        probeDroneCost(level, rfOrig, rf300Pos, "lc2:heavy_transport_drone", EnergyPriority.BATTERY_FIRST, 10000.0, 10, 0.0, 4, "s3.rf2_300_heavy_bat");
+        rfOrig.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_2", 1));
+        probeDroneCost(level, rfOrig, rf300Pos, "trera:transport_drone", EnergyPriority.EU_FIRST, 10000.0, 0, 2000.0, 0, "s3.rf2_300_std_eu");
+        probeDroneCost(level, rfOrig, rf300Pos, "trera:heavy_transport_drone", EnergyPriority.EU_FIRST, 10000.0, 0, 4000.0, 0, "s3.rf2_300_heavy_eu");
+        probeDroneCost(level, rfOrig, rf300Pos, "trera:transport_drone", EnergyPriority.BATTERY_FIRST, 10000.0, 10, 0.0, 2, "s3.rf2_300_std_bat");
+        probeDroneCost(level, rfOrig, rf300Pos, "trera:heavy_transport_drone", EnergyPriority.BATTERY_FIRST, 10000.0, 10, 0.0, 4, "s3.rf2_300_heavy_bat");
 
         // 4) rf_chip_2 rejects distance 600 -> OUT_OF_RF_RANGE
         rfOrig.setTargetPos(rf600Pos);
         rfOrig.setStoredEu(14400.0);
-        rfOrig.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+        rfOrig.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
         qa.check("s3.rf_chip_2_rejects_600", !rfOrig.tryDispatch(level, true), "status=" + rfOrig.getStatusKey());
         qa.checkEquals("s3.rf_chip_2_rejects_600_reason", DispatchFailure.OUT_OF_RF_RANGE.translationKey(), rfOrig.getStatusKey());
 
         // 5) rf_chip_3 (1024m) accepts distance 600: 7000/14000 EU and 5/10 batteries
-        rfOrig.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_3", 1));
-        probeDroneCost(level, rfOrig, rf600Pos, "lc2:transport_drone", EnergyPriority.EU_FIRST, 14400.0, 0, 7000.0, 0, "s3.rf3_600_std_eu");
-        probeDroneCost(level, rfOrig, rf600Pos, "lc2:heavy_transport_drone", EnergyPriority.EU_FIRST, 14400.0, 0, 14000.0, 0, "s3.rf3_600_heavy_eu");
-        probeDroneCost(level, rfOrig, rf600Pos, "lc2:transport_drone", EnergyPriority.BATTERY_FIRST, 14400.0, 16, 0.0, 5, "s3.rf3_600_std_bat");
-        probeDroneCost(level, rfOrig, rf600Pos, "lc2:heavy_transport_drone", EnergyPriority.BATTERY_FIRST, 14400.0, 16, 0.0, 10, "s3.rf3_600_heavy_bat");
+        rfOrig.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_3", 1));
+        probeDroneCost(level, rfOrig, rf600Pos, "trera:transport_drone", EnergyPriority.EU_FIRST, 14400.0, 0, 7000.0, 0, "s3.rf3_600_std_eu");
+        probeDroneCost(level, rfOrig, rf600Pos, "trera:heavy_transport_drone", EnergyPriority.EU_FIRST, 14400.0, 0, 14000.0, 0, "s3.rf3_600_heavy_eu");
+        probeDroneCost(level, rfOrig, rf600Pos, "trera:transport_drone", EnergyPriority.BATTERY_FIRST, 14400.0, 16, 0.0, 5, "s3.rf3_600_std_bat");
+        probeDroneCost(level, rfOrig, rf600Pos, "trera:heavy_transport_drone", EnergyPriority.BATTERY_FIRST, 14400.0, 16, 0.0, 10, "s3.rf3_600_heavy_bat");
 
         // 6) Standard Drone (12 stacks, faster 0.80) vs Heavy Drone (36 stacks, slower 0.50)
         CargoStationBlockEntity cargoA = Lc2QaHelpers.placeCargoStation(level, s3CargoAPos, "S3-CargoA");
@@ -1091,11 +1092,11 @@ final class Lc2QaRunner {
 
         cargoA.setTargetPos(s3CargoBPos);
         cargoA.setAutoReturn(false);
-        cargoA.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
-        cargoA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
-        cargoA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:pulling_upgrade", 1));
+        cargoA.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_1", 1));
+        cargoA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
+        cargoA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("mhera:pulling_upgrade", 1));
         cargoA.setStoredEu(5000.0);
-        cargoB.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:ejector_upgrade", 1));
+        cargoB.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("mhera:ejector_upgrade", 1));
 
         qa.check("s3.std_drone_dispatch_ok", cargoA.tryDispatch(level, true), "status=" + cargoA.getStatusKey());
         TransitRecord stdRec = findLatestTransitFrom(level, s3CargoAPos, VehicleKind.STANDARD_DRONE);
@@ -1123,7 +1124,7 @@ final class Lc2QaRunner {
         station.setEnergyPriority(priority);
         station.setStoredEu(startEu);
         station.setItem(CargoStationBlockEntity.SLOT_BATTERY,
-                startBats > 0 ? Lc2QaHelpers.itemStack("ic2:single_use_battery", startBats) : ItemStack.EMPTY);
+                startBats > 0 ? Lc2QaHelpers.itemStack("mhera:single_use_battery", startBats) : ItemStack.EMPTY);
         station.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack(droneItemId, 1));
 
         Set<UUID> before = new HashSet<>();
@@ -1180,7 +1181,7 @@ final class Lc2QaRunner {
             BlockPos dest = i < 20 ? s3CargoAContainers.get(0) : s3CargoAContainers.get(1);
             Lc2QaHelpers.insertItemIntoBlock(level, dest, stacks40.get(i));
         }
-        cargoA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:heavy_transport_drone", 1));
+        cargoA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:heavy_transport_drone", 1));
         cargoA.setStoredEu(5000.0);
         qa.check("s3.heavy_drone_dispatch_ok", cargoA.tryDispatch(level, true), "status=" + cargoA.getStatusKey());
         TransitRecord heavyRec = findLatestTransitFrom(level, s3CargoAPos, VehicleKind.HEAVY_DRONE);
@@ -1214,16 +1215,16 @@ final class Lc2QaRunner {
 
         // Fill all 6 bays at target
         for (int bay = 0; bay < CargoStationBlockEntity.DRONE_BAY_COUNT; bay++) {
-            target.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + bay, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+            target.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + bay, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
         }
         orig1.setTargetPos(s3BayTargetPos);
-        orig1.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
-        orig1.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+        orig1.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_1", 1));
+        orig1.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
         orig1.setStoredEu(5000.0);
 
         orig2.setTargetPos(s3BayTargetPos);
-        orig2.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
-        orig2.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+        orig2.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_1", 1));
+        orig2.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
         orig2.setStoredEu(5000.0);
 
         qa.check("s3.full_6_bays_rejects", !orig1.tryDispatch(level, true), "status=" + orig1.getStatusKey());
@@ -1247,8 +1248,8 @@ final class Lc2QaRunner {
         retA.setTargetPos(s3RetBPos);
         retA.setAutoReturn(true);
         retA.setEnergyPriority(EnergyPriority.EU_FIRST);
-        retA.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
-        retA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+        retA.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_1", 1));
+        retA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
         retA.setStoredEu(2000.0);
         // Load 3 stacks into retA internal outgoing buffer
         List<ItemStack> retCargo = Lc2QaHelpers.distinctStacks(3, 10);
@@ -1335,9 +1336,9 @@ final class Lc2QaRunner {
         portA.setTargetPos(s4PortBPos);
         portA.setAutoReturn(false);
         portA.setStoredEu(10000.0);
-        portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:overclocker_upgrade", 4));
-        portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("ic2:pulling_upgrade", 1));
-        portB.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:ejector_upgrade", 1));
+        portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("mhera:overclocker_upgrade", 4));
+        portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("mhera:pulling_upgrade", 1));
+        portB.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("mhera:ejector_upgrade", 1));
 
         // Setup Cargo Stations at X=0 -> X=352 (dist = 352 <= 512 -> rf_chip_2)
         CargoStationBlockEntity stA = Lc2QaHelpers.placeCargoStation(level, s4StationAPos, "S4-UnloadedStA");
@@ -1352,10 +1353,10 @@ final class Lc2QaRunner {
         stA.setTargetPos(s4StationBPos);
         stA.setAutoReturn(false);
         stA.setStoredEu(10000.0);
-        stA.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_2", 1));
-        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
-        stA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("ic2:overclocker_upgrade", 4));
-        stA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("ic2:pulling_upgrade", 1));
+        stA.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_2", 1));
+        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
+        stA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("mhera:overclocker_upgrade", 4));
+        stA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START + 1, Lc2QaHelpers.itemStack("mhera:pulling_upgrade", 1));
     }
 
     private void tickScenario4WaitChunksUnload(ServerLevel level) {
@@ -1488,13 +1489,13 @@ final class Lc2QaRunner {
     // -------------------------------------------------------------------------
 
     private void runScenario5Setup(ServerLevel level) {
-        Lc2QaMod.LOGGER.info("[LC2-QA] === Scenario 5: Chunk Loading Upgrade (lc2:chunk_loading_upgrade) ===");
+        Lc2QaMod.LOGGER.info("[LC2-QA] === Scenario 5: Chunk Loading Upgrade (trera:chunk_loading_upgrade) ===");
         CargoStationBlockEntity st = Lc2QaHelpers.placeCargoStation(level, s5StationPos, "S5-ChunkLoader");
         qa.checkEquals("s5.initial_held_chunks_zero", 0, LogisticsChunkTickets.heldChunkCount(level));
         qa.check("s5.initial_inactive", !st.isChunkLoaderActive(), "inactive before upgrade");
 
         st.setStoredEu(100.0);
-        st.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("lc2:chunk_loading_upgrade", 1));
+        st.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("trera:chunk_loading_upgrade", 1));
     }
 
     private void runScenario5VerifyHoldAndRemove(ServerLevel level) {
@@ -1526,7 +1527,7 @@ final class Lc2QaRunner {
 
         // Re-insert upgrade with only 6.0 EU (enough for exactly 3 ticks, then releases on tick 4!)
         st.setStoredEu(6.0);
-        st.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("lc2:chunk_loading_upgrade", 1));
+        st.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("trera:chunk_loading_upgrade", 1));
     }
 
     // -------------------------------------------------------------------------
@@ -1571,16 +1572,16 @@ final class Lc2QaRunner {
         dA.setTargetPos(s6DroneBPos);
         dA.setAutoReturn(false);
         dA.setStoredEu(10000.0);
-        dA.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
-        dA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
-        dA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 1, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+        dA.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_1", 1));
+        dA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
+        dA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 1, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
 
         dB.setTargetPos(s6DroneAPos);
         dB.setAutoReturn(false);
         dB.setStoredEu(10000.0);
-        dB.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
-        dB.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
-        dB.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 1, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+        dB.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_1", 1));
+        dB.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
+        dB.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 1, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
 
         s6DroneIds.clear();
         Set<UUID> seen = new HashSet<>();
@@ -1682,7 +1683,7 @@ final class Lc2QaRunner {
         // --- 8A: External Hopper & ForgeCapabilities.ITEM_HANDLER Zone Isolation ---
         SmartPortBlockEntity hPort = Lc2QaHelpers.placeSmartPort(level, s8HopperPortPos, Direction.SOUTH, "S8-HopperPort");
         // Seed Battery slot (54) and 1 Outbound stack (slot 0) + 1 Storage stack (slot 27)
-        hPort.setItem(SmartPortBlockEntity.SLOT_BATTERY, Lc2QaHelpers.itemStack("ic2:single_use_battery", 8));
+        hPort.setItem(SmartPortBlockEntity.SLOT_BATTERY, Lc2QaHelpers.itemStack("mhera:single_use_battery", 8));
         hPort.setItem(SmartPortBlockEntity.SLOT_OUTBOUND_START, new ItemStack(Items.COBBLESTONE, 16));
         hPort.setItem(SmartPortBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.GOLD_NUGGET, 4));
 
@@ -1728,8 +1729,8 @@ final class Lc2QaRunner {
         upgSt.setItem(CargoStationBlockEntity.SLOT_OUTBOUND_START, new ItemStack(Items.EMERALD, 6));
         upgSt.setItem(CargoStationBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.DIAMOND, 10));
 
-        ItemStack pullWest = Lc2FieldHelpers.configureUpgradeFace(level, fakePlayer, s8UpgStationPos, "ic2:pulling_upgrade", Direction.WEST);
-        ItemStack ejectEast = Lc2FieldHelpers.configureUpgradeFace(level, fakePlayer, s8UpgStationPos, "ic2:ejector_upgrade", Direction.EAST);
+        ItemStack pullWest = Lc2FieldHelpers.configureUpgradeFace(level, fakePlayer, s8UpgStationPos, "mhera:pulling_upgrade", Direction.WEST);
+        ItemStack ejectEast = Lc2FieldHelpers.configureUpgradeFace(level, fakePlayer, s8UpgStationPos, "mhera:ejector_upgrade", Direction.EAST);
         upgSt.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, pullWest);
         upgSt.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START + 1, ejectEast);
 
@@ -1750,7 +1751,7 @@ final class Lc2QaRunner {
 
         // Atomic Swap!
         swapPort.swapCargoZones();
-        qa.checkEquals("s8.swap_status_key", "status.lc2.swapped", swapPort.getStatusKey());
+        qa.checkEquals("s8.swap_status_key", "status.trera.swapped", swapPort.getStatusKey());
         qa.check("s8.swap_slot_0_to_27",
                 swapPort.getItem(0).is(Items.DIAMOND) && swapPort.getItem(0).getCount() == 16
                         && swapPort.getItem(27).is(Items.RAW_IRON) && swapPort.getItem(27).getCount() == 20,
@@ -1810,9 +1811,9 @@ final class Lc2QaRunner {
         NonNullList<ItemStack> legacyPortItems = NonNullList.withSize(32, ItemStack.EMPTY);
         legacyPortItems.set(0, new ItemStack(Items.IRON_INGOT, 11));
         legacyPortItems.set(26, new ItemStack(Items.GOLD_INGOT, 7));
-        legacyPortItems.set(27, Lc2QaHelpers.itemStack("ic2:single_use_battery", 12));
-        legacyPortItems.set(28, Lc2QaHelpers.itemStack("ic2:overclocker_upgrade", 2));
-        legacyPortItems.set(31, Lc2QaHelpers.itemStack("lc2:chunk_loading_upgrade", 1));
+        legacyPortItems.set(27, Lc2QaHelpers.itemStack("mhera:single_use_battery", 12));
+        legacyPortItems.set(28, Lc2QaHelpers.itemStack("mhera:overclocker_upgrade", 2));
+        legacyPortItems.set(31, Lc2QaHelpers.itemStack("trera:chunk_loading_upgrade", 1));
         CompoundTag legacyPortTag = new CompoundTag();
         ContainerHelper.saveAllItems(legacyPortTag, legacyPortItems);
         legacyPortTag.putDouble("StoredEu", 4200.0);
@@ -1831,11 +1832,11 @@ final class Lc2QaRunner {
                 "slot26=" + migratedPort.getItem(26));
         qa.checkEquals("s8.migrate_port_battery_54", 12, migratedPort.getBatteryCount());
         qa.check("s8.migrate_port_upgrade_55",
-                "ic2:overclocker_upgrade".equals(Lc2Coords.itemId(migratedPort.getItem(55)))
+                "mhera:overclocker_upgrade".equals(Lc2Coords.itemId(migratedPort.getItem(55)))
                         && migratedPort.getItem(55).getCount() == 2,
                 "slot55=" + migratedPort.getItem(55));
         qa.check("s8.migrate_port_upgrade_58",
-                "lc2:chunk_loading_upgrade".equals(Lc2Coords.itemId(migratedPort.getItem(58))),
+                "trera:chunk_loading_upgrade".equals(Lc2Coords.itemId(migratedPort.getItem(58))),
                 "slot58=" + migratedPort.getItem(58));
         qa.checkEquals("s8.migrate_port_storage_empty", 0,
                 Lc2QaHelpers.totalItemCount(Lc2QaHelpers.countStationStorage(migratedPort)));
@@ -1846,12 +1847,12 @@ final class Lc2QaRunner {
         NonNullList<ItemStack> legacyStationItems = NonNullList.withSize(30, ItemStack.EMPTY);
         legacyStationItems.set(0, new ItemStack(Items.COPPER_INGOT, 9));
         legacyStationItems.set(17, new ItemStack(Items.DIAMOND, 5));
-        legacyStationItems.set(18, Lc2QaHelpers.itemStack("lc2:rf_chip_2", 1));
-        legacyStationItems.set(19, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
-        legacyStationItems.set(24, Lc2QaHelpers.itemStack("lc2:heavy_transport_drone", 1));
-        legacyStationItems.set(25, Lc2QaHelpers.itemStack("ic2:single_use_battery", 6));
-        legacyStationItems.set(26, Lc2QaHelpers.itemStack("ic2:transformer_upgrade", 1));
-        legacyStationItems.set(29, Lc2QaHelpers.itemStack("ic2:energy_storage_upgrade", 1));
+        legacyStationItems.set(18, Lc2QaHelpers.itemStack("trera:rf_chip_2", 1));
+        legacyStationItems.set(19, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
+        legacyStationItems.set(24, Lc2QaHelpers.itemStack("trera:heavy_transport_drone", 1));
+        legacyStationItems.set(25, Lc2QaHelpers.itemStack("mhera:single_use_battery", 6));
+        legacyStationItems.set(26, Lc2QaHelpers.itemStack("mhera:transformer_upgrade", 1));
+        legacyStationItems.set(29, Lc2QaHelpers.itemStack("mhera:energy_storage_upgrade", 1));
         CompoundTag legacyStationTag = new CompoundTag();
         ContainerHelper.saveAllItems(legacyStationTag, legacyStationItems);
         legacyStationTag.putDouble("StoredEu", 5500.0);
@@ -1873,10 +1874,10 @@ final class Lc2QaRunner {
         qa.checkEquals("s8.migrate_station_bay5_60", VehicleKind.HEAVY_DRONE, migratedStation.getBayDroneKind(5));
         qa.checkEquals("s8.migrate_station_battery_61", 6, migratedStation.getBatteryCount());
         qa.check("s8.migrate_station_upgrade_62",
-                "ic2:transformer_upgrade".equals(Lc2Coords.itemId(migratedStation.getItem(62))),
+                "mhera:transformer_upgrade".equals(Lc2Coords.itemId(migratedStation.getItem(62))),
                 "slot62=" + migratedStation.getItem(62));
         qa.check("s8.migrate_station_upgrade_65",
-                "ic2:energy_storage_upgrade".equals(Lc2Coords.itemId(migratedStation.getItem(65))),
+                "mhera:energy_storage_upgrade".equals(Lc2Coords.itemId(migratedStation.getItem(65))),
                 "slot65=" + migratedStation.getItem(65));
         CompoundTag savedStationV2 = migratedStation.saveWithoutMetadata();
         qa.checkEquals("s8.migrate_station_saves_layout_v2", 2, savedStationV2.getInt("LayoutVersion"));
@@ -1929,8 +1930,8 @@ final class Lc2QaRunner {
         upgSt.setTargetPos(s8UpgDummyTargetPos);
         upgSt.setAutoReturn(false);
         upgSt.setStoredEu(5000.0);
-        upgSt.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
-        upgSt.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+        upgSt.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_1", 1));
+        upgSt.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
         qa.check("s8.vehicle_storage_isolation_dispatched", upgSt.tryDispatch(level, true), "status=" + upgSt.getStatusKey());
         TransitRecord isoRec = findLatestTransitFrom(level, s8UpgStationPos, VehicleKind.STANDARD_DRONE);
         qa.check("s8.vehicle_storage_isolation_record", isoRec != null, "isoRec=" + isoRec);
@@ -1959,7 +1960,7 @@ final class Lc2QaRunner {
         dOrig.setTargetPos(s8DroneTargetPos);
         dOrig.setAutoReturn(false);
         dOrig.setStoredEu(5000.0);
-        dOrig.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
+        dOrig.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_1", 1));
         dOrig.setItem(CargoStationBlockEntity.SLOT_OUTBOUND_START, new ItemStack(Items.IRON_INGOT, 32));
         dOrig.setItem(CargoStationBlockEntity.SLOT_OUTBOUND_START + 1, new ItemStack(Items.GOLD_INGOT, 16));
         level.setBlock(s8DroneRedstonePos, Blocks.REDSTONE_BLOCK.defaultBlockState(), Block.UPDATE_ALL);
@@ -2005,7 +2006,7 @@ final class Lc2QaRunner {
                 "0 active transits before placing vehicles");
 
         // Now place the Drone into bay 55 (SLOT_DRONE_BAY_START) -> MUST reset dispatchCooldown=0 & launch immediately!
-        dOrig.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+        dOrig.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
 
         // Now place the Boat in water ~3.0 blocks away from berth center (x = berthX + 3.0) -> tests BOAT_DOCK_RADIUS=3.5 & immediate reset!
         var berth = bOrig.refreshWaterBerth(level);
@@ -2017,7 +2018,7 @@ final class Lc2QaRunner {
 
         // Now place the second Boat via SmartPortBlockEntity.spawnAndDockBoat -> MUST reset dispatchCooldown=0 & launch immediately!
         FakePlayer fakePlayer = FakePlayerFactory.getMinecraft(level);
-        ItemStack boatItem = Lc2QaHelpers.itemStack("lc2:electric_cargo_boat", 1);
+        ItemStack boatItem = Lc2QaHelpers.itemStack("trera:electric_cargo_boat", 1);
         qa.check("s8.items_first_boat_spawn_and_dock_ok", bDockOrig.spawnAndDockBoat(level, fakePlayer, boatItem),
                 "spawnAndDockBoat succeeded");
     }
@@ -2099,8 +2100,8 @@ final class Lc2QaRunner {
         qa.checkEquals("s9.terminal_max_stack_1", 1, new ItemStack(termItem).getMaxStackSize());
 
         // Cable visual arm connection via CableBlockMixin (explicitly start with all 6 arms FALSE!)
-        Block cableBlock = Lc2QaHelpers.requireBlock("ic2:insulated_copper_cable");
-        Block genBlock = Lc2QaHelpers.requireBlock("ic2:generator");
+        Block cableBlock = Lc2QaHelpers.requireBlock("mhera:insulated_copper_cable");
+        Block genBlock = Lc2QaHelpers.requireBlock("mhera:generator");
         for (int x = 23; x <= 27; x++) {
             level.setBlock(new BlockPos(x, SURFACE_Y - 1, -6), Blocks.STONE.defaultBlockState(), Block.UPDATE_CLIENTS);
         }
@@ -2374,11 +2375,11 @@ final class Lc2QaRunner {
 
         smartPort.setItem(0, new ItemStack(Items.DIAMOND, 16));
         smartPort.setItem(SmartPortBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.EMERALD, 12));
-        smartPort.setItem(SmartPortBlockEntity.SLOT_BATTERY, Lc2QaHelpers.itemStack("ic2:single_use_battery", 2));
+        smartPort.setItem(SmartPortBlockEntity.SLOT_BATTERY, Lc2QaHelpers.itemStack("mhera:single_use_battery", 2));
         cargoOrigin.setItem(0, new ItemStack(Items.GOLD_INGOT, 8));
         cargoOrigin.setItem(CargoStationBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.LAPIS_LAZULI, 10));
-        cargoOrigin.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
-        cargoOrigin.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
+        cargoOrigin.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_1", 1));
+        cargoOrigin.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
 
         SmartPortMenu remotePortMenu = new SmartPortMenu(401, player.getInventory(), smartPort, s9CommMainPos, terminalId);
         CargoStationMenu remoteCargoMenu =
@@ -2627,8 +2628,8 @@ final class Lc2QaRunner {
         stA.setTargetPos(s7StationBPos);
         stA.setAutoReturn(true);
         stA.setStoredEu(10000.0);
-        stA.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("lc2:rf_chip_1", 1));
-        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:heavy_transport_drone", 1));
+        stA.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack("trera:rf_chip_1", 1));
+        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:heavy_transport_drone", 1));
         List<ItemStack> droneCargo = Lc2QaHelpers.distinctStacksOffset(12, 8, 32); // 256 items
         for (int i = 0; i < droneCargo.size(); i++) {
             stA.setItem(i, droneCargo.get(i));

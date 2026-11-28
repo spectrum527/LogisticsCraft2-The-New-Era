@@ -10,7 +10,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 
 /**
- * NeoForge 26.x Item with localized {@code tooltip.lc2.*} hover text lines.
+ * NeoForge 26.x Item with localized {@code tooltip.trera.*} hover text lines.
  */
 public class Lc2TooltipItem extends Item {
 

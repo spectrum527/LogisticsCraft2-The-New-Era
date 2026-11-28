@@ -111,12 +111,12 @@ public final class Suite4UnloadedTransit {
         QaChecks.buildCanal(level, 17, 355, 72, 72, WATER_Y);
 
         level.setBlockAndUpdate(ORIGIN_PORT,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.EAST));
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.EAST));
         level.setBlockAndUpdate(DISTANT_PORT,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.WEST));
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.WEST));
         level.setBlockAndUpdate(DISTANT_PORT_CHEST, Blocks.CHEST.defaultBlockState());
 
-        var stationState = QaChecks.block("lc2:cargo_station").defaultBlockState();
+        var stationState = QaChecks.block("trera:cargo_station").defaultBlockState();
         level.setBlockAndUpdate(ORIGIN_STATION, stationState);
         level.setBlockAndUpdate(DISTANT_STATION, stationState);
         level.setBlockAndUpdate(DISTANT_STATION_CHEST, Blocks.CHEST.defaultBlockState());

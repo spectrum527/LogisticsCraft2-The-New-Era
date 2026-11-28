@@ -165,29 +165,29 @@ public final class Suite9RemoteTerminal {
                 LogisticsConstants.COMM_BASE_STATION_ID,
                 new String[]{"CFC", "IMI", "WBW"},
                 Map.of(
-                        'C', "ic2:circuit",
-                        'F', "ic2:frequency_transmitter",
-                        'I', "ic2:iron_plate",
-                        'M', "ic2:machine",
-                        'W', "ic2:insulated_copper_cable",
-                        'B', "ic2:re_battery"
+                        'C', "mhera:circuit",
+                        'F', "mhera:frequency_transmitter",
+                        'I', "mhera:iron_plate",
+                        'M', "mhera:machine",
+                        'W', "mhera:insulated_copper_cable",
+                        'B', "mhera:re_battery"
                 ));
         verifyRecipeCraft(level, player, liveRecipes, checks,
                 LogisticsConstants.OPERATION_TERMINAL_ID,
                 new String[]{"IGI", "CFC", "WBW"},
                 Map.of(
-                        'I', "ic2:iron_plate",
+                        'I', "mhera:iron_plate",
                         'G', "minecraft:glass_pane",
-                        'C', "ic2:circuit",
-                        'F', "ic2:frequency_transmitter",
-                        'W', "ic2:insulated_copper_cable",
-                        'B', "ic2:re_battery"
+                        'C', "mhera:circuit",
+                        'F', "mhera:frequency_transmitter",
+                        'W', "mhera:insulated_copper_cable",
+                        'B', "mhera:re_battery"
                 ));
 
         // 2. CableBlockMixin visual connection (both placement orders!) + real IC2 Generator EU flow
         // Order A: cable first, then CommBaseStation -> updateShape
-        QaChecks.survivalPlace(level, player, "ic2:generator", GEN_A);
-        QaChecks.survivalPlace(level, player, "ic2:insulated_copper_cable", CABLE_A);
+        QaChecks.survivalPlace(level, player, "mhera:generator", GEN_A);
+        QaChecks.survivalPlace(level, player, "mhera:insulated_copper_cable", CABLE_A);
         level.setBlockAndUpdate(COMM_A, commBlock.defaultBlockState());
         BlockState cableAState = level.getBlockState(CABLE_A);
         checks.check("s9.mixin.cable_connects_comm_via_update",
@@ -195,9 +195,9 @@ public final class Suite9RemoteTerminal {
                 "state=" + cableAState);
 
         // Order B: CommBaseStation first, then survival-placed cable -> getStateForPlacement
-        QaChecks.survivalPlace(level, player, "ic2:generator", GEN_B);
+        QaChecks.survivalPlace(level, player, "mhera:generator", GEN_B);
         level.setBlockAndUpdate(COMM_B, commBlock.defaultBlockState());
-        QaChecks.survivalPlace(level, player, "ic2:insulated_copper_cable", CABLE_B);
+        QaChecks.survivalPlace(level, player, "mhera:insulated_copper_cable", CABLE_B);
         BlockState cableBState = level.getBlockState(CABLE_B);
         checks.check("s9.mixin.cable_connects_comm_via_placement",
                 cableBState.hasProperty(BlockStateProperties.EAST) && cableBState.getValue(BlockStateProperties.EAST),
@@ -289,11 +289,11 @@ public final class Suite9RemoteTerminal {
 
         // 6. Place adjacency & remote-dispatch stations now so onLoad() registers them in StationRegistry
         level.setBlockAndUpdate(SMART_PORT_ADJ,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.NORTH));
-        level.setBlockAndUpdate(CARGO_ORIGIN_ADJ, QaChecks.block("lc2:cargo_station").defaultBlockState());
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.NORTH));
+        level.setBlockAndUpdate(CARGO_ORIGIN_ADJ, QaChecks.block("trera:cargo_station").defaultBlockState());
         level.setBlockAndUpdate(NON_STATION_CHEST, Blocks.CHEST.defaultBlockState());
         level.setBlockAndUpdate(COMM_SECOND, commBlock.defaultBlockState());
-        level.setBlockAndUpdate(CARGO_TARGET, QaChecks.block("lc2:cargo_station").defaultBlockState());
+        level.setBlockAndUpdate(CARGO_TARGET, QaChecks.block("trera:cargo_station").defaultBlockState());
     }
 
     private void verifyRecipeCraft(

@@ -96,9 +96,9 @@ public final class FieldFactoryBuilder {
 
         // Place Smart Port A on natural shoreline at Y = waterY + 1 facing water
         level.setBlockAndUpdate(portA,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, waterDirA));
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, waterDirA));
         level.setBlockAndUpdate(bufferChestA, Blocks.CHEST.defaultBlockState());
-        placeHorizontal(level, advMinerPos, "ic2:advanced_miner", waterDirA);
+        placeHorizontal(level, advMinerPos, "mhera:advanced_miner", waterDirA);
 
         // Power Grid A1 on leftA flank: copper cables touching BOTH Smart Port A and Advanced Miner
         BlockPos cableA0 = portA.relative(leftA);
@@ -115,14 +115,14 @@ public final class FieldFactoryBuilder {
         }
         prepareHeadroomOnly(level, genA4, 2);
 
-        placeFacing(level, batBoxA, "ic2:batbox", rightA);
+        placeFacing(level, batBoxA, "mhera:batbox", rightA);
         placeGeneratorWithCoal(level, genA1, waterDirA, 64);
         placeGeneratorWithCoal(level, genA2, waterDirA, 64);
         placeGeneratorWithCoal(level, genA3, waterDirA, 64);
         placeGeneratorWithCoal(level, genA4, waterDirA, 64);
-        QaChecks.survivalPlace(level, builder, "ic2:insulated_copper_cable", cableA0);
-        QaChecks.survivalPlace(level, builder, "ic2:insulated_copper_cable", cableA1);
-        QaChecks.survivalPlace(level, builder, "ic2:insulated_copper_cable", cableA2);
+        QaChecks.survivalPlace(level, builder, "mhera:insulated_copper_cable", cableA0);
+        QaChecks.survivalPlace(level, builder, "mhera:insulated_copper_cable", cableA1);
+        QaChecks.survivalPlace(level, builder, "mhera:insulated_copper_cable", cableA2);
 
         // Verify CableBlockMixin connected copper cable visually to Smart Port A
         checks.check("field.cable.outpost_port_connected",
@@ -130,10 +130,10 @@ public final class FieldFactoryBuilder {
                 "state=" + level.getBlockState(cableA0));
 
         // Equip ic2:advanced_miner via capability API: slot 0 = advanced_scanner, slots 1..3 = iron/copper/tin raw ore whitelist
-        QaChecks.insertOrFail(level, advMinerPos, new ItemStack(QaChecks.item("ic2:advanced_scanner"), 1));
+        QaChecks.insertOrFail(level, advMinerPos, new ItemStack(QaChecks.item("mhera:advanced_scanner"), 1));
         QaChecks.insertOrFail(level, advMinerPos, new ItemStack(Items.RAW_IRON, 1));
         QaChecks.insertOrFail(level, advMinerPos, new ItemStack(Items.RAW_COPPER, 1));
-        QaChecks.insertOrFail(level, advMinerPos, new ItemStack(QaChecks.item("ic2:raw_tin"), 1));
+        QaChecks.insertOrFail(level, advMinerPos, new ItemStack(QaChecks.item("mhera:raw_tin"), 1));
 
         // Configure Outpost Smart Port A: name, target, autoReturn, upgrades, boat
         SmartPortBlockEntity portABe = (SmartPortBlockEntity) level.getBlockEntity(portA);
@@ -146,7 +146,7 @@ public final class FieldFactoryBuilder {
                 portABe.getWaterBerthPos() != null && portABe.getWaterBerthPos().y() == site.waterY(),
                 "berthA=" + portABe.getWaterBerthPos());
 
-        ItemStack portAPuller = routeUpgrade(level, builder, bufferChestA, "ic2:pulling_upgrade", backA, "portA_pull", checks);
+        ItemStack portAPuller = routeUpgrade(level, builder, bufferChestA, "mhera:pulling_upgrade", backA, "portA_pull", checks);
         portABe.setItem(SmartPortBlockEntity.UPGRADE_START, new ItemStack(QaChecks.item(LogisticsConstants.UPGRADE_CHUNK_LOADING), 1));
         portABe.setItem(SmartPortBlockEntity.UPGRADE_START + 1, portAPuller);
         portABe.setItem(SmartPortBlockEntity.UPGRADE_START + 2, new ItemStack(QaChecks.item(LogisticsConstants.UPGRADE_OVERCLOCKER), 2));
@@ -190,8 +190,8 @@ public final class FieldFactoryBuilder {
         // Clear sky above Cargo Station roof pads + prepare work footprint without touching below basicMinerPos!
         preparePad(level, hillCargoPos, 18);
         prepareHeadroomOnly(level, basicMinerPos, 6);
-        level.setBlockAndUpdate(hillCargoPos, QaChecks.block("lc2:cargo_station").defaultBlockState());
-        placeHorizontal(level, basicMinerPos, "ic2:miner", Direction.SOUTH);
+        level.setBlockAndUpdate(hillCargoPos, QaChecks.block("trera:cargo_station").defaultBlockState());
+        placeHorizontal(level, basicMinerPos, "mhera:miner", Direction.SOUTH);
 
         // Power Grid A2 on WEST flank: copper cables connecting generators + batbox to BOTH Cargo Station and Miner
         BlockPos hillCable0 = hillCargoPos.west();
@@ -206,22 +206,22 @@ public final class FieldFactoryBuilder {
             preparePad(level, p, 4);
         }
         prepareHeadroomOnly(level, hillGen4, 2);
-        placeFacing(level, hillBatBox, "ic2:batbox", Direction.EAST);
+        placeFacing(level, hillBatBox, "mhera:batbox", Direction.EAST);
         placeGeneratorWithCoal(level, hillGen1, Direction.SOUTH, 64);
         placeGeneratorWithCoal(level, hillGen2, Direction.SOUTH, 64);
         placeGeneratorWithCoal(level, hillGen3, Direction.SOUTH, 64);
         placeGeneratorWithCoal(level, hillGen4, Direction.SOUTH, 64);
-        QaChecks.survivalPlace(level, builder, "ic2:insulated_copper_cable", hillCable0);
-        QaChecks.survivalPlace(level, builder, "ic2:insulated_copper_cable", hillCable1);
+        QaChecks.survivalPlace(level, builder, "mhera:insulated_copper_cable", hillCable0);
+        QaChecks.survivalPlace(level, builder, "mhera:insulated_copper_cable", hillCable1);
 
         checks.check("field.cable.hillside_cargo_connected",
                 cableConnectedToward(level.getBlockState(hillCable0), Direction.EAST),
                 "state=" + level.getBlockState(hillCable0));
 
         // Equip ic2:miner via capability API: diamond_drill (slot 0), advanced_scanner (slot 1), 64x mining_pipe (slot 2)
-        QaChecks.insertOrFail(level, basicMinerPos, new ItemStack(QaChecks.item("ic2:diamond_drill"), 1));
-        QaChecks.insertOrFail(level, basicMinerPos, new ItemStack(QaChecks.item("ic2:advanced_scanner"), 1));
-        QaChecks.insertOrFail(level, basicMinerPos, new ItemStack(QaChecks.item("ic2:mining_pipe"), 64));
+        QaChecks.insertOrFail(level, basicMinerPos, new ItemStack(QaChecks.item("mhera:diamond_drill"), 1));
+        QaChecks.insertOrFail(level, basicMinerPos, new ItemStack(QaChecks.item("mhera:advanced_scanner"), 1));
+        QaChecks.insertOrFail(level, basicMinerPos, new ItemStack(QaChecks.item("mhera:mining_pipe"), 64));
 
         // Vanilla Redstone Comparator reading Hillside Cargo Station on EAST -> flat SOUTH loop back to Cargo Station
         // (keeps Cargo Station roof 100% open sky AND keeps redstone 2 blocks away from ic2:miner!)
@@ -277,12 +277,12 @@ public final class FieldFactoryBuilder {
         preparePad(level, outBoxPos, 4);
 
         level.setBlockAndUpdate(portB,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, waterDirB));
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, waterDirB));
         level.setBlockAndUpdate(rchPos, Blocks.CHEST.defaultBlockState());
-        level.setBlockAndUpdate(baseCargoPos, QaChecks.block("lc2:cargo_station").defaultBlockState());
-        placeHorizontal(level, macPos, "ic2:macerator", waterDirB);
-        placeHorizontal(level, efurPos, "ic2:electric_furnace", waterDirB);
-        level.setBlockAndUpdate(outBoxPos, QaChecks.block("ic2:steel_storage_box").defaultBlockState());
+        level.setBlockAndUpdate(baseCargoPos, QaChecks.block("trera:cargo_station").defaultBlockState());
+        placeHorizontal(level, macPos, "mhera:macerator", waterDirB);
+        placeHorizontal(level, efurPos, "mhera:electric_furnace", waterDirB);
+        level.setBlockAndUpdate(outBoxPos, QaChecks.block("mhera:steel_storage_box").defaultBlockState());
 
         // Power Grid B: rear copper cable bus + connected spur around Base Cargo Station to Base Smart Port B + 2x BatBox + 6x coal Generators
         BlockPos bCablePort = portB.relative(oppFlow);
@@ -318,15 +318,15 @@ public final class FieldFactoryBuilder {
             }
         }
 
-        placeFacing(level, bBat1, "ic2:batbox", waterDirB);
-        placeFacing(level, bBat2, "ic2:batbox", waterDirB);
+        placeFacing(level, bBat1, "mhera:batbox", waterDirB);
+        placeFacing(level, bBat2, "mhera:batbox", waterDirB);
         for (BlockPos g : bGenerators) {
             placeGeneratorWithCoal(level, g, waterDirB, 64);
         }
         for (BlockPos c : List.of(
                 bCablePort, bCableSpur1, bCableSpur2, bCableSpur3,
                 bCableCargo, bCableRch, bCableMac, bCableEfur)) {
-            QaChecks.survivalPlace(level, builder, "ic2:insulated_copper_cable", c);
+            QaChecks.survivalPlace(level, builder, "mhera:insulated_copper_cable", c);
         }
 
         checks.check("field.cable.base_port_connected",
@@ -348,13 +348,13 @@ public final class FieldFactoryBuilder {
                 "berthB=" + portBBe.getWaterBerthPos());
         portBBe.setItem(SmartPortBlockEntity.UPGRADE_START, new ItemStack(QaChecks.item(LogisticsConstants.UPGRADE_CHUNK_LOADING), 1));
         portBBe.setItem(SmartPortBlockEntity.UPGRADE_START + 1,
-                routeUpgrade(level, builder, rchPos, "ic2:ejector_upgrade", backB, "portB_eject", checks));
+                routeUpgrade(level, builder, rchPos, "mhera:ejector_upgrade", backB, "portB_eject", checks));
 
         baseCargoBe.setStationName("Refinery Airpad");
         baseCargoBe.setEnergyPriority(EnergyPriority.EU_FIRST);
         baseCargoBe.setItem(CargoStationBlockEntity.UPGRADE_START, new ItemStack(QaChecks.item(LogisticsConstants.UPGRADE_CHUNK_LOADING), 1));
         baseCargoBe.setItem(CargoStationBlockEntity.UPGRADE_START + 1,
-                routeUpgrade(level, builder, rchPos, "ic2:ejector_upgrade", flow, "baseCargo_eject", checks));
+                routeUpgrade(level, builder, rchPos, "mhera:ejector_upgrade", flow, "baseCargo_eject", checks));
 
         // Link Outpost Smart Port A -> Base Smart Port B
         portABe.setTargetPos(portB);
@@ -380,7 +380,7 @@ public final class FieldFactoryBuilder {
         hillCargoBe.setItem(CargoStationBlockEntity.UPGRADE_START,
                 new ItemStack(QaChecks.item(LogisticsConstants.UPGRADE_CHUNK_LOADING), 1));
         hillCargoBe.setItem(CargoStationBlockEntity.UPGRADE_START + 1,
-                routeUpgrade(level, builder, hillCargoPos, "ic2:pulling_upgrade", minerDir, "hillCargo_pull", checks));
+                routeUpgrade(level, builder, hillCargoPos, "mhera:pulling_upgrade", minerDir, "hillCargo_pull", checks));
         hillCargoBe.setItem(CargoStationBlockEntity.UPGRADE_START + 2,
                 new ItemStack(QaChecks.item(LogisticsConstants.UPGRADE_OVERCLOCKER), 2));
 
@@ -389,12 +389,12 @@ public final class FieldFactoryBuilder {
         IndustrialMachine efurBe = (IndustrialMachine) level.getBlockEntity(efurPos);
         checks.check("field.base.refining_machines_ready", macBe != null && efurBe != null);
 
-        macBe.setItem(3, routeUpgrade(level, builder, macPos, "ic2:pulling_upgrade", oppFlow, "mac_pull", checks));
-        macBe.setItem(4, routeUpgrade(level, builder, macPos, "ic2:ejector_upgrade", flow, "mac_eject", checks));
+        macBe.setItem(3, routeUpgrade(level, builder, macPos, "mhera:pulling_upgrade", oppFlow, "mac_pull", checks));
+        macBe.setItem(4, routeUpgrade(level, builder, macPos, "mhera:ejector_upgrade", flow, "mac_eject", checks));
         macBe.setItem(5, new ItemStack(QaChecks.item(LogisticsConstants.UPGRADE_OVERCLOCKER), 3));
 
         // Configure IC2 Electric Furnace (slot 3=ejector->steel_storage_box, slot 4=2x overclocker)
-        efurBe.setItem(3, routeUpgrade(level, builder, efurPos, "ic2:ejector_upgrade", flow, "efur_eject", checks));
+        efurBe.setItem(3, routeUpgrade(level, builder, efurPos, "mhera:ejector_upgrade", flow, "efur_eject", checks));
         efurBe.setItem(4, new ItemStack(QaChecks.item(LogisticsConstants.UPGRADE_OVERCLOCKER), 2));
 
         return new BuiltFactory(
@@ -467,7 +467,7 @@ public final class FieldFactoryBuilder {
     }
 
     private static void placeGeneratorWithCoal(ServerLevel level, BlockPos pos, Direction facing, int coalCount) {
-        placeHorizontal(level, pos, "ic2:generator", facing);
+        placeHorizontal(level, pos, "mhera:generator", facing);
         if (level.getBlockEntity(pos) instanceof IndustrialMachine gen) {
             gen.setItem(0, new ItemStack(Items.COAL, coalCount));
         }

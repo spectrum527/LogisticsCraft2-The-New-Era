@@ -28,11 +28,11 @@ import org.lwjgl.glfw.GLFW;
 public final class Lc2ClientSetup {
 
     public static final KeyMapping OPEN_TERMINAL_KEY = new KeyMapping(
-            "key.lc2.open_terminal",
+            "key.trera.open_terminal",
             KeyConflictContext.IN_GAME,
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_G,
-            "key.categories.lc2"
+            "key.categories.trera"
     );
 
     private static final ResourceLocation BOAT_TEXTURE = ResourceLocation.fromNamespaceAndPath(

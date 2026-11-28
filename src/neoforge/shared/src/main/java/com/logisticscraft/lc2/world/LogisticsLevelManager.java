@@ -211,7 +211,7 @@ public final class LogisticsLevelManager {
                 if (level.hasChunkAt(targetPos)
                         && level.getBlockEntity(targetPos) instanceof CargoStationBlockEntity station) {
                     station.clearWaitingReturnBay(rec.id());
-                    station.setStatusKey("status.lc2.returning");
+                    station.setStatusKey("status.trera.returning");
                 }
             }
         }
@@ -224,7 +224,7 @@ public final class LogisticsLevelManager {
                 if (level.hasChunkAt(targetPos)
                         && level.getBlockEntity(targetPos) instanceof CargoStationBlockEntity station) {
                     station.setWaitingReturnBay(rec.targetBay(), rec.id(), rec.vehicleKind());
-                    station.setStatusKey("status.lc2.waiting_return_energy");
+                    station.setStatusKey("status.trera.waiting_return_energy");
                 }
             }
         }
@@ -295,10 +295,10 @@ public final class LogisticsLevelManager {
             cargo.addAll(overflow);
             data.setDirty();
             if (cargo.isEmpty()) {
-                targetPort.setStatusKey("status.lc2.arrived");
+                targetPort.setStatusKey("status.trera.arrived");
                 return true;
             }
-            targetPort.setStatusKey("status.lc2.unloading");
+            targetPort.setStatusKey("status.trera.unloading");
             return false;
         } else {
             if (!(level.getBlockEntity(targetBlock) instanceof CargoStationBlockEntity targetStation)) {
@@ -317,10 +317,10 @@ public final class LogisticsLevelManager {
             cargo.addAll(overflow);
             data.setDirty();
             if (cargo.isEmpty()) {
-                targetStation.setStatusKey("status.lc2.arrived");
+                targetStation.setStatusKey("status.trera.arrived");
                 return true;
             }
-            targetStation.setStatusKey("status.lc2.unloading");
+            targetStation.setStatusKey("status.trera.unloading");
             return false;
         }
     }
@@ -452,7 +452,7 @@ public final class LogisticsLevelManager {
                     && !station.isRemoved()) {
                 parked = station.parkReturningOrArrivingDrone(finalBay, droneStack);
                 if (parked) {
-                    station.setStatusKey("status.lc2.docked");
+                    station.setStatusKey("status.trera.docked");
                 }
             }
             if (!parked && !droneStack.isEmpty()) {

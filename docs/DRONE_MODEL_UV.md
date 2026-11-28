@@ -1,15 +1,15 @@
-# LogisticsCraft² (`lc2`) — Entity Model & UV Specification
+# Transitera (`trera`) — Entity Model & UV Specification
 
-This document defines the exact texture dimensions and UV coordinates for both LC2 entities so NeoForge (1.21.1 / 26.1.2 / 26.2) and Forge (1.19.2) render pixel-identically.
+This document defines the exact texture dimensions and UV coordinates for both TRERA entities so NeoForge (1.21.1 / 26.1.2 / 26.2) and Forge (1.19.2) render pixel-identically.
 
 ---
 
-## 1. Electric Smart Cargo Boat (`lc2:electric_cargo_boat`)
+## 1. Electric Smart Cargo Boat (`trera:electric_cargo_boat`)
 
-- **Texture**: `assets/lc2/textures/entity/boat/electric_cargo_boat.png`
+- **Texture**: `assets/trera/textures/entity/boat/electric_cargo_boat.png`
 - **Dimensions**: **128 × 128** RGBA PNG
 - **Model**: Standard vanilla Minecraft **`ChestBoatModel`** (`LayerDefinition` texture size `128 × 128` across 1.19.2, 1.21.1, 26.1.2, and 26.2!).
-  - Top region (`y = 0..50`): Exact standard `BoatModel` UV boxes (`bottom`, `back`, `front`, `right`, `left`, `left_paddle`, `right_paddle`), styled after IC2's metallic steel hull + electric cobalt-blue & cyan trim + carbon paddles.
+  - Top region (`y = 0..50`): Exact standard `BoatModel` UV boxes (`bottom`, `back`, `front`, `right`, `left`, `left_paddle`, `right_paddle`), styled after MHERA's metallic steel hull + electric cobalt-blue & cyan trim + carbon paddles.
   - Bottom region (`y = 59..95`): Exact standard `ChestBoatModel` chest UV boxes:
     - `chest_lock`: `texOffs(0, 59)`, box `(2, 4, 1)` → `x = 0..5, y = 59..63` (polished steel latch with cyan smart-lock LED)
     - `chest_lid`: `texOffs(0, 59)`, box `(12, 5, 12)` → top `x = 12..23, y = 59..70`, bottom `x = 24..35, y = 59..70`, sides `x = 0..47, y = 71..75`
@@ -18,11 +18,11 @@ This document defines the exact texture dimensions and UV coordinates for both L
 
 ---
 
-## 2. Cargo Drone (`lc2:cargo_drone`) — Custom `CargoDroneModel`
+## 2. Cargo Drone (`trera:cargo_drone`) — Custom `CargoDroneModel`
 
 - **Textures**:
-  - `STANDARD` variant: `assets/lc2/textures/entity/drone/transport_drone.png` (**64 × 64** RGBA)
-  - `HEAVY` variant: `assets/lc2/textures/entity/drone/heavy_transport_drone.png` (**64 × 64** RGBA)
+  - `STANDARD` variant: `assets/trera/textures/entity/drone/transport_drone.png` (**64 × 64** RGBA)
+  - `HEAVY` variant: `assets/trera/textures/entity/drone/heavy_transport_drone.png` (**64 × 64** RGBA)
 - **LayerDefinition**: `LayerDefinition.create(meshDefinition, 64, 64)`
 - **Coordinate System**: Standard Minecraft `EntityModel` space (`-Z` = forward nose, `+Y` = downward, model root pivoted at `PartPose.offset(0.0F, 17.0F, 0.0F)` so landing skids touch ground at `y = 24.0F`).
 
@@ -63,9 +63,9 @@ All boxes below are children of a `root` part at `PartPose.offset(0.0F, 17.0F, 0
 
 ## 3. Blockstate Property Contract
 
-- `lc2:smart_port`:
+- `trera:smart_port`:
   - Properties: `facing` (`north`, `east`, `south`, `west`), `active` (`false`, `true`).
   - Uses standard `variants` blockstate with `y` rotation (`north=0`, `east=90`, `south=180`, `west=270`).
-- `lc2:cargo_station`:
+- `trera:cargo_station`:
   - Property: `active` (`false`, `true`).
   - Uses `multipart` blockstate matching `when: {"active": "false"}` / `when: {"active": "true"}` — works identically whether `CargoStationBlock` declares only `active` or also includes `facing`.

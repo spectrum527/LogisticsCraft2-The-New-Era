@@ -35,12 +35,12 @@ class CommonTagAndDatagenTest {
             "\"minecraft:redstone\"",
             "\"minecraft:ender_pearl\"",
             "\"minecraft:glass_pane\"",
-            "\"ic2:iron_plate\"",
-            "\"ic2:steel_plate\"",
-            "\"ic2:copper_plate\"",
-            "\"ic2:gold_plate\"",
-            "\"ic2:circuit\"",
-            "\"ic2:advanced_circuit\""
+            "\"mhera:iron_plate\"",
+            "\"mhera:steel_plate\"",
+            "\"mhera:copper_plate\"",
+            "\"mhera:gold_plate\"",
+            "\"mhera:circuit\"",
+            "\"mhera:advanced_circuit\""
     );
 
     private static final Map<String, List<String>> EXPECTED_RECIPE_COMMON_TAGS = Map.ofEntries(
@@ -59,8 +59,8 @@ class CommonTagAndDatagenTest {
 
     @Test
     void singleUseBatteriesTagConstantIsCanonical() {
-        assertEquals("lc2:single_use_batteries", LogisticsConstants.SINGLE_USE_BATTERIES_TAG);
-        assertEquals("ic2:single_use_battery", LogisticsConstants.SINGLE_USE_BATTERY_ID);
+        assertEquals("trera:single_use_batteries", LogisticsConstants.SINGLE_USE_BATTERIES_TAG);
+        assertEquals("mhera:single_use_battery", LogisticsConstants.SINGLE_USE_BATTERY_ID);
     }
 
     @Test
@@ -98,36 +98,36 @@ class CommonTagAndDatagenTest {
                     target + " emitted wrong minecraft block tag dir");
             assertFalse(Files.exists(outDir.resolve("data/curios/" + wrongItemTagDir)),
                     target + " emitted wrong curios item tag dir");
-            assertFalse(Files.exists(outDir.resolve("data/lc2/" + wrongBlockTagDir)),
+            assertFalse(Files.exists(outDir.resolve("data/trera/" + wrongBlockTagDir)),
                     target + " emitted wrong lc2 block tag dir");
-            assertFalse(Files.exists(outDir.resolve("data/lc2/" + wrongItemTagDir)),
+            assertFalse(Files.exists(outDir.resolve("data/trera/" + wrongItemTagDir)),
                     target + " emitted wrong lc2 item tag dir");
 
             // 2. Common relocation_not_supported block tag
             String relocation = readUtf8(outDir.resolve("data/" + ns + "/" + blockTagDir + "/relocation_not_supported.json"));
-            assertTrue(relocation.contains("\"lc2:smart_port\""), target + " missing smart_port in relocation tag");
-            assertTrue(relocation.contains("\"lc2:cargo_station\""), target + " missing cargo_station in relocation tag");
-            assertTrue(relocation.contains("\"lc2:comm_base_station\""), target + " missing comm_base_station in relocation tag");
+            assertTrue(relocation.contains("\"trera:smart_port\""), target + " missing smart_port in relocation tag");
+            assertTrue(relocation.contains("\"trera:cargo_station\""), target + " missing cargo_station in relocation tag");
+            assertTrue(relocation.contains("\"trera:comm_base_station\""), target + " missing comm_base_station in relocation tag");
 
             // 3. Mod-internal grouping tags + optional single-use battery tag
-            assertTagValues(outDir.resolve("data/lc2/" + blockTagDir + "/stations.json"),
-                    "lc2:smart_port", "lc2:cargo_station");
-            assertTagValues(outDir.resolve("data/lc2/" + itemTagDir + "/stations.json"),
-                    "lc2:smart_port", "lc2:cargo_station");
-            assertTagValues(outDir.resolve("data/lc2/" + blockTagDir + "/power_blocks.json"),
-                    "lc2:smart_port", "lc2:cargo_station", "lc2:comm_base_station");
-            assertTagValues(outDir.resolve("data/lc2/" + itemTagDir + "/power_blocks.json"),
-                    "lc2:smart_port", "lc2:cargo_station", "lc2:comm_base_station");
-            assertTagValues(outDir.resolve("data/lc2/" + itemTagDir + "/rf_chips.json"),
-                    "lc2:rf_chip_1", "lc2:rf_chip_2", "lc2:rf_chip_3");
-            assertTagValues(outDir.resolve("data/lc2/" + itemTagDir + "/drones.json"),
-                    "lc2:transport_drone", "lc2:heavy_transport_drone");
-            assertTagValues(outDir.resolve("data/lc2/" + itemTagDir + "/single_use_batteries.json"),
-                    "ic2:single_use_battery");
+            assertTagValues(outDir.resolve("data/trera/" + blockTagDir + "/stations.json"),
+                    "trera:smart_port", "trera:cargo_station");
+            assertTagValues(outDir.resolve("data/trera/" + itemTagDir + "/stations.json"),
+                    "trera:smart_port", "trera:cargo_station");
+            assertTagValues(outDir.resolve("data/trera/" + blockTagDir + "/power_blocks.json"),
+                    "trera:smart_port", "trera:cargo_station", "trera:comm_base_station");
+            assertTagValues(outDir.resolve("data/trera/" + itemTagDir + "/power_blocks.json"),
+                    "trera:smart_port", "trera:cargo_station", "trera:comm_base_station");
+            assertTagValues(outDir.resolve("data/trera/" + itemTagDir + "/rf_chips.json"),
+                    "trera:rf_chip_1", "trera:rf_chip_2", "trera:rf_chip_3");
+            assertTagValues(outDir.resolve("data/trera/" + itemTagDir + "/drones.json"),
+                    "trera:transport_drone", "trera:heavy_transport_drone");
+            assertTagValues(outDir.resolve("data/trera/" + itemTagDir + "/single_use_batteries.json"),
+                    "mhera:single_use_battery");
             assertTagValues(outDir.resolve("data/curios/" + itemTagDir + "/charm.json"),
-                    "lc2:operation_terminal");
+                    "trera:operation_terminal");
             assertTagValues(outDir.resolve("data/curios/" + itemTagDir + "/belt.json"),
-                    "lc2:operation_terminal");
+                    "trera:operation_terminal");
 
             // 4. All 11 recipes: common tags present, exact version schema, no legacy hardcoded IDs or wrong namespace
             int totalTagMatches = 0;
@@ -135,7 +135,7 @@ class CommonTagAndDatagenTest {
                     ? Pattern.compile("\"#([a-z0-9_]+:[a-z0-9_/]+)\"")
                     : Pattern.compile("\"tag\"\\s*:\\s*\"([a-z0-9_]+:[a-z0-9_/]+)\"");
             for (Map.Entry<String, List<String>> entry : EXPECTED_RECIPE_COMMON_TAGS.entrySet()) {
-                Path recipeFile = outDir.resolve("data/lc2/" + recipeDir + "/" + entry.getKey() + ".json");
+                Path recipeFile = outDir.resolve("data/trera/" + recipeDir + "/" + entry.getKey() + ".json");
                 String content = readUtf8(recipeFile);
                 assertFalse(content.contains(otherNs + ":"),
                         target + " recipe " + entry.getKey() + " leaked wrong namespace " + otherNs + ":");

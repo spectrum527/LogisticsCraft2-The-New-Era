@@ -150,7 +150,7 @@ public final class QaPlatform {
                 .encodeStart(ops, legacyItems)
                 .getOrThrow();
         root.put("items", encodedItems);
-        root.put("lc2", legacyLc2Tag.copy());
+        root.put("trera", legacyLc2Tag.copy());
         be.loadCustomOnly(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), root));
     }
 

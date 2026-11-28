@@ -40,39 +40,39 @@ public final class Suite1RegistryPower {
     }
 
     private static final List<RecipeSpec> EXPECTED_RECIPES = List.of(
-            new RecipeSpec("lc2:smart_port", new String[]{"CMC", "IHI", "CRC"}, Map.of(
-                    'C', "ic2:circuit", 'M', "ic2:machine", 'I', "ic2:iron_plate",
-                    'H', "minecraft:hopper", 'R', "ic2:re_battery")),
-            new RecipeSpec("lc2:cargo_station", new String[]{"AFA", "PMP", "HCH"}, Map.of(
-                    'A', "ic2:advanced_circuit", 'F', "ic2:frequency_transmitter", 'P', "ic2:steel_plate",
-                    'M', "ic2:advanced_machine", 'H', "minecraft:hopper", 'C', "ic2:energy_crystal")),
-            new RecipeSpec("lc2:electric_cargo_boat", new String[]{"XCX", "PBP", "PEP"}, Map.of(
-                    'X', "minecraft:chest", 'C', "ic2:circuit", 'P', "ic2:iron_plate",
-                    'B', "ic2:electric_boat", 'E', "ic2:electric_motor")),
-            new RecipeSpec("lc2:transport_drone", new String[]{"BCB", "EXE", "BPB"}, Map.of(
-                    'B', "ic2:iron_rotor_blade", 'C', "ic2:circuit", 'E', "ic2:electric_motor",
-                    'X', "minecraft:chest", 'P', "ic2:carbon_plate")),
-            new RecipeSpec("lc2:heavy_transport_drone", new String[]{"BAB", "XDX", "LEL"}, Map.of(
-                    'B', "ic2:carbon_rotor_blade", 'A', "ic2:advanced_circuit", 'X', "minecraft:chest",
-                    'D', "lc2:transport_drone", 'L', "ic2:alloy", 'E', "ic2:electric_motor")),
-            new RecipeSpec("lc2:rf_chip_1", new String[]{"WFW", "CRC", "WGW"}, Map.of(
-                    'W', "ic2:insulated_copper_cable", 'F', "ic2:frequency_transmitter", 'C', "ic2:circuit",
-                    'R', "minecraft:redstone", 'G', "ic2:copper_plate")),
-            new RecipeSpec("lc2:rf_chip_2", new String[]{"WAW", "GIG", "WEW"}, Map.of(
-                    'W', "ic2:insulated_gold_cable", 'A', "ic2:advanced_circuit", 'G', "ic2:gold_plate",
-                    'I', "lc2:rf_chip_1", 'E', "minecraft:ender_pearl")),
-            new RecipeSpec("lc2:rf_chip_3", new String[]{"WAW", "CIC", "WLW"}, Map.of(
-                    'W', "ic2:glass_fibre_cable", 'A', "ic2:advanced_circuit", 'C', "ic2:carbon_plate",
-                    'I', "lc2:rf_chip_2", 'L', "ic2:lapotron_crystal")),
-            new RecipeSpec("lc2:chunk_loading_upgrade", new String[]{"ALA", "CKC", "AEA"}, Map.of(
-                    'A', "ic2:alloy", 'L', "ic2:insulated_gold_cable", 'C', "ic2:advanced_circuit",
-                    'K', "ic2:chunk_loader", 'E', "minecraft:ender_eye")),
-            new RecipeSpec("lc2:comm_base_station", new String[]{"CFC", "IMI", "WBW"}, Map.of(
-                    'C', "ic2:circuit", 'F', "ic2:frequency_transmitter", 'I', "ic2:iron_plate",
-                    'M', "ic2:machine", 'W', "ic2:insulated_copper_cable", 'B', "ic2:re_battery")),
-            new RecipeSpec("lc2:operation_terminal", new String[]{"IGI", "CFC", "WBW"}, Map.of(
-                    'I', "ic2:iron_plate", 'G', "minecraft:glass_pane", 'C', "ic2:circuit",
-                    'F', "ic2:frequency_transmitter", 'W', "ic2:insulated_copper_cable", 'B', "ic2:re_battery"))
+            new RecipeSpec("trera:smart_port", new String[]{"CMC", "IHI", "CRC"}, Map.of(
+                    'C', "mhera:circuit", 'M', "mhera:machine", 'I', "mhera:iron_plate",
+                    'H', "minecraft:hopper", 'R', "mhera:re_battery")),
+            new RecipeSpec("trera:cargo_station", new String[]{"AFA", "PMP", "HCH"}, Map.of(
+                    'A', "mhera:advanced_circuit", 'F', "mhera:frequency_transmitter", 'P', "mhera:steel_plate",
+                    'M', "mhera:advanced_machine", 'H', "minecraft:hopper", 'C', "mhera:energy_crystal")),
+            new RecipeSpec("trera:electric_cargo_boat", new String[]{"XCX", "PBP", "PEP"}, Map.of(
+                    'X', "minecraft:chest", 'C', "mhera:circuit", 'P', "mhera:iron_plate",
+                    'B', "mhera:electric_boat", 'E', "mhera:electric_motor")),
+            new RecipeSpec("trera:transport_drone", new String[]{"BCB", "EXE", "BPB"}, Map.of(
+                    'B', "mhera:iron_rotor_blade", 'C', "mhera:circuit", 'E', "mhera:electric_motor",
+                    'X', "minecraft:chest", 'P', "mhera:carbon_plate")),
+            new RecipeSpec("trera:heavy_transport_drone", new String[]{"BAB", "XDX", "LEL"}, Map.of(
+                    'B', "mhera:carbon_rotor_blade", 'A', "mhera:advanced_circuit", 'X', "minecraft:chest",
+                    'D', "trera:transport_drone", 'L', "mhera:alloy", 'E', "mhera:electric_motor")),
+            new RecipeSpec("trera:rf_chip_1", new String[]{"WFW", "CRC", "WGW"}, Map.of(
+                    'W', "mhera:insulated_copper_cable", 'F', "mhera:frequency_transmitter", 'C', "mhera:circuit",
+                    'R', "minecraft:redstone", 'G', "mhera:copper_plate")),
+            new RecipeSpec("trera:rf_chip_2", new String[]{"WAW", "GIG", "WEW"}, Map.of(
+                    'W', "mhera:insulated_gold_cable", 'A', "mhera:advanced_circuit", 'G', "mhera:gold_plate",
+                    'I', "trera:rf_chip_1", 'E', "minecraft:ender_pearl")),
+            new RecipeSpec("trera:rf_chip_3", new String[]{"WAW", "CIC", "WLW"}, Map.of(
+                    'W', "mhera:glass_fibre_cable", 'A', "mhera:advanced_circuit", 'C', "mhera:carbon_plate",
+                    'I', "trera:rf_chip_2", 'L', "mhera:lapotron_crystal")),
+            new RecipeSpec("trera:chunk_loading_upgrade", new String[]{"ALA", "CKC", "AEA"}, Map.of(
+                    'A', "mhera:alloy", 'L', "mhera:insulated_gold_cable", 'C', "mhera:advanced_circuit",
+                    'K', "mhera:chunk_loader", 'E', "minecraft:ender_eye")),
+            new RecipeSpec("trera:comm_base_station", new String[]{"CFC", "IMI", "WBW"}, Map.of(
+                    'C', "mhera:circuit", 'F', "mhera:frequency_transmitter", 'I', "mhera:iron_plate",
+                    'M', "mhera:machine", 'W', "mhera:insulated_copper_cable", 'B', "mhera:re_battery")),
+            new RecipeSpec("trera:operation_terminal", new String[]{"IGI", "CFC", "WBW"}, Map.of(
+                    'I', "mhera:iron_plate", 'G', "minecraft:glass_pane", 'C', "mhera:circuit",
+                    'F', "mhera:frequency_transmitter", 'W', "mhera:insulated_copper_cable", 'B', "mhera:re_battery"))
     );
 
     private static final BlockPos GEN_PORT = new BlockPos(10, 64, 8);
@@ -90,9 +90,9 @@ public final class Suite1RegistryPower {
         MinecraftServer server = level.getServer();
 
         // 1. Verify exact packaged production JARs for both ic2 and lc2
-        Path lc2Jar = ModList.get().getModContainerById("lc2").orElseThrow()
+        Path lc2Jar = ModList.get().getModContainerById("trera").orElseThrow()
                 .getModInfo().getOwningFile().getFile().getFilePath();
-        Path ic2Jar = ModList.get().getModContainerById("ic2").orElseThrow()
+        Path ic2Jar = ModList.get().getModContainerById("mhera").orElseThrow()
                 .getModInfo().getOwningFile().getFile().getFilePath();
         String expectedLc2 = System.getProperty("lc2.qa.expectedLc2Jar", lc2Jar.getFileName().toString());
         String expectedIc2 = System.getProperty("lc2.qa.expectedIc2Jar", ic2Jar.getFileName().toString());
@@ -104,20 +104,20 @@ public final class Suite1RegistryPower {
                 Files.isSameFile(ic2Jar, Path.of("mods", expectedIc2)), ic2Jar.getFileName().toString());
 
         // 2. Verify all registries: 3 blocks, 3 BEs, 2 entities, 11 items, 3 menus
-        for (String id : List.of("lc2:smart_port", "lc2:cargo_station", "lc2:comm_base_station")) {
+        for (String id : List.of("trera:smart_port", "trera:cargo_station", "trera:comm_base_station")) {
             checks.check("s1.reg.block." + id, QaChecks.hasBlock(id));
             checks.check("s1.reg.be." + id, QaChecks.hasBlockEntity(id));
         }
-        for (String id : List.of("lc2:electric_cargo_boat", "lc2:cargo_drone")) {
+        for (String id : List.of("trera:electric_cargo_boat", "trera:cargo_drone")) {
             checks.check("s1.reg.entity." + id, QaChecks.hasEntity(id));
         }
         for (String id : List.of(
-                "lc2:smart_port", "lc2:cargo_station", "lc2:comm_base_station", "lc2:operation_terminal",
-                "lc2:electric_cargo_boat", "lc2:transport_drone", "lc2:heavy_transport_drone",
-                "lc2:rf_chip_1", "lc2:rf_chip_2", "lc2:rf_chip_3", "lc2:chunk_loading_upgrade")) {
+                "trera:smart_port", "trera:cargo_station", "trera:comm_base_station", "trera:operation_terminal",
+                "trera:electric_cargo_boat", "trera:transport_drone", "trera:heavy_transport_drone",
+                "trera:rf_chip_1", "trera:rf_chip_2", "trera:rf_chip_3", "trera:chunk_loading_upgrade")) {
             checks.check("s1.reg.item." + id, QaChecks.hasItem(id));
         }
-        for (String id : List.of("lc2:smart_port", "lc2:cargo_station", "lc2:electric_cargo_boat")) {
+        for (String id : List.of("trera:smart_port", "trera:cargo_station", "trera:electric_cargo_boat")) {
             checks.check("s1.reg.menu." + id, QaChecks.hasMenu(id));
         }
 
@@ -146,28 +146,28 @@ public final class Suite1RegistryPower {
         }
 
         // 3b. Verify common relocation_not_supported tag, LC2 grouping tags, recipe common tags, and SmartPort rotation/mirror
-        for (String id : List.of("lc2:smart_port", "lc2:cargo_station", "lc2:comm_base_station")) {
+        for (String id : List.of("trera:smart_port", "trera:cargo_station", "trera:comm_base_station")) {
             BlockState defaultState = QaChecks.block(id).defaultBlockState();
             checks.check("s1.tag.relocation_not_supported." + id,
                     defaultState.is(Lc2Native.TAG_C_RELOCATION_NOT_SUPPORTED));
             checks.check("s1.tag.power_blocks.block." + id,
-                    defaultState.is(Lc2Native.blockTag("lc2", "power_blocks")));
+                    defaultState.is(Lc2Native.blockTag("trera", "power_blocks")));
             checks.check("s1.tag.power_blocks.item." + id,
-                    new ItemStack(QaChecks.item(id)).is(Lc2Native.itemTag("lc2", "power_blocks")));
+                    new ItemStack(QaChecks.item(id)).is(Lc2Native.itemTag("trera", "power_blocks")));
         }
-        for (String id : List.of("lc2:smart_port", "lc2:cargo_station")) {
+        for (String id : List.of("trera:smart_port", "trera:cargo_station")) {
             checks.check("s1.tag.stations.block." + id,
-                    QaChecks.block(id).defaultBlockState().is(Lc2Native.blockTag("lc2", "stations")));
+                    QaChecks.block(id).defaultBlockState().is(Lc2Native.blockTag("trera", "stations")));
             checks.check("s1.tag.stations.item." + id,
-                    new ItemStack(QaChecks.item(id)).is(Lc2Native.itemTag("lc2", "stations")));
+                    new ItemStack(QaChecks.item(id)).is(Lc2Native.itemTag("trera", "stations")));
         }
-        for (String id : List.of("lc2:rf_chip_1", "lc2:rf_chip_2", "lc2:rf_chip_3")) {
+        for (String id : List.of("trera:rf_chip_1", "trera:rf_chip_2", "trera:rf_chip_3")) {
             checks.check("s1.tag.rf_chips." + id,
-                    new ItemStack(QaChecks.item(id)).is(Lc2Native.itemTag("lc2", "rf_chips")));
+                    new ItemStack(QaChecks.item(id)).is(Lc2Native.itemTag("trera", "rf_chips")));
         }
-        for (String id : List.of("lc2:transport_drone", "lc2:heavy_transport_drone")) {
+        for (String id : List.of("trera:transport_drone", "trera:heavy_transport_drone")) {
             checks.check("s1.tag.drones." + id,
-                    new ItemStack(QaChecks.item(id)).is(Lc2Native.itemTag("lc2", "drones")));
+                    new ItemStack(QaChecks.item(id)).is(Lc2Native.itemTag("trera", "drones")));
         }
         ItemStack singleUseBat = new ItemStack(QaChecks.item(LogisticsConstants.SINGLE_USE_BATTERY_ID));
         checks.check("s1.tag.single_use_batteries",
@@ -177,23 +177,23 @@ public final class Suite1RegistryPower {
                         && new ItemStack(Items.REDSTONE).is(Lc2Native.itemTag("c", "dusts/redstone"))
                         && new ItemStack(Items.ENDER_PEARL).is(Lc2Native.itemTag("c", "ender_pearls"))
                         && new ItemStack(QaChecks.item("minecraft:blue_stained_glass_pane")).is(Lc2Native.itemTag("c", "glass_panes"))
-                        && new ItemStack(QaChecks.item("ic2:iron_plate")).is(Lc2Native.itemTag("c", "plates/iron"))
-                        && new ItemStack(QaChecks.item("ic2:steel_plate")).is(Lc2Native.itemTag("c", "plates/steel"))
-                        && new ItemStack(QaChecks.item("ic2:copper_plate")).is(Lc2Native.itemTag("c", "plates/copper"))
-                        && new ItemStack(QaChecks.item("ic2:gold_plate")).is(Lc2Native.itemTag("c", "plates/gold"))
-                        && new ItemStack(QaChecks.item("ic2:circuit")).is(Lc2Native.itemTag("c", "circuits/basic"))
-                        && new ItemStack(QaChecks.item("ic2:advanced_circuit")).is(Lc2Native.itemTag("c", "circuits/advanced")));
+                        && new ItemStack(QaChecks.item("mhera:iron_plate")).is(Lc2Native.itemTag("c", "plates/iron"))
+                        && new ItemStack(QaChecks.item("mhera:steel_plate")).is(Lc2Native.itemTag("c", "plates/steel"))
+                        && new ItemStack(QaChecks.item("mhera:copper_plate")).is(Lc2Native.itemTag("c", "plates/copper"))
+                        && new ItemStack(QaChecks.item("mhera:gold_plate")).is(Lc2Native.itemTag("c", "plates/gold"))
+                        && new ItemStack(QaChecks.item("mhera:circuit")).is(Lc2Native.itemTag("c", "circuits/basic"))
+                        && new ItemStack(QaChecks.item("mhera:advanced_circuit")).is(Lc2Native.itemTag("c", "circuits/advanced")));
 
         // Verify recipe tag substitution works live (blue_stained_glass_pane satisfies #c:glass_panes for operation_terminal)
         CraftingMenu tagSubMenu = new CraftingMenu(102, crafter.getInventory(),
                 ContainerLevelAccess.create(level, new BlockPos(8, 65, 8)));
         Map<Character, ItemStack> subKey = Map.of(
-                'I', new ItemStack(QaChecks.item("ic2:iron_plate")),
+                'I', new ItemStack(QaChecks.item("mhera:iron_plate")),
                 'G', new ItemStack(QaChecks.item("minecraft:blue_stained_glass_pane")),
-                'C', new ItemStack(QaChecks.item("ic2:circuit")),
-                'F', new ItemStack(QaChecks.item("ic2:frequency_transmitter")),
-                'W', new ItemStack(QaChecks.item("ic2:insulated_copper_cable")),
-                'B', new ItemStack(QaChecks.item("ic2:re_battery"))
+                'C', new ItemStack(QaChecks.item("mhera:circuit")),
+                'F', new ItemStack(QaChecks.item("mhera:frequency_transmitter")),
+                'W', new ItemStack(QaChecks.item("mhera:insulated_copper_cable")),
+                'B', new ItemStack(QaChecks.item("mhera:re_battery"))
         );
         String[] termPattern = new String[]{"IGI", "CFC", "WBW"};
         for (int r = 0; r < 3; r++) {
@@ -204,25 +204,25 @@ public final class Suite1RegistryPower {
         tagSubMenu.slotsChanged(tagSubMenu.getSlot(1).container);
         ItemStack tagSubOut = tagSubMenu.getSlot(0).getItem();
         checks.check("s1.recipe.tag_substitution.operation_terminal_stained_pane",
-                !tagSubOut.isEmpty() && tagSubOut.is(QaChecks.item("lc2:operation_terminal")),
+                !tagSubOut.isEmpty() && tagSubOut.is(QaChecks.item("trera:operation_terminal")),
                 "crafted=" + tagSubOut);
 
         // Verify SmartPortBlock rotate/mirror and IC2 wrench exclusion from third-party wrench handler
-        BlockState spNorth = QaChecks.block("lc2:smart_port").defaultBlockState()
+        BlockState spNorth = QaChecks.block("trera:smart_port").defaultBlockState()
                 .setValue(SmartPortBlock.FACING, Direction.NORTH);
         checks.check("s1.block.smart_port_rotate_and_mirror",
                 spNorth.rotate(Rotation.CLOCKWISE_90).getValue(SmartPortBlock.FACING) == Direction.EAST
                         && spNorth.mirror(Mirror.LEFT_RIGHT).getValue(SmartPortBlock.FACING) == Direction.SOUTH);
         checks.check("s1.wrench.ic2_wrench_excluded_from_third_party_handler",
-                !Lc2Native.isThirdPartyWrench(new ItemStack(QaChecks.item("ic2:wrench")))
-                        && !Lc2Native.isThirdPartyWrench(new ItemStack(QaChecks.item("ic2:electric_wrench"))));
+                !Lc2Native.isThirdPartyWrench(new ItemStack(QaChecks.item("mhera:wrench")))
+                        && !Lc2Native.isThirdPartyWrench(new ItemStack(QaChecks.item("mhera:electric_wrench"))));
 
         // 4. IC2 Generator + insulated_copper_cable + CableBlockMixin + EU flow (both placement orders!)
         // Order A: place cable FIRST, then place Smart Port adjacent -> triggers updateShape -> updateConnection
-        QaChecks.survivalPlace(level, crafter, "ic2:generator", GEN_PORT);
-        QaChecks.survivalPlace(level, crafter, "ic2:insulated_copper_cable", CABLE_PORT);
+        QaChecks.survivalPlace(level, crafter, "mhera:generator", GEN_PORT);
+        QaChecks.survivalPlace(level, crafter, "mhera:insulated_copper_cable", CABLE_PORT);
         level.setBlockAndUpdate(SMART_PORT,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.EAST));
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.EAST));
         BlockState cablePortState = level.getBlockState(CABLE_PORT);
         checks.check("s1.mixin.cable_connects_smart_port_via_update",
                 cablePortState.hasProperty(BlockStateProperties.EAST)
@@ -230,9 +230,9 @@ public final class Suite1RegistryPower {
                 "state=" + cablePortState);
 
         // Order B: place Cargo Station FIRST, then place cable adjacent via survival placement -> getStateForPlacement
-        QaChecks.survivalPlace(level, crafter, "ic2:generator", GEN_STATION);
-        level.setBlockAndUpdate(CARGO_STATION, QaChecks.block("lc2:cargo_station").defaultBlockState());
-        QaChecks.survivalPlace(level, crafter, "ic2:insulated_copper_cable", CABLE_STATION);
+        QaChecks.survivalPlace(level, crafter, "mhera:generator", GEN_STATION);
+        level.setBlockAndUpdate(CARGO_STATION, QaChecks.block("trera:cargo_station").defaultBlockState());
+        QaChecks.survivalPlace(level, crafter, "mhera:insulated_copper_cable", CABLE_STATION);
         BlockState cableStationState = level.getBlockState(CABLE_STATION);
         checks.check("s1.mixin.cable_connects_cargo_station_via_placement",
                 cableStationState.hasProperty(BlockStateProperties.EAST)

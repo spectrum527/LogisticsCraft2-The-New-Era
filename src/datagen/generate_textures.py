@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Reproducible pixel-art texture generator for LogisticsCraft²: The New Era (lc2).
+"""Reproducible pixel-art texture generator for Transitera (trera).
 
-Generates all original CC BY-SA 4.0 textures under assets/lc2/textures/:
+Generates all original CC BY-SA 4.0 textures under assets/trera/textures/:
   - 16 block textures (16x16): Smart Port (5), Cargo Station (5), Comm Base Station (6)
   - 8 item textures (16x16): Boat, Drones (2), RF Chips (3), Chunk Loader, Operation Terminal
   - 3 entity textures (128x128 ChestBoat UV + two 64x64 CargoDrone UVs)
@@ -16,7 +16,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-TEX_ROOT = REPO_ROOT / "assets" / "lc2" / "textures"
+TEX_ROOT = REPO_ROOT / "assets" / "trera" / "textures"
 
 
 def rgba(hex_color: str, alpha: int = 255) -> tuple[int, int, int, int]:

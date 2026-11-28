@@ -58,7 +58,7 @@ public record StationSyncPayload(
                         buf.writeVarInt(p.energyPriorityOrdinal);
                         buf.writeBoolean(p.hasTarget);
                         buf.writeBlockPos(p.targetPos == null ? BlockPos.ZERO : p.targetPos);
-                        buf.writeUtf(p.statusKey == null ? "status.lc2.ready" : p.statusKey, 128);
+                        buf.writeUtf(p.statusKey == null ? "status.trera.ready" : p.statusKey, 128);
                         buf.writeBoolean(p.chunkLoaderActive);
                         buf.writeBoolean(p.vehicleReady);
                         buf.writeVarInt(p.readyVehicleCount);

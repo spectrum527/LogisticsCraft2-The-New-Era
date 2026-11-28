@@ -11,7 +11,7 @@ import net.minecraft.world.level.saveddata.SavedData;
  */
 public abstract class Lc2SavedDataBase extends SavedData {
 
-    private static final String STORAGE_NAME = "lc2_logistics";
+    private static final String STORAGE_NAME = "trera_logistics";
 
     /** Retrieves or creates the per-dimension {@link LogisticsSavedData} for {@code level}. */
     public static LogisticsSavedData getOrCreate(ServerLevel level) {

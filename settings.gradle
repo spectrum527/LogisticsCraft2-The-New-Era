@@ -8,7 +8,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'logisticscraft-2'
+rootProject.name = 'transitera'
 def minecraftTargets = ['1.21.1', '26.1.2', '26.2']
 include 'common', 'test'
 minecraftTargets.each { include "neoforge:$it" }

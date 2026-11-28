@@ -50,7 +50,7 @@ public record S2CStationSyncPacket(
 
     public S2CStationSyncPacket {
         stationName = stationName == null ? "" : stationName;
-        statusKey = statusKey == null ? "status.lc2.ready" : statusKey;
+        statusKey = statusKey == null ? "status.trera.ready" : statusKey;
         targets = targets == null ? List.of() : List.copyOf(targets);
     }
 

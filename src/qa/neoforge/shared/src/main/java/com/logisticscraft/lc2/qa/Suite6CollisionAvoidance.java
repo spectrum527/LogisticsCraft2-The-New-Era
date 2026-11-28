@@ -86,14 +86,14 @@ public final class Suite6CollisionAvoidance {
         // Shared 3-wide waterway X=11..39, Z=-33..-31
         QaChecks.buildCanal(level, 11, 39, -33, -31, WATER_Y);
         level.setBlockAndUpdate(PORT_WEST,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.EAST));
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.EAST));
         level.setBlockAndUpdate(PORT_EAST,
-                QaChecks.block("lc2:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.WEST));
+                QaChecks.block("trera:smart_port").defaultBlockState().setValue(SmartPortBlock.FACING, Direction.WEST));
         level.setBlockAndUpdate(PORT_WEST_CHEST, Blocks.CHEST.defaultBlockState());
         level.setBlockAndUpdate(PORT_EAST_CHEST, Blocks.CHEST.defaultBlockState());
 
         // Opposing Cargo Stations
-        var stationState = QaChecks.block("lc2:cargo_station").defaultBlockState();
+        var stationState = QaChecks.block("trera:cargo_station").defaultBlockState();
         level.setBlockAndUpdate(AIR_WEST, stationState);
         level.setBlockAndUpdate(AIR_EAST, stationState);
         level.setBlockAndUpdate(AIR_WEST_CHEST, Blocks.CHEST.defaultBlockState());

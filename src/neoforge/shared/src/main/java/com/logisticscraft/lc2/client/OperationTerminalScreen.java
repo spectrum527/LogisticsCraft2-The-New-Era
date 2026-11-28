@@ -70,7 +70,7 @@ public final class OperationTerminalScreen extends TerminalScreenBase {
     private final Button[] unbindBtns = new Button[VISIBLE_ROWS];
 
     public OperationTerminalScreen(TerminalSyncPayload initial) {
-        super(Component.translatable("gui.lc2.terminal.title"), PANEL_WIDTH, PANEL_HEIGHT);
+        super(Component.translatable("gui.trera.terminal.title"), PANEL_WIDTH, PANEL_HEIGHT);
         applyPayloadFields(initial);
     }
 
@@ -99,10 +99,10 @@ public final class OperationTerminalScreen extends TerminalScreenBase {
                 topPos + 20,
                 236,
                 14,
-                Component.translatable("gui.lc2.terminal.search_placeholder")
+                Component.translatable("gui.trera.terminal.search_placeholder")
         ));
         searchBox.setMaxLength(64);
-        searchBox.setHint(Component.translatable("gui.lc2.terminal.search_placeholder"));
+        searchBox.setHint(Component.translatable("gui.trera.terminal.search_placeholder"));
         searchBox.setValue(searchQuery);
         searchBox.setResponder(q -> {
             searchQuery = q == null ? "" : q;
@@ -113,7 +113,7 @@ public final class OperationTerminalScreen extends TerminalScreenBase {
 
         // Refresh Button: (248, 20, 64, 14)
         refreshBtn = addRenderableWidget(Button.builder(
-                Component.translatable("gui.lc2.terminal.refresh"),
+                Component.translatable("gui.trera.terminal.refresh"),
                 b -> Lc2Native.sendToServer(TerminalActionPayload.refresh(terminalId))
         ).bounds(leftPos + 248, topPos + 20, 64, 14).build());
 
@@ -124,7 +124,7 @@ public final class OperationTerminalScreen extends TerminalScreenBase {
 
             // Connect button: (rx + 222, ry + 5, 48, 15)
             connectBtns[i] = addRenderableWidget(Button.builder(
-                    Component.translatable("gui.lc2.terminal.connect"),
+                    Component.translatable("gui.trera.terminal.connect"),
                     b -> onConnectRow(rowIdx)
             ).bounds(leftPos + ROW_X + 222, topPos + ry + 5, 48, 15).build());
 
@@ -134,7 +134,7 @@ public final class OperationTerminalScreen extends TerminalScreenBase {
                     ry + 5,
                     14,
                     15,
-                    Component.translatable("gui.lc2.terminal.unbind"),
+                    Component.translatable("gui.trera.terminal.unbind"),
                     GUI_TEXTURE,
                     2,
                     2,
@@ -251,7 +251,7 @@ public final class OperationTerminalScreen extends TerminalScreenBase {
             canvas.blit(GUI_TEXTURE, 187, 5, 328, 30, fillW, 9);
         }
         String energyShort = Component.translatable(
-                "gui.lc2.terminal.energy_short",
+                "gui.trera.terminal.energy_short",
                 Math.round(storedEu),
                 Math.round(maxEu)
         ).getString();
@@ -261,9 +261,9 @@ public final class OperationTerminalScreen extends TerminalScreenBase {
 
         // 4. Station list viewport (8, 38, 296, 166)
         if (allEntries.isEmpty()) {
-            drawCenteredViewportMessage(canvas, Component.translatable("gui.lc2.terminal.empty").getString());
+            drawCenteredViewportMessage(canvas, Component.translatable("gui.trera.terminal.empty").getString());
         } else if (filteredEntries.isEmpty()) {
-            drawCenteredViewportMessage(canvas, Component.translatable("gui.lc2.terminal.no_matches").getString());
+            drawCenteredViewportMessage(canvas, Component.translatable("gui.trera.terminal.no_matches").getString());
         } else {
             for (int i = 0; i < VISIBLE_ROWS; i++) {
                 int idx = scrollOffset + i;
@@ -288,7 +288,7 @@ public final class OperationTerminalScreen extends TerminalScreenBase {
 
         // 6. Footer status LCD (8, 207, 304, 12) -> text at (12, 209), maxWidth = 296
         String footer = Component.translatable(
-                "gui.lc2.terminal.footer",
+                "gui.trera.terminal.footer",
                 boundCount,
                 countOnlineEntries()
         ).getString();
@@ -327,14 +327,14 @@ public final class OperationTerminalScreen extends TerminalScreenBase {
         // Line 1: title + distance at (rx + 34, ry + 3), maxWidth = 184
         String titleLine = formatEntryTitle(entry);
         if (entry.distance() >= 0) {
-            titleLine = titleLine + " [" + Component.translatable("gui.lc2.terminal.distance", entry.distance()).getString() + "]";
+            titleLine = titleLine + " [" + Component.translatable("gui.trera.terminal.distance", entry.distance()).getString() + "]";
         }
         canvas.drawClippedString(titleLine, rx + 34, ry + 3, 184, online ? COLOR_TEXT_ONLINE : COLOR_TEXT_OFFLINE);
 
         // Line 2: coords + status at (rx + 34, ry + 14), maxWidth = 184
         BlockPos3i pos = entry.displayPos();
         String coords = Component.translatable(
-                "gui.lc2.terminal.station_coords",
+                "gui.trera.terminal.station_coords",
                 pos.x(),
                 pos.y(),
                 pos.z()
@@ -356,12 +356,12 @@ public final class OperationTerminalScreen extends TerminalScreenBase {
             }
             BlockPos3i sp = entry.stationPos();
             String key = entry.stationType() == StationType.SMART_PORT
-                    ? "gui.lc2.terminal.unnamed_port"
-                    : "gui.lc2.terminal.unnamed_cargo";
+                    ? "gui.trera.terminal.unnamed_port"
+                    : "gui.trera.terminal.unnamed_cargo";
             return Component.translatable(key, sp.x(), sp.y(), sp.z()).getString();
         }
         BlockPos3i cp = entry.commPos();
-        return Component.translatable("gui.lc2.terminal.comm_coords", cp.x(), cp.y(), cp.z()).getString();
+        return Component.translatable("gui.trera.terminal.comm_coords", cp.x(), cp.y(), cp.z()).getString();
     }
 
     private void drawCenteredViewportMessage(ScreenCanvas canvas, String message) {
@@ -388,7 +388,7 @@ public final class OperationTerminalScreen extends TerminalScreenBase {
         if (relX >= 186 && relX < 312 && relY >= 4 && relY < 15) {
             canvas.drawTooltip(
                     List.of(Component.translatable(
-                            "gui.lc2.terminal.energy",
+                            "gui.trera.terminal.energy",
                             Math.round(storedEu),
                             Math.round(maxEu),
                             EnergyUnits.euToFeFloor(storedEu),
@@ -410,7 +410,7 @@ public final class OperationTerminalScreen extends TerminalScreenBase {
             int uy = ROW_Y_START + i * ROW_STEP + 5;
             if (relX >= ux && relX < ux + 14 && relY >= uy && relY < uy + 15) {
                 canvas.drawTooltip(
-                        List.of(Component.translatable("gui.lc2.terminal.unbind_tooltip")),
+                        List.of(Component.translatable("gui.trera.terminal.unbind_tooltip")),
                         mouseX,
                         mouseY
                 );

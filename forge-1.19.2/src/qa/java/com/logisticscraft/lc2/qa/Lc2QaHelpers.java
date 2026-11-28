@@ -39,7 +39,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 final class Lc2QaHelpers {
 
     private static final TicketType<ChunkPos> QA_TEMP_TICKET =
-            TicketType.create("lc2_qa_temp", Comparator.comparingLong(ChunkPos::toLong));
+            TicketType.create("trera_qa_temp", Comparator.comparingLong(ChunkPos::toLong));
 
     /** 48 distinct stackable vanilla items so 42+ stacks never merge into fewer slots. */
     private static final Item[] DISTINCT_CARGO_ITEMS = {

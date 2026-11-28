@@ -1,4 +1,4 @@
-# LogisticsCraft² (`lc2`) — Natural-World Client+Server & IC2 Production-Line Field Test Report (`v1.0.1`)
+# Transitera (`trera`) — Natural-World Client+Server & MHERA Production-Line Field Test Report (`v1.0.1`)
 
 ## 1. Verified Natural World Seed & Terrain
 
@@ -7,23 +7,23 @@
 - **Biome & Sea Level**: `minecraft:sparse_jungle` coastline/bay (`waterY = 62`)
 - **Natural Waterway**:
   - **NeoForge (1.21.1 / 26.1.2 / 26.2)**: Curved 84m natural river/bay connecting Shore A berth `(4, 62, 120)` → Shore B berth `(-32, 62, 50)` (5–6 A* waypoints traversing 118–204 natural kelp/seagrass blocks), +12-block hillside overlooking the bay for aerial Cargo Station testing, and natural underground ore veins beneath Shore A.
-  - **Forge 1.19.2**: Curved 139.5m natural bay connecting Shore A berth `(-41, 62, 24)` → Shore B berth `(88, 62, -29)` (7 A* waypoints traversing 50 natural kelp/seagrass blocks), with 1,626+ natural ores beneath Shore A (`ic2:advanced_miner`) and 239+ natural ores beneath the classic `ic2:miner`.
+  - **Forge 1.19.2**: Curved 139.5m natural bay connecting Shore A berth `(-41, 62, 24)` → Shore B berth `(88, 62, -29)` (7 A* waypoints traversing 50 natural kelp/seagrass blocks), with 1,626+ natural ores beneath Shore A (`mhera:advanced_miner`) and 239+ natural ores beneath the classic `mhera:miner`.
 
 ---
 
-## 2. End-to-End Automated IC2 Mining → Logistics → Refining Production Line
+## 2. End-to-End Automated MHERA Mining → Logistics → Refining Production Line
 
 Both NeoForge (`1.21.1`, `26.1.2`, `26.2`) and Forge `1.19.2` were tested end-to-end loading the exact packaged `ic2-*-1.0.5.jar` and `lc2-*-1.0.1.jar`:
 
 1. **Outpost A (Natural Shore A + Hillside)**:
-   - Real IC2 coal-fueled `ic2:generator` + `ic2:batbox` + `ic2:insulated_copper_cable` (visually connected via `CableBlockMixin` and delivering real EU).
-   - Real **`ic2:advanced_miner`** (equipped with `ic2:advanced_scanner`) and **`ic2:miner`** (equipped with `ic2:diamond_drill`, `ic2:advanced_scanner`, `ic2:mining_pipe`) actively digging real natural underground ores from seed `20261121`.
-   - Mined ores auto-ejected into Chest/Storage Box, driving vanilla **Redstone Comparators** (using our new `hasAnalogOutputSignal` / `getAnalogOutputSignal` support) to trigger both **Smart Port (`lc2:smart_port`)** and **Cargo Station (`lc2:cargo_station`)** automatically, with `lc2:chunk_loading_upgrade` active.
+   - Real MHERA coal-fueled `mhera:generator` + `mhera:batbox` + `mhera:insulated_copper_cable` (visually connected via `CableBlockMixin` and delivering real EU).
+   - Real **`mhera:advanced_miner`** (equipped with `mhera:advanced_scanner`) and **`mhera:miner`** (equipped with `mhera:diamond_drill`, `mhera:advanced_scanner`, `mhera:mining_pipe`) actively digging real natural underground ores from seed `20261121`.
+   - Mined ores auto-ejected into Chest/Storage Box, driving vanilla **Redstone Comparators** (using our new `hasAnalogOutputSignal` / `getAnalogOutputSignal` support) to trigger both **Smart Port (`trera:smart_port`)** and **Cargo Station (`trera:cargo_station`)** automatically, with `trera:chunk_loading_upgrade` active.
 2. **Real Natural-World Transit**:
    - **Electric Smart Cargo Boat** navigated the real natural curved bay/kelp waterway with auto-return.
    - **Standard & Heavy Transport Drones** climbed VTOL above jungle canopies/hills and flew to Base B with Base-B-paid auto-return.
 3. **Main Refining Base B (Natural Shore B)**:
-   - Incoming Smart Port & Cargo Station unloaded mined raw ores into Base B Receiving Chest → **`ic2:macerator`** (`pulling_upgrade` + `ejector_upgrade` + `overclocker_upgrade`) → **`ic2:electric_furnace`** (`ejector_upgrade`) → finished **`minecraft:copper_ingot`** landed automatically in the final **`ic2:steel_storage_box`**!
+   - Incoming Smart Port & Cargo Station unloaded mined raw ores into Base B Receiving Chest → **`mhera:macerator`** (`pulling_upgrade` + `ejector_upgrade` + `overclocker_upgrade`) → **`mhera:electric_furnace`** (`ejector_upgrade`) → finished **`minecraft:copper_ingot`** landed automatically in the final **`mhera:steel_storage_box`**!
 
 ### Natural-World Production Line & Live Client↔Server Matrix
 
@@ -52,5 +52,5 @@ Both NeoForge (`1.21.1`, `26.1.2`, `26.2`) and Forge `1.19.2` were tested end-to
    - Fixed live top header title staying stale after renaming a station in-GUI.
 5. **Multi-Boat Berth Priority for Seated Players (`SmartPortBlockEntity.findDockedBoat`)**:
    - Prioritizes launching a docked boat with a seated passenger before tie-breaking by berth distance on all four targets (caught live when two boats were docked at the same harbor).
-6. **Mixin Config Metadata (`lc2.mixins.json`)**:
+6. **Mixin Config Metadata (`trera.mixins.json`)**:
    - Added `"minVersion": "0.8"` across Forge & NeoForge to eliminate Mixin startup warnings.

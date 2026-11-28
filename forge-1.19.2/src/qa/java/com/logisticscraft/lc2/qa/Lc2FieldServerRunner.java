@@ -272,7 +272,7 @@ final class Lc2FieldServerRunner {
                         if (portA.findDockedBoat(level) == null) {
                             Lc2QaHelpers.spawnDockedBoatAt(level, portA);
                         }
-                        portA.setStatusKey("status.lc2.ready");
+                        portA.setStatusKey("status.trera.ready");
                     }
                     // Scenic elevated angle from over the natural water looking back at Outpost Harbor A, Boat, Cables & Advanced Miner!
                     Direction r = f.getClockWise();
@@ -299,7 +299,7 @@ final class Lc2FieldServerRunner {
                         portA.setItem(SmartPortBlockEntity.SLOT_OUTBOUND_START + 1, new ItemStack(Items.RAW_IRON, 16));
                         portA.setItem(SmartPortBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.COPPER_INGOT, 18));
                         portA.setItem(SmartPortBlockEntity.SLOT_STORAGE_START + 1, new ItemStack(Items.IRON_INGOT, 12));
-                        portA.setStatusKey("status.lc2.ready");
+                        portA.setStatusKey("status.trera.ready");
                     }
                     Direction f = shoreA.waterDir();
                     Vec3 cam = Vec3.atCenterOf(portAPos).add(f.getStepX() * 2.2, 0.6, f.getStepZ() * 2.2);
@@ -327,13 +327,13 @@ final class Lc2FieldServerRunner {
                     level.setBlock(stationAPos.below().relative(r), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
                     CargoStationBlockEntity stA = (CargoStationBlockEntity) level.getBlockEntity(stationAPos);
                     if (stA != null) {
-                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
-                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 1, Lc2QaHelpers.itemStack("lc2:heavy_transport_drone", 1));
+                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
+                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 1, Lc2QaHelpers.itemStack("trera:heavy_transport_drone", 1));
                         stA.setItem(CargoStationBlockEntity.SLOT_OUTBOUND_START, new ItemStack(Items.RAW_IRON, 20));
                         stA.setItem(CargoStationBlockEntity.SLOT_OUTBOUND_START + 1, new ItemStack(Items.RAW_GOLD, 12));
                         stA.setItem(CargoStationBlockEntity.SLOT_STORAGE_START, new ItemStack(Items.IRON_INGOT, 14));
                         stA.setItem(CargoStationBlockEntity.SLOT_STORAGE_START + 1, new ItemStack(Items.GOLD_INGOT, 8));
-                        stA.setStatusKey("status.lc2.ready");
+                        stA.setStatusKey("status.trera.ready");
                     }
                     Vec3 cam = Vec3.atCenterOf(stationAPos).add(f.getStepX() * 2.2, 0.6, f.getStepZ() * 2.2);
                     teleportLook(level, player, cam, Vec3.atCenterOf(stationAPos));
@@ -515,10 +515,10 @@ final class Lc2FieldServerRunner {
                             stA.setStoredEu(12000.0);
                         }
                         // Put 2 extra drones in bays 2 & 3 so 2 launch and 2 stay parked on the roof!
-                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
-                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 1, Lc2QaHelpers.itemStack("lc2:heavy_transport_drone", 1));
-                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 2, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
-                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 3, Lc2QaHelpers.itemStack("lc2:heavy_transport_drone", 1));
+                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
+                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 1, Lc2QaHelpers.itemStack("trera:heavy_transport_drone", 1));
+                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 2, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
+                        stA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 3, Lc2QaHelpers.itemStack("trera:heavy_transport_drone", 1));
                         stA.setAutoReturn(true);
                         stA.setTargetPos(stationBPos);
                         stA.tryDispatch(level, true);
@@ -826,15 +826,15 @@ final class Lc2FieldServerRunner {
         holdAreaTemp(level, shoreA.portPos(), 2);
         holdAreaTemp(level, shoreB.portPos(), 2);
 
-        Block cableBlock = Lc2QaHelpers.requireBlock("ic2:insulated_copper_cable");
-        Block genBlock = Lc2QaHelpers.requireBlock("ic2:generator");
-        Block batboxBlock = Lc2QaHelpers.requireBlock("ic2:batbox");
-        Block advMinerBlock = Lc2QaHelpers.requireBlock("ic2:advanced_miner");
-        Block minerBlock = Lc2QaHelpers.requireBlock("ic2:miner");
-        Block ironBoxBlock = Lc2QaHelpers.requireBlock("ic2:iron_storage_box");
-        Block steelBoxBlock = Lc2QaHelpers.requireBlock("ic2:steel_storage_box");
-        Block maceratorBlock = Lc2QaHelpers.requireBlock("ic2:macerator");
-        Block furnaceBlock = Lc2QaHelpers.requireBlock("ic2:electric_furnace");
+        Block cableBlock = Lc2QaHelpers.requireBlock("mhera:insulated_copper_cable");
+        Block genBlock = Lc2QaHelpers.requireBlock("mhera:generator");
+        Block batboxBlock = Lc2QaHelpers.requireBlock("mhera:batbox");
+        Block advMinerBlock = Lc2QaHelpers.requireBlock("mhera:advanced_miner");
+        Block minerBlock = Lc2QaHelpers.requireBlock("mhera:miner");
+        Block ironBoxBlock = Lc2QaHelpers.requireBlock("mhera:iron_storage_box");
+        Block steelBoxBlock = Lc2QaHelpers.requireBlock("mhera:steel_storage_box");
+        Block maceratorBlock = Lc2QaHelpers.requireBlock("mhera:macerator");
+        Block furnaceBlock = Lc2QaHelpers.requireBlock("mhera:electric_furnace");
 
         // ---------------------------------------------------------------------
         // 1. MINING OUTPOST A (Natural Shore A)
@@ -901,11 +901,11 @@ final class Lc2FieldServerRunner {
                 "detected=" + portA.getWaterBerthPos() + ", expected=" + shoreA.berthPos());
 
         // Verify Phase 1 Comparator signal = 0 when cargo buffer empty (even with upgrades installed!)
-        portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("lc2:chunk_loading_upgrade", 1));
-        ItemStack portAPull = Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, portAPos, "ic2:pulling_upgrade", Direction.DOWN);
+        portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("trera:chunk_loading_upgrade", 1));
+        ItemStack portAPull = Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, portAPos, "mhera:pulling_upgrade", Direction.DOWN);
         portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START + 1, portAPull);
-        portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START + 2, Lc2QaHelpers.itemStack("ic2:overclocker_upgrade", 2));
-        portA.setItem(SmartPortBlockEntity.SLOT_BATTERY, Lc2QaHelpers.itemStack("ic2:single_use_battery", 8));
+        portA.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START + 2, Lc2QaHelpers.itemStack("mhera:overclocker_upgrade", 2));
+        portA.setItem(SmartPortBlockEntity.SLOT_BATTERY, Lc2QaHelpers.itemStack("mhera:single_use_battery", 8));
         qa.checkEquals("p1.portA_comparator_zero_when_cargo_empty", 0,
                 level.getBlockState(portAPos).getAnalogOutputSignal(level, portAPos));
 
@@ -914,7 +914,7 @@ final class Lc2FieldServerRunner {
 
         // Equip IC2 Advanced Miner with OV Scanner (ic2:advanced_scanner)
         boolean advScannerInserted = Lc2FieldHelpers.insertIntoMachineMenuSlot(
-                level, advMinerPos, setupPlayer, Lc2QaHelpers.itemStack("ic2:advanced_scanner", 1));
+                level, advMinerPos, setupPlayer, Lc2QaHelpers.itemStack("mhera:advanced_scanner", 1));
         qa.check("p2.adv_miner_equipped_scanner", advScannerInserted,
                 Lc2FieldHelpers.describeMachineSlots(level, advMinerPos, setupPlayer));
 
@@ -954,15 +954,15 @@ final class Lc2FieldServerRunner {
         int distAir = Math.abs(stationAPos.getX() - shoreB.portPos().getX())
                 + Math.abs(stationAPos.getY() - shoreB.portPos().getY())
                 + Math.abs(stationAPos.getZ() - shoreB.portPos().getZ());
-        String rfChipId = distAir <= 240 ? "lc2:rf_chip_1" : (distAir <= 500 ? "lc2:rf_chip_2" : "lc2:rf_chip_3");
+        String rfChipId = distAir <= 240 ? "trera:rf_chip_1" : (distAir <= 500 ? "trera:rf_chip_2" : "trera:rf_chip_3");
         stationA.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack(rfChipId, 1));
-        stationA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("lc2:transport_drone", 1));
-        stationA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 1, Lc2QaHelpers.itemStack("lc2:heavy_transport_drone", 1));
-        stationA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("lc2:chunk_loading_upgrade", 1));
-        ItemStack stAPull = Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, stationAPos, "ic2:pulling_upgrade", lA);
+        stationA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START, Lc2QaHelpers.itemStack("trera:transport_drone", 1));
+        stationA.setItem(CargoStationBlockEntity.SLOT_DRONE_BAY_START + 1, Lc2QaHelpers.itemStack("trera:heavy_transport_drone", 1));
+        stationA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("trera:chunk_loading_upgrade", 1));
+        ItemStack stAPull = Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, stationAPos, "mhera:pulling_upgrade", lA);
         stationA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START + 1, stAPull);
-        stationA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START + 2, Lc2QaHelpers.itemStack("ic2:overclocker_upgrade", 2));
-        stationA.setItem(CargoStationBlockEntity.SLOT_BATTERY, Lc2QaHelpers.itemStack("ic2:single_use_battery", 8));
+        stationA.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START + 2, Lc2QaHelpers.itemStack("mhera:overclocker_upgrade", 2));
+        stationA.setItem(CargoStationBlockEntity.SLOT_BATTERY, Lc2QaHelpers.itemStack("mhera:single_use_battery", 8));
 
         // Verify Phase 1 Comparator signal = 0 when cargo buffer is empty (even with RF chip + 2 drones + upgrades!)
         qa.checkEquals("p1.stationA_comparator_zero_when_cargo_empty", 0,
@@ -997,11 +997,11 @@ final class Lc2FieldServerRunner {
 
         // Equip classic IC2 Miner with Diamond Drill, OV Scanner, and Mining Pipes!
         boolean drillOk = Lc2FieldHelpers.insertIntoMachineMenuSlot(
-                level, minerPos, setupPlayer, Lc2QaHelpers.itemStack("ic2:diamond_drill", 1));
+                level, minerPos, setupPlayer, Lc2QaHelpers.itemStack("mhera:diamond_drill", 1));
         boolean scanOk = Lc2FieldHelpers.insertIntoMachineMenuSlot(
-                level, minerPos, setupPlayer, Lc2QaHelpers.itemStack("ic2:advanced_scanner", 1));
+                level, minerPos, setupPlayer, Lc2QaHelpers.itemStack("mhera:advanced_scanner", 1));
         boolean pipeOk = Lc2FieldHelpers.insertIntoMachineMenuSlot(
-                level, minerPos, setupPlayer, Lc2QaHelpers.itemStack("ic2:mining_pipe", 64));
+                level, minerPos, setupPlayer, Lc2QaHelpers.itemStack("mhera:mining_pipe", 64));
         qa.check("p2.classic_miner_equipped", drillOk && scanOk && pipeOk,
                 "drill=" + drillOk + ", scanner=" + scanOk + ", pipes=" + pipeOk
                         + " | " + Lc2FieldHelpers.describeMachineSlots(level, minerPos, setupPlayer));
@@ -1067,9 +1067,9 @@ final class Lc2FieldServerRunner {
         qa.check("p2.portB_berth_detected",
                 portB.getWaterBerthPos() != null && portB.getWaterBerthPos().equals(Lc2Coords.toCore(shoreB.berthPos())),
                 "detected=" + portB.getWaterBerthPos() + ", expected=" + shoreB.berthPos());
-        portB.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("lc2:chunk_loading_upgrade", 1));
+        portB.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("trera:chunk_loading_upgrade", 1));
         portB.setItem(SmartPortBlockEntity.SLOT_UPGRADE_START + 1,
-                Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, portBPos, "ic2:ejector_upgrade", bB));
+                Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, portBPos, "mhera:ejector_upgrade", bB));
 
         // Receiving Chest (Iron Storage Box — holds 54+ stacks cleanly!)
         level.setBlock(receivingChestPos, ironBoxBlock.defaultBlockState(), Block.UPDATE_ALL);
@@ -1077,9 +1077,9 @@ final class Lc2FieldServerRunner {
         // Base Cargo Station B (directly adjacent to Receiving Chest on leftB!)
         CargoStationBlockEntity stationB = Lc2QaHelpers.placeCargoStation(level, stationBPos, "Refinery Pad B");
         stationB.setItem(CargoStationBlockEntity.SLOT_RF_CHIP, Lc2QaHelpers.itemStack(rfChipId, 1));
-        stationB.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("lc2:chunk_loading_upgrade", 1));
+        stationB.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START, Lc2QaHelpers.itemStack("trera:chunk_loading_upgrade", 1));
         stationB.setItem(CargoStationBlockEntity.SLOT_UPGRADE_START + 1,
-                Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, stationBPos, "ic2:ejector_upgrade", rB));
+                Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, stationBPos, "mhera:ejector_upgrade", rB));
 
         // IC2 Ore-Processing Production Line:
         // Receiving Box -> ic2:macerator -> Crushed Ore Buffer Chest -> ic2:electric_furnace -> ic2:steel_storage_box!
@@ -1090,28 +1090,28 @@ final class Lc2FieldServerRunner {
 
         // Equip IC2 Macerator: pulling_upgrade(fB = Receiving Box) + ejector_upgrade(bB = Crushed Buffer)
         // + overclocker_upgrade x5 (LV-safe 21 EU/t, 50 ticks/item!) + energy_storage_upgrade x1!
-        ItemStack macPull = Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, maceratorPos, "ic2:pulling_upgrade", fB);
-        ItemStack macEject = Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, maceratorPos, "ic2:ejector_upgrade", bB);
+        ItemStack macPull = Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, maceratorPos, "mhera:pulling_upgrade", fB);
+        ItemStack macEject = Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, maceratorPos, "mhera:ejector_upgrade", bB);
         boolean macOk1 = Lc2FieldHelpers.insertIntoMachineMenuSlot(level, maceratorPos, setupPlayer, macPull);
         boolean macOk2 = Lc2FieldHelpers.insertIntoMachineMenuSlot(level, maceratorPos, setupPlayer, macEject);
         boolean macOk3 = Lc2FieldHelpers.insertIntoMachineMenuSlot(level, maceratorPos, setupPlayer,
-                Lc2QaHelpers.itemStack("ic2:overclocker_upgrade", 5));
+                Lc2QaHelpers.itemStack("mhera:overclocker_upgrade", 5));
         boolean macOk4 = Lc2FieldHelpers.insertIntoMachineMenuSlot(level, maceratorPos, setupPlayer,
-                Lc2QaHelpers.itemStack("ic2:energy_storage_upgrade", 1));
+                Lc2QaHelpers.itemStack("mhera:energy_storage_upgrade", 1));
         qa.check("p2.macerator_equipped", macOk1 && macOk2 && macOk3 && macOk4,
                 "pull=" + macOk1 + ", eject=" + macOk2 + ", oc=" + macOk3 + ", es=" + macOk4
                         + " | " + Lc2FieldHelpers.describeMachineSlots(level, maceratorPos, setupPlayer));
 
         // Equip IC2 Electric Furnace: pulling_upgrade(fB = Crushed Buffer) + ejector_upgrade(bB = Steel Storage Box)
         // + overclocker_upgrade x4 (LV-safe 20 EU/t, 24 ticks/ingot!) + energy_storage_upgrade x1!
-        ItemStack furPull = Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, furnacePos, "ic2:pulling_upgrade", fB);
-        ItemStack furEject = Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, furnacePos, "ic2:ejector_upgrade", bB);
+        ItemStack furPull = Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, furnacePos, "mhera:pulling_upgrade", fB);
+        ItemStack furEject = Lc2FieldHelpers.configureUpgradeFace(level, setupPlayer, furnacePos, "mhera:ejector_upgrade", bB);
         boolean furOk1 = Lc2FieldHelpers.insertIntoMachineMenuSlot(level, furnacePos, setupPlayer, furPull);
         boolean furOk2 = Lc2FieldHelpers.insertIntoMachineMenuSlot(level, furnacePos, setupPlayer, furEject);
         boolean furOk3 = Lc2FieldHelpers.insertIntoMachineMenuSlot(level, furnacePos, setupPlayer,
-                Lc2QaHelpers.itemStack("ic2:overclocker_upgrade", 4));
+                Lc2QaHelpers.itemStack("mhera:overclocker_upgrade", 4));
         boolean furOk4 = Lc2FieldHelpers.insertIntoMachineMenuSlot(level, furnacePos, setupPlayer,
-                Lc2QaHelpers.itemStack("ic2:energy_storage_upgrade", 1));
+                Lc2QaHelpers.itemStack("mhera:energy_storage_upgrade", 1));
         qa.check("p2.electric_furnace_equipped", furOk1 && furOk2 && furOk3 && furOk4,
                 "pull=" + furOk1 + ", eject=" + furOk2 + ", oc=" + furOk3 + ", es=" + furOk4
                         + " | " + Lc2FieldHelpers.describeMachineSlots(level, furnacePos, setupPlayer));

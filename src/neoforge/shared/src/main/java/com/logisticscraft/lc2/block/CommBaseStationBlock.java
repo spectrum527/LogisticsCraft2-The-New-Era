@@ -118,8 +118,8 @@ public final class CommBaseStationBlock extends Lc2StationBlockBase
                 && level.getBlockEntity(pos) instanceof CommBaseStationBlockEntity comm) {
             boolean online = comm.isOnline();
             String statusKey = online
-                    ? "status.lc2.terminal.comm_status_online"
-                    : "status.lc2.terminal.comm_status_offline";
+                    ? "status.trera.terminal.comm_status_online"
+                    : "status.trera.terminal.comm_status_offline";
             MutableComponent statusLine = Component.translatable(
                     statusKey,
                     Math.round(comm.getStoredEu()),
@@ -129,8 +129,8 @@ public final class CommBaseStationBlock extends Lc2StationBlockBase
             );
             Component adjacentSummary = comm.formatAdjacentComponent(serverLevel);
             Component adjacentLine = adjacentSummary == null
-                    ? Component.translatable("status.lc2.terminal.comm_adjacent_none")
-                    : Component.translatable("status.lc2.terminal.comm_adjacent_list", adjacentSummary);
+                    ? Component.translatable("status.trera.terminal.comm_adjacent_none")
+                    : Component.translatable("status.trera.terminal.comm_adjacent_list", adjacentSummary);
             Lc2Native.sendActionBar(player, statusLine.append(Component.literal(" | ")).append(adjacentLine));
         }
         return InteractionResult.SUCCESS;
